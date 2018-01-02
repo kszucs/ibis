@@ -2,7 +2,6 @@
 
 import os
 import click
-import shutil
 import tarfile
 
 import numpy as np
