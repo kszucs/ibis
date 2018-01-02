@@ -2,6 +2,7 @@
 
 import os
 import click
+import shutil
 import tarfile
 
 import numpy as np
@@ -15,18 +16,24 @@ try:
 except ImportError:
     import pbs as sh
 
+try:
+    from pathlib import Path
+except ImportError:
+    # py2 compat
+    from pathlib2 import Path
+
 
 if os.environ.get('APPVEYOR', None) is not None:
     curl = sh.Command('C:\\Tools\\curl\\bin\\curl.exe')
 else:
     curl = sh.curl
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = Path(__file__).parent.absolute()
+DATA_DIR = Path(os.environ.get('IBIS_TEST_DATA_DIRECTORY',
+                               SCRIPT_DIR / 'ibis-testing-data'))
 
 TEST_TABLES = ['functional_alltypes', 'diamonds', 'batting',
                'awards_players']
-TEST_DATA = os.environ.get('IBIS_TEST_DATA_DIRECTORY',
-                           os.path.join(SCRIPT_DIR, 'ibis-testing-data'))
 
 
 def recreate_database(driver, params, **kwargs):
@@ -59,7 +66,7 @@ def init_database(driver, params, schema=None, recreate=True, **kwargs):
 def read_tables(names, data_directory):
     dtype = {'bool_col': np.bool_}
     for name in names:
-        path = os.path.join(data_directory, '{}.csv'.format(name))
+        path = data_directory / '{}.csv'.format(name)
         click.echo(path)
         df = pd.read_csv(path, index_col=None, header=0, dtype=dtype)
         yield (name, df)
@@ -82,13 +89,14 @@ def cli():
               default='https://storage.googleapis.com/ibis-ci-data')
 @click.option('-d', '--directory', default=SCRIPT_DIR)
 def download(base_url, directory, name):
-    if not os.path.exists(directory):
-        os.mkdir(directory)
+    directory = Path(directory)
+    if not directory.exists():
+        directory.mkdir()
 
     data_url = '{}/{}'.format(base_url, name)
-    path = os.path.join(directory, name)
+    path = directory / name
 
-    if not os.path.exists(path):
+    if not path.exists():
         curl(data_url, o=path, L=True,
              _out=click.get_binary_stream('stdout'),
              _err=click.get_binary_stream('stderr'))
@@ -96,9 +104,19 @@ def download(base_url, directory, name):
         click.echo('Skipping download due to {} already exists.'.format(name))
 
     click.echo('Extracting archive to {} ...'.format(directory))
-    if path.endswith(('.tar', '.gz', '.bz2', '.xz')):
+    if path.suffix in ('.tar', '.gz', '.bz2', '.xz'):
         with tarfile.open(path, mode='r|gz') as f:
             f.extractall(path=directory)
+
+
+@cli.command()
+@click.option('-t', '--tables', multiple=True, default=TEST_TABLES)
+@click.option('-d', '--data-directory', default=DATA_DIR)
+def parquet(tables, data_directory, **params):
+    data_directory = Path(data_directory)
+    for table, df in read_tables(tables, data_directory):
+        target = data_directory / '{}.parquet'.format(table)
+        df.to_parquet(target)
 
 
 @cli.command()
@@ -108,10 +126,11 @@ def download(base_url, directory, name):
 @click.option('-p', '--password', default='ibis')
 @click.option('-D', '--database', default='ibis_testing')
 @click.option('-S', '--schema', type=click.File('rt'),
-              default=os.path.join(SCRIPT_DIR, 'schema/postgresql.sql'))
+              default=SCRIPT_DIR / 'schema' / 'postgresql.sql')
 @click.option('-t', '--tables', multiple=True, default=TEST_TABLES)
-@click.option('-d', '--data-directory', default=TEST_DATA)
+@click.option('-d', '--data-directory', default=DATA_DIR)
 def postgres(schema, tables, data_directory, **params):
+    data_directory = Path(data_directory)
     click.echo('Initializing PostgreSQL...')
     engine = init_database('postgresql', params, schema,
                            isolation_level='AUTOCOMMIT')
@@ -120,13 +139,14 @@ def postgres(schema, tables, data_directory, **params):
 
 
 @cli.command()
-@click.option('-D', '--database',
-              default=os.path.join(SCRIPT_DIR, 'ibis_testing.db'))
+@click.option('-D', '--database', default=SCRIPT_DIR / 'ibis_testing.db')
 @click.option('-S', '--schema', type=click.File('rt'),
-              default=os.path.join(SCRIPT_DIR, 'schema/sqlite.sql'))
+              default=SCRIPT_DIR / 'schema' / 'sqlite.sql')
 @click.option('-t', '--tables', multiple=True, default=TEST_TABLES)
-@click.option('-d', '--data-directory', default=TEST_DATA)
+@click.option('-d', '--data-directory', default=DATA_DIR)
 def sqlite(database, schema, tables, data_directory, **params):
+    database = Path(database)
+    data_directory = Path(data_directory)
     click.echo('Initializing SQLite...')
     if os.path.exists(database):
         try:
@@ -149,10 +169,11 @@ def sqlite(database, schema, tables, data_directory, **params):
 @click.option('-p', '--password', default='')
 @click.option('-D', '--database', default='ibis_testing')
 @click.option('-S', '--schema', type=click.File('rt'),
-              default=os.path.join(SCRIPT_DIR, 'schema/clickhouse.sql'))
+              default=SCRIPT_DIR / 'schema' / 'clickhouse.sql')
 @click.option('-t', '--tables', multiple=True, default=TEST_TABLES)
-@click.option('-d', '--data-directory', default=TEST_DATA)
+@click.option('-d', '--data-directory', default=DATA_DIR)
 def clickhouse(schema, tables, data_directory, **params):
+    data_directory = Path(data_directory)
     click.echo('Initializing ClickHouse...')
     engine = init_database('clickhouse+native', params, schema)
 

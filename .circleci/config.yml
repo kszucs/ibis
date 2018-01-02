@@ -56,6 +56,7 @@ python_test_steps: &python_test_steps
                 -wait tcp://localhost:9000 \
                 -timeout 1m
   - run: testing/datamgr.py download
+  - run: testing/datamgr.py parquet
   - run: testing/datamgr.py sqlite
   - run: testing/datamgr.py postgres
   - run: testing/datamgr.py clickhouse

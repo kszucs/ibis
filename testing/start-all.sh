@@ -9,6 +9,7 @@ export IBIS_TEST_WEBHDFS_USER=ubuntu
 docker-compose up -d
 
 python datamgr.py download
+python datamgr.py parquet
 python datamgr.py sqlite
 python datamgr.py postgres
 python datamgr.py clickhouse
