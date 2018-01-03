@@ -4,7 +4,6 @@ import os
 import click
 import tarfile
 
-import numpy as np
 import pandas as pd
 import sqlalchemy as sa
 
