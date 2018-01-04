@@ -44,6 +44,7 @@ test_script:
   - "%ACTIVATE% \"ibis_%PYTHON_VERSION%\""
   - "%CONDA% install pytables"
 
+
   - "pip install -e .\"[sqlite, postgres, visualization, pandas, csv, hdf5]\""
   - "pip install flake8 mock pytest click \"pbs==0.110\""
 
@@ -53,5 +54,4 @@ test_script:
   - "python testing\\datamgr.py parquet"
   - "python testing\\datamgr.py sqlite"
   - "python testing\\datamgr.py postgres"
-
   - "pytest --tb=short -m \"not backend and not clickhouse and not impala and not hdfs and not bigquery\" -rs ibis"

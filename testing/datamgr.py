@@ -63,7 +63,8 @@ def init_database(driver, params, schema=None, recreate=True, **kwargs):
 
 def read_tables(names, data_directory):
     dtype = {'bool_col': bool,
-             'string_col': str}
+             'string_col': str,
+             'date_string_col': str}
 
     for name in names:
         path = data_directory / '{}.csv'.format(name)
@@ -121,7 +122,11 @@ def parquet(tables, data_directory, **params):
 
     data_directory = Path(data_directory)
     for table, df in read_tables(tables, data_directory):
-        arrow_table = pa.Table.from_pandas(df)
+        schema = pa.schema([
+            pa.field('string_col', pa.string()),
+            pa.field('date_string_col', pa.string())
+        ])
+        arrow_table = pa.Table.from_pandas(df, schema=schema)
         target_path = data_directory / '{}.parquet'.format(table)
         pq.write_table(arrow_table, str(target_path))
 
