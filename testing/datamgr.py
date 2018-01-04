@@ -5,6 +5,8 @@ import click
 import tarfile
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import sqlalchemy as sa
 
 from toolz import dissoc
@@ -120,8 +122,9 @@ def parquet(tables, data_directory, **params):
 
     data_directory = Path(data_directory)
     for table, df in read_tables(tables, data_directory):
-        target = data_directory / '{}.parquet'.format(table)
-        df.to_parquet(target)
+        arrow_table = pa.Table.from_pandas(df)
+        target_path = data_directory / '{}.parquet'.format(table)
+        pq.write_table(arrow_table, str(target_path))
 
 
 @cli.command()
