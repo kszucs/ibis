@@ -7,7 +7,18 @@ services:
       - "8123:8123"
       - "9000:9000"
 
+  mysql:
+    image: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+      - MYSQL_DATABASE=ibis_testing
+      - MYSQL_USER=ibis
+      - MYSQL_PASSWORD=ibis
+
   impala:
+    # this container includes postgres too
     image: cpcloud86/impala:java8-1
     hostname: localhost
     ports:

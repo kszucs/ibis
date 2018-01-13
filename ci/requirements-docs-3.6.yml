@@ -13,6 +13,7 @@ dependencies:
   - numpydoc
   - pandas
   - psycopg2
+  - pymysql
   - pytest
   - python=3.6
   - python-graphviz
