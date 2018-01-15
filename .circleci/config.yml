@@ -11,6 +11,11 @@ environment: &environment
   - IBIS_TEST_POSTGRES_PASSWORD: ubuntu
   - IBIS_TEST_POSTGRES_DATABASE: ibis_testing
 
+  - IBIS_TEST_MYSQL_HOST: localhost
+  - IBIS_TEST_MYSQL_USER: ibis
+  - IBIS_TEST_MYSQL_PASSWORD: ibis
+  - IBIS_TEST_MYSQL_DATABASE: ibis_testing
+
   - IBIS_TEST_CLICKHOUSE_USER: default
   - IBIS_TEST_CLICKHOUSE_HOST: localhost
   - IBIS_TEST_CLICKHOUSE_PASSWORD: ''

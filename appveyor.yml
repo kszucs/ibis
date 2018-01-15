@@ -4,21 +4,18 @@ platform:
   - x64
 
 environment:
-  PGUSER: "postgres"
-  PGPASSWORD: "Password12!"
-  PGPORT: 5432
-  PGHOST: "localhost"
-
+  PGUSER: ""
+  PGPASSWORD: ""
   IBIS_TEST_DOWNLOAD_DIRECTORY: "%USERPROFILE%"
   IBIS_TEST_DOWNLOAD_BASE_URL: "https://storage.googleapis.com/ibis-ci-data"
   IBIS_TEST_DOWNLOAD_NAME: "ibis-testing-data.tar.gz"
 
   IBIS_TEST_DATA_DIRECTORY: "%USERPROFILE%\\ibis-testing-data"
-
-  IBIS_TEST_POSTGRES_USER: "%PGUSER%"
-  IBIS_TEST_POSTGRES_PASSWORD: "%PGPASSWORD%"
-  IBIS_TEST_POSTGRES_PORT: "%PGPORT%"
-  IBIS_TEST_POSTGRES_HOST: "%PGHOST%"
+  IBIS_TEST_MYSQL_USER: "ibis"
+  IBIS_TEST_MYSQL_PASSWORD: "ibis"
+  IBIS_TEST_POSTGRES_DATABASE: "ibis_testing"
+  IBIS_TEST_POSTGRES_USER: "postgres"
+  IBIS_TEST_POSTGRES_PASSWORD: "Password12!"
   IBIS_TEST_POSTGRES_DATABASE: "ibis_testing"
 
   IBIS_TEST_SQLITE_DATABASE: "%USERPROFILE%\\ibis_testing.db"
