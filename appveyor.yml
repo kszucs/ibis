@@ -4,8 +4,6 @@ platform:
   - x64
 
 environment:
-  PGUSER: ""
-  PGPASSWORD: ""
   IBIS_TEST_DOWNLOAD_DIRECTORY: "%USERPROFILE%"
   IBIS_TEST_DOWNLOAD_BASE_URL: "https://storage.googleapis.com/ibis-ci-data"
   IBIS_TEST_DOWNLOAD_NAME: "ibis-testing-data.tar.gz"
@@ -48,6 +46,7 @@ test_script:
 
   - "python testing\\datamgr.py download"
   - "python testing\\datamgr.py parquet"
+  - "python testing\\datamgr.py mysql"
   - "python testing\\datamgr.py sqlite"
   - "python testing\\datamgr.py postgres"
   - "pytest --tb=short -m \"not backend and not clickhouse and not impala and not hdfs and not bigquery\" -rs ibis"

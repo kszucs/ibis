@@ -62,6 +62,7 @@ python_test_steps: &python_test_steps
                 -timeout 1m
   - run: testing/datamgr.py download
   - run: testing/datamgr.py parquet
+  - run: testing/datamgr.py mysql
   - run: testing/datamgr.py sqlite
   - run: testing/datamgr.py postgres
   - run: testing/datamgr.py clickhouse
