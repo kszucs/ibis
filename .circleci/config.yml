@@ -139,6 +139,12 @@ jobs:
           PYTHON_VERSION: 2.7
       - image: cpcloud86/impala:java8-1
       - image: yandex/clickhouse-server
+      - image: mysql
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   python34_test:
@@ -149,6 +155,12 @@ jobs:
           PYTHON_VERSION: 3.4
       - image: cpcloud86/impala:java8-1
       - image: yandex/clickhouse-server
+      - image: mysql
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   python35_test:
@@ -159,6 +171,12 @@ jobs:
           PYTHON_VERSION: 3.5
       - image: cpcloud86/impala:java8-1
       - image: yandex/clickhouse-server
+      - image: mysql
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   python36_test:
@@ -169,6 +187,12 @@ jobs:
           PYTHON_VERSION: 3.6
       - image: cpcloud86/impala:java8-1
       - image: yandex/clickhouse-server
+      - image: mysql
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   ################# CONDA BUILD ##################
