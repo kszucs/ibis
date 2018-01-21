@@ -9,8 +9,8 @@ environment:
   IBIS_TEST_DOWNLOAD_NAME: "ibis-testing-data.tar.gz"
 
   IBIS_TEST_DATA_DIRECTORY: "%USERPROFILE%\\ibis-testing-data"
-  IBIS_TEST_MYSQL_USER: "ibis"
-  IBIS_TEST_MYSQL_PASSWORD: "ibis"
+  IBIS_TEST_MYSQL_USER: "root"
+  IBIS_TEST_MYSQL_PASSWORD: "Password12!"
   IBIS_TEST_MYSQL_DATABASE: "ibis_testing"
   IBIS_TEST_POSTGRES_USER: "postgres"
   IBIS_TEST_POSTGRES_PASSWORD: "Password12!"
@@ -28,6 +28,7 @@ environment:
     - PYTHON_VERSION: "3.6"
 
 services:
+  - mysql
   - postgresql101
 
 test_script:
