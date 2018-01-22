@@ -23,9 +23,7 @@ class Backend(object):
     def __init__(self, data_directory):
         try:
             # check that the backend is available
-            backend = getattr(ibis, self.name)
-            print('------------ {} ----------'.format(self.name))
-            print(dir(backend))
+            getattr(getattr(ibis, self.name), 'connect')
         except AttributeError:
             pytest.skip()
         else:
