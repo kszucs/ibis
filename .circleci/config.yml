@@ -69,7 +69,7 @@ python_test_steps: &python_test_steps
   - run: testing/impalamgr.py load --data --data-dir "$IBIS_TEST_DATA_DIRECTORY"
   - run: mkdir -p /tmp/reports
   - run: |
-      pytest -rvsxX \
+      pytest -sv -rsxX \
         --doctest-modules \
         --doctest-ignore-import-errors \
         --junitxml=/tmp/reports/junit.xml \
