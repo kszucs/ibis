@@ -1,13 +1,12 @@
 import re
-
 import pandas as pd
+import google.cloud.bigquery
 
 import ibis
 import ibis.expr.types as ir
 import ibis.expr.datatypes as dt
 from ibis.client import Database, Query, SQLClient
 from ibis.bigquery import compiler as comp
-import google.cloud.bigquery
 
 
 def _ensure_split(table_id, dataset_id):
