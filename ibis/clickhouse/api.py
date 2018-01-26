@@ -2,6 +2,7 @@ import ibis.common as com
 
 from ibis.config import options
 from ibis.clickhouse.client import ClickhouseClient, external_table
+from ibis.clickhouse.compiler import ClickhouseDialect
 
 
 __all__ = ('compile', 'verify', 'connect', 'external_table')
@@ -14,7 +15,7 @@ except ImportError:
     _default_compression = False
 
 
-def compile(expr):
+def compile(expr, params=None):
     """
     Force compilation of expression as though it were an expression depending
     on Clickhouse. Note you can also call expr.compile()
@@ -24,16 +25,16 @@ def compile(expr):
     compiled : string
     """
     from .compiler import to_sql
-    return to_sql(expr)
+    return to_sql(expr, ClickhouseDialect.make_context(params=params))
 
 
-def verify(expr):
+def verify(expr, params=None):
     """
     Determine if expression can be successfully translated to execute on
     Clickhouse
     """
     try:
-        compile(expr)
+        compile(expr, params=params)
         return True
     except com.TranslationError:
         return False

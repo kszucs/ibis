@@ -15,8 +15,9 @@
 
 from ibis.sql.alchemy import to_sqlalchemy
 
-from .client import PostgreSQLClient, PostgreSQLDialect
-from .compiler import rewrites  # noqa
+from ibis.sql.postgres.client import PostgreSQLClient
+from ibis.sql.postgres.compiler import PostgreSQLDialect
+from ibis.sql.postgres.compiler import rewrites  # noqa: F401
 
 
 def compile(expr, params=None):
@@ -56,7 +57,7 @@ def compile(expr, params=None):
     SELECT t0.double_col + %(param_1)s AS tmp
     FROM functional_alltypes AS t0
     """
-    return to_sqlalchemy(expr, dialect=PostgreSQLDialect, params=params)
+    return to_sqlalchemy(expr, PostgreSQLDialect.make_context(params=params))
 
 
 def connect(

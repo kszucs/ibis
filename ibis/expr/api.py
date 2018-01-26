@@ -1977,7 +1977,7 @@ def _struct_get_field(expr, field_name):
     value_expr : ibis.expr.types.ValueExpr
         An expression with the type of the field being accessed.
     """
-    return _ops.StructField(expr, field_name).to_expr()
+    return _ops.StructField(expr, field_name).to_expr().name(field_name)
 
 
 _struct_column_methods = dict(
@@ -2762,7 +2762,10 @@ def mutate(table, exprs=None, **kwds):
             v = v(table)
         else:
             v = as_value_expr(v)
-        exprs.append(v.name(k))
+
+        # TODO(phillipc): Fix this by making expressions hashable
+        named_v = v.name(k) if v.get_name() != k else v
+        exprs.append(named_v)
 
     has_replacement = False
     for expr in exprs:

@@ -2,9 +2,10 @@ import google.cloud.bigquery  # noqa: F401 fail early if bigquery is missing
 import ibis.common as com
 from ibis.config import options  # noqa: F401
 from ibis.bigquery.client import BigQueryClient
+from ibis.bigquery.compiler import BigQueryDialect
 
 
-def compile(expr):
+def compile(expr, params=None):
     """
     Force compilation of expression as though it were an expression depending
     on BigQuery. Note you can also call expr.compile()
@@ -14,16 +15,16 @@ def compile(expr):
     compiled : string
     """
     from .compiler import to_sql
-    return to_sql(expr)
+    return to_sql(expr, BigQueryDialect.make_context(params=params))
 
 
-def verify(expr):
+def verify(expr, params=None):
     """
     Determine if expression can be successfully translated to execute on
     BigQuery
     """
     try:
-        compile(expr)
+        compile(expr, params=params)
         return True
     except com.TranslationError:
         return False

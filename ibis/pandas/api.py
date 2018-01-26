@@ -77,7 +77,7 @@ class PandasExprTranslator(object):
     _rewrites = {}
 
 
-class PandasDialect(ibis.client.Dialect):
+class PandasDialect(ibis.sql.compiler.Dialect):
 
     translator = PandasExprTranslator
 
