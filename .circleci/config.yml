@@ -12,7 +12,7 @@ jobs:
     steps:
       - checkout
       - run: docker-compose up -d
-      - run: docker-compose build test
+      - run: docker-compose run test conda list
       - run: docker-compose run test flake8
 
 
