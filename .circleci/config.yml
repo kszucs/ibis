@@ -12,6 +12,8 @@ jobs:
     steps:
       - checkout
 
+      - run: cd ci
+      - run: pwd
       - run: docker-compose up -d
       - run: docker-compose build ibis
 
