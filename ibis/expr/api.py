@@ -1110,6 +1110,7 @@ _generic_column_methods = dict(
     topk=topk,
     summary=_generic_summary,
     count=count,
+    arbitrary=_unary_op('arbitrary', _ops.Arbitrary),
     min=min,
     max=max,
     approx_median=approx_median,
