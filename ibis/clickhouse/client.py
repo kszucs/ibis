@@ -2,23 +2,87 @@ import re
 import pandas as pd
 
 import ibis.common as com
-import ibis.expr.operations as ops
-import ibis.expr.schema as sch
 import ibis.expr.types as ir
+import ibis.expr.schema as sch
+import ibis.expr.lineage as lin
+import ibis.expr.datatypes as dt
+import ibis.expr.operations as ops
 
 from ibis.config import options
 from ibis.compat import zip as czip
 from ibis.client import Query, Database, DatabaseEntity, SQLClient
-from ibis.clickhouse.compiler import build_ast, ClickhouseDialect
+from ibis.clickhouse.compiler import ClickhouseDialect, build_ast
 from ibis.util import log
 from ibis.sql.compiler import DDL
 
 from clickhouse_driver.client import Client as _DriverClient
 
-from .types import clickhouse_to_pandas, clickhouse_to_ibis
-
 
 fully_qualified_re = re.compile(r"(.*)\.(?:`(.*)`|(.*))")
+
+
+_clickhouse_dtypes = {
+    'Null': dt.Null,
+    'UInt8': dt.UInt8,
+    'UInt16': dt.UInt16,
+    'UInt32': dt.UInt32,
+    'UInt64': dt.UInt64,
+    'Int8': dt.Int8,
+    'Int16': dt.Int16,
+    'Int32': dt.Int32,
+    'Int64': dt.Int64,
+    'Float32': dt.Float32,
+    'Float64': dt.Float64,
+    'String': dt.String,
+    'FixedString': dt.String,
+    'Date': dt.Date,
+    'DateTime': dt.Timestamp
+}
+_ibis_dtypes = {v: k for k, v in _clickhouse_dtypes.items()}
+_ibis_dtypes[dt.String] = 'String'
+
+
+class ClickhouseDataType(object):
+
+    __slots__ = 'typename', 'nullable'
+
+    def __init__(self, typename, nullable=False):
+        if typename not in _clickhouse_dtypes:
+            raise com.UnsupportedBackendType(typename)
+        self.typename = typename
+        self.nullable = nullable
+
+    def __str__(self):
+        if self.nullable:
+            return 'Nullable({})'.format(self.typename)
+        else:
+            return self.typename
+
+    def __repr__(self):
+        return '<Clickhouse {}>'.format(str(self))
+
+    @classmethod
+    def parse(cls, spec):
+        # TODO(kszucs): spare parsing, depends on clickhouse-driver#22
+        if spec.startswith('Nullable'):
+            return cls(spec[9:-1], nullable=True)
+        else:
+            return cls(spec)
+
+    def to_ibis(self):
+        return _clickhouse_dtypes[self.typename](nullable=self.nullable)
+
+    @classmethod
+    def from_ibis(cls, dtype, nullable=None):
+        typename = _ibis_dtypes[type(dtype)]
+        if nullable is None:
+            nullable = dtype.nullable
+        return cls(typename, nullable=nullable)
+
+
+@dt.dtype.register(ClickhouseDataType)
+def clickhouse_to_ibis_dtype(clickhouse_dtype):
+    return clickhouse_dtype.to_ibis()
 
 
 class ClickhouseDatabase(Database):
@@ -27,44 +91,48 @@ class ClickhouseDatabase(Database):
 
 class ClickhouseQuery(Query):
 
+    def _external_tables(self):
+        table_set = getattr(self.ddl, 'table_set', None)
+        query_params = getattr(self.ddl, 'params', {})
+
+        if table_set is None:
+            return []
+
+        tables = []
+        for table in lin.roots(table_set, ClickhouseExternalTable):
+            data = table.execute(params=query_params).to_dict('records')
+
+            typenames = [str(ClickhouseDataType.from_ibis(dtype))
+                         for dtype in table.schema.types]
+            structure = list(zip(table.schema.names, typenames))
+
+            tables.append(dict(data=data,
+                               name=table.name,
+                               structure=structure))
+
+        return tables
+
     def execute(self):
-        # synchronous by default
-        cursor = self.client._execute(self.compiled_ddl)
+        cursor = self.client._execute(
+            self.compiled_ddl,
+            external_tables=self._external_tables()
+        )
         result = self._fetch(cursor)
         return self._wrap_result(result)
 
     def _fetch(self, cursor):
-        data, columns = cursor
-        names, types = czip(*columns)
+        data, colnames, coltypes = cursor
+        schema = sch.schema(colnames, coltypes)
+        # TODO(kszucs): schema = self.schema() instead
 
-        cols = {}
-        for (col, name, db_type) in czip(data, names, types):
-            dtype = self._db_type_to_dtype(db_type, name)
+        columns = {}
+        for (column, (name, dtype)) in czip(data, schema.to_pandas()):
             try:
-                cols[name] = pd.Series(col, dtype=dtype)
+                columns[name] = pd.Series(column, dtype=dtype)
             except TypeError:
-                cols[name] = pd.Series(col)
+                columns[name] = pd.Series(column)
 
-        return pd.DataFrame(cols, columns=names)
-
-    def _db_type_to_dtype(self, db_type, column):
-        try:
-            return clickhouse_to_pandas[db_type]
-        except KeyError:
-            return com.UnsupportedBackendType(db_type)
-
-
-def clickhouse_types_to_ibis_types(types):
-    result = []
-
-    for t in types:
-        try:
-            value = clickhouse_to_ibis[t]
-        except KeyError:
-            raise com.UnsupportedBackendType(t)
-        else:
-            result.append(value)
-    return result
+        return pd.DataFrame(columns, columns=schema.names)
 
 
 class ClickhouseClient(SQLClient):
@@ -96,12 +164,18 @@ class ClickhouseClient(SQLClient):
         """Close Clickhouse connection and drop any temporary objects"""
         self.con.disconnect()
 
-    def _execute(self, query):
+    def _execute(self, query, external_tables=[]):
         if isinstance(query, DDL):
             query = query.compile()
         self.log(query)
 
-        return self.con.execute(query, columnar=True, with_column_types=True)
+        data, columns = self.con.execute(query, columnar=True,
+                                         with_column_types=True,
+                                         external_tables=external_tables)
+        colnames, typenames = czip(*columns)
+        coltypes = list(map(ClickhouseDataType.parse, typenames))
+
+        return data, colnames, coltypes
 
     def _fully_qualified_name(self, name, database):
         if bool(fully_qualified_re.search(name)):
@@ -196,16 +270,12 @@ class ClickhouseClient(SQLClient):
         """
         qualified_name = self._fully_qualified_name(table_name, database)
         query = 'DESC {0}'.format(qualified_name)
-        data, _ = self._execute(query)
+        data = self._execute(query)[0]
 
-        names, types = data[:2]
-        ibis_types = clickhouse_types_to_ibis_types(types)
-        try:
-            ibis_types = map(clickhouse_to_ibis.__getitem__, types)
-        except KeyError:
-            raise com.UnsupportedBackendType()
+        colnames, coltypes = data[:2]
+        coltypes = list(map(ClickhouseDataType.parse, coltypes))
 
-        return sch.Schema(names, ibis_types)
+        return sch.schema(colnames, coltypes)
 
     @property
     def client_options(self):
@@ -242,10 +312,8 @@ class ClickhouseClient(SQLClient):
         return self.get_schema(tname)
 
     def _get_schema_using_query(self, query):
-        _, types = self._execute(query)
-        names, clickhouse_types = zip(*types)
-        ibis_types = clickhouse_types_to_ibis_types(clickhouse_types)
-        return sch.Schema(names, ibis_types)
+        _, colnames, coltypes = self._execute(query)
+        return sch.schema(colnames, coltypes)
 
     def _exec_statement(self, stmt, adapter=None):
         query = ClickhouseQuery(self, stmt)
@@ -257,6 +325,19 @@ class ClickhouseClient(SQLClient):
     def _table_command(self, cmd, name, database=None):
         qualified_name = self._fully_qualified_name(name, database)
         return '{0} {1}'.format(cmd, qualified_name)
+
+    @property
+    def version(self):
+        self.con.connection.force_connect()
+
+        try:
+            info = self.con.connection.server_info
+            version = (info.version_major, info.version_minor, info.revision)
+        except Exception as e:
+            self.con.connection.disconnect()
+            raise e
+        else:
+            return version
 
 
 class ClickhouseTable(ir.TableExpr, DatabaseEntity):
@@ -309,17 +390,26 @@ class ClickhouseTable(ir.TableExpr, DatabaseEntity):
         return self._client._execute(stmt)
 
 
-class ClickhouseTemporaryTable(ops.DatabaseTable):
+class ClickhouseExternalTable(ops.DatabaseTable):
 
-    def __del__(self):
-        try:
-            self.drop()
-        except com.IbisError:
-            pass
+    def execute(self, *args, **kwargs):
+        return self.source.execute(*args, **kwargs)
 
-    def drop(self):
-        try:
-            self.source.drop_table(self.name)
-        except Exception:  # ClickhouseError
-            # database might have been dropped
-            pass
+    def root_tables(self):
+        return [self]
+
+
+def external_table(name, table):
+    """
+    Flag a Selection or a DatabaseTable as external to Clickhouse
+
+    Parameters
+    ----------
+    table : TableExpr
+
+    Returns
+    -------
+    table : ClickhouseExternalTable
+    """
+    op = ClickhouseExternalTable(name, table.schema(), table)
+    return ClickhouseTable(op)

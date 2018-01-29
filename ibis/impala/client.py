@@ -294,10 +294,15 @@ class ImpalaQuery(Query):
     def _fetch(self, cursor):
         batches = cursor.fetchall(columnar=True)
         names = [x[0] for x in cursor.description]
-        return _column_batches_to_dataframe(names, batches)
+        df = _column_batches_to_dataframe(names, batches)
 
-    def _db_type_to_dtype(self, db_type, column):
-        return _HS2_TTypeId_to_dtype[db_type]
+        # UGLY HACK for PY2 to ensure unicode values for string columns
+        if self.expr is not None:
+            # in case of metadata queries there is no expr and
+            # self.schema() would raise an exception
+            return self.schema().ensure_on(df)
+
+        return df
 
 
 def _column_batches_to_dataframe(names, batches):
@@ -370,8 +375,10 @@ class ImpalaAsyncQuery(ImpalaQuery, AsyncQuery):
         self._operation_active = False
 
     def __del__(self):
-        if self._cursor is not None:
+        try:
             self._cursor.release()
+        except AttributeError:
+            pass
 
     def execute(self):
         if self._operation_active:
@@ -724,6 +731,15 @@ class ImpalaClient(SQLClient):
     @property
     def client_options(self):
         return self.con.options
+
+    @property
+    def version(self):
+        with self._execute('select version()', results=True) as cur:
+            raw = self._get_list(cur)[0]
+
+        v = raw.split()[2]
+        m = re.match('.*?(\d{1,3})\.(\d{1,3})\.(\d{1,3}).*', v)
+        return tuple([int(x) for x in m.group(1, 2, 3) if x is not None])
 
     def get_options(self):
         """

@@ -1,10 +1,9 @@
 import collections
 import datetime
 import re
-
 import six
-
 import pandas as pd
+import google.cloud.bigquery as bq
 
 from multipledispatch import Dispatcher
 
@@ -15,8 +14,6 @@ import ibis.expr.datatypes as dt
 
 from ibis.client import Database, Query, SQLClient
 from ibis.bigquery import compiler as comp
-
-import google.cloud.bigquery as bq
 
 
 def _ensure_split(table_id, dataset_id):

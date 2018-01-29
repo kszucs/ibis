@@ -6,10 +6,14 @@ export IBIS_TEST_NN_HOST=localhost
 export IBIS_TEST_WEBHDFS_PORT=50070
 export IBIS_TEST_WEBHDFS_USER=ubuntu
 
-docker-compose up -d
+CWD=$(dirname $0)
 
-python datamgr.py download
-python datamgr.py sqlite
-python datamgr.py postgres
-python datamgr.py clickhouse
-python impalamgr.py load --data --no-udf --data-dir ibis-testing-data
+docker-compose -f $CWD/docker-compose.yml up -d
+
+python $CWD/datamgr.py download
+python $CWD/datamgr.py parquet
+python $CWD/datamgr.py mysql
+python $CWD/datamgr.py sqlite
+python $CWD/datamgr.py postgres
+python $CWD/datamgr.py clickhouse
+python $CWD/impalamgr.py load --data --no-udf --data-dir $CWD/ibis-testing-data

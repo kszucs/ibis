@@ -6,12 +6,14 @@ dependencies:
   - enum34
   - flake8
   - graphviz
+  - requests
   - impyla>=0.13.7
   - mock
   - multipledispatch
   - numpy=1.11.*
-  - pandas=0.18.1
+  - pandas
   - psycopg2
+  - pymysql
   - pytest
   - python=2.7
   - python-graphviz

@@ -121,6 +121,28 @@ def _strftime_int(fmt):
     return translator
 
 
+_truncate_modifiers = {
+    'Y': 'start of year',
+    'M': 'start of month',
+    'D': 'start of day',
+    'W': 'weekday 1',
+}
+
+
+def _truncate(func):
+    def translator(t, expr):
+        arg, unit = expr.op().args
+        sa_arg = t.translate(arg)
+        try:
+            modifier = _truncate_modifiers[unit]
+        except KeyError:
+            raise com.TranslationError('Unsupported truncate unit '
+                                       '{}'.format(unit))
+        return func(sa_arg, modifier)
+
+    return translator
+
+
 def _now(t, expr):
     return sa.func.datetime('now')
 
@@ -222,6 +244,9 @@ _operation_registry.update({
 
     ops.StringReplace: fixed_arity(sa.func.replace, 3),
 
+    ops.Date: unary(sa.func.date),
+    ops.DateTruncate: _truncate(sa.func.date),
+    ops.TimestampTruncate: _truncate(sa.func.datetime),
     ops.Strftime: _strftime,
     ops.ExtractYear: _strftime_int('%Y'),
     ops.ExtractMonth: _strftime_int('%m'),
@@ -241,21 +266,21 @@ _operation_registry.update({
     ops.LPad: _lpad,
     ops.RPad: _rpad,
 
-    ops.Reverse: fixed_arity(sa.func._ibis_sqlite_reverse, 1),
-    ops.StringAscii: fixed_arity(sa.func._ibis_sqlite_string_ascii, 1),
-    ops.Capitalize: fixed_arity(sa.func._ibis_sqlite_capitalize, 1),
+    ops.Reverse: unary(sa.func._ibis_sqlite_reverse),
+    ops.StringAscii: unary(sa.func._ibis_sqlite_string_ascii),
+    ops.Capitalize: unary(sa.func._ibis_sqlite_capitalize),
     ops.Translate: fixed_arity(sa.func._ibis_sqlite_translate, 3),
 
-    ops.Sqrt: fixed_arity(sa.func._ibis_sqlite_sqrt, 1),
+    ops.Sqrt: unary(sa.func._ibis_sqlite_sqrt),
     ops.Power: fixed_arity(sa.func._ibis_sqlite_power, 2),
-    ops.Exp: fixed_arity(sa.func._ibis_sqlite_exp, 1),
-    ops.Ln: fixed_arity(sa.func._ibis_sqlite_ln, 1),
+    ops.Exp: unary(sa.func._ibis_sqlite_exp),
+    ops.Ln: unary(sa.func._ibis_sqlite_ln),
     ops.Log: _log,
-    ops.Log10: fixed_arity(sa.func._ibis_sqlite_log10, 1),
-    ops.Log2: fixed_arity(sa.func._ibis_sqlite_log2, 1),
-    ops.Floor: fixed_arity(sa.func._ibis_sqlite_floor, 1),
-    ops.Ceil: fixed_arity(sa.func._ibis_sqlite_ceil, 1),
-    ops.Sign: fixed_arity(sa.func._ibis_sqlite_sign, 1),
+    ops.Log10: unary(sa.func._ibis_sqlite_log10),
+    ops.Log2: unary(sa.func._ibis_sqlite_log2),
+    ops.Floor: unary(sa.func._ibis_sqlite_floor),
+    ops.Ceil: unary(sa.func._ibis_sqlite_ceil),
+    ops.Sign: unary(sa.func._ibis_sqlite_sign),
     ops.FloorDivide: fixed_arity(sa.func._ibis_sqlite_floordiv, 2),
 
     ops.Variance: _variance_reduction('_ibis_sqlite_var'),

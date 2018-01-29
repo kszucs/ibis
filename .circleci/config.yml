@@ -12,6 +12,11 @@ environment: &environment
   - IBIS_TEST_POSTGRES_PASSWORD: ubuntu
   - IBIS_TEST_POSTGRES_DATABASE: ibis_testing
 
+  - IBIS_TEST_MYSQL_HOST: localhost
+  - IBIS_TEST_MYSQL_USER: ibis
+  - IBIS_TEST_MYSQL_PASSWORD: ibis
+  - IBIS_TEST_MYSQL_DATABASE: ibis_testing
+
   - IBIS_TEST_CLICKHOUSE_USER: default
   - IBIS_TEST_CLICKHOUSE_HOST: localhost
   - IBIS_TEST_CLICKHOUSE_PASSWORD: ''
@@ -58,6 +63,8 @@ python_test_steps: &python_test_steps
                 -timeout 1m
   - run: sudo apt-get install -qq -y postgresql-client
   - run: testing/datamgr.py download
+  - run: testing/datamgr.py parquet
+  - run: testing/datamgr.py mysql
   - run: testing/datamgr.py sqlite
   - run: |
       testing/datamgr.py postgres \
@@ -139,6 +146,12 @@ jobs:
           PYTHON_VERSION: 2.7
       - image: cpcloud86/impala:java8-1
       - image: yandex/clickhouse-server
+      - image: mariadb:10.2
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   python34_test:
@@ -148,7 +161,13 @@ jobs:
         environment:
           PYTHON_VERSION: 3.4
       - image: cpcloud86/impala:java8-1
-      - image: yandex/clickhouse-server
+      - image: yandex/clickhouse-server:1.1.54327
+      - image: mariadb:10.2
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   python35_test:
@@ -158,7 +177,13 @@ jobs:
         environment:
           PYTHON_VERSION: 3.5
       - image: cpcloud86/impala:java8-1
-      - image: yandex/clickhouse-server
+      - image: yandex/clickhouse-server:1.1.54327
+      - image: mariadb:10.2
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   python36_test:
@@ -168,7 +193,13 @@ jobs:
         environment:
           PYTHON_VERSION: 3.6
       - image: cpcloud86/impala:java8-1
-      - image: yandex/clickhouse-server
+      - image: yandex/clickhouse-server:1.1.54327
+      - image: mariadb:10.2
+        environment:
+          - MYSQL_ALLOW_EMPTY_PASSWORD=1
+          - MYSQL_DATABASE=ibis_testing
+          - MYSQL_USER=ibis
+          - MYSQL_PASSWORD=ibis
     steps: *python_test_steps
 
   ################# CONDA BUILD ##################

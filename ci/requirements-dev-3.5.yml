@@ -5,14 +5,17 @@ dependencies:
   - cmake
   - flake8
   - graphviz
+  - requests
   - impyla>=0.13.7
   - multipledispatch
   - numpy=1.12.0
   - pandas
   - psycopg2
+  - pymysql
   - pytest
   - python=3.5
   - python-graphviz
+  - pyarrow>=0.6.0
   - regex
   - six
   - sh
