@@ -553,6 +553,7 @@ _operation_registry = {
     # ops.GroupConcat: fixed_arity('group_concat', 2),
 
     ops.Count: agg('count'),
+    ops.Arbitrary: agg('any'),
     ops.CountDistinct: agg('uniq'),
 
     # string operations
