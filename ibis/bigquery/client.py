@@ -1,13 +1,22 @@
+import collections
+import datetime
 import re
+
+import six
 
 import pandas as pd
 
+from multipledispatch import Dispatcher
+
 import ibis
+import ibis.common as com
 import ibis.expr.types as ir
 import ibis.expr.datatypes as dt
+
 from ibis.client import Database, Query, SQLClient
 from ibis.bigquery import compiler as comp
-import google.cloud.bigquery
+
+import google.cloud.bigquery as bq
 
 
 def _ensure_split(table_id, dataset_id):
@@ -46,14 +55,30 @@ class BigQueryCursor(object):
 
 class BigQuery(Query):
 
+    def __init__(self, *args, **kwargs):
+        query_parameters = kwargs.pop('query_parameters', [])
+        super(BigQuery, self).__init__(*args, **kwargs)
+        self.query_parameters = query_parameters
+
     def _fetch(self, cursor):
         return pd.DataFrame(cursor.fetchall(), columns=cursor.columns)
+
+    def execute(self):
+        # synchronous by default
+        with self.client._execute(
+            self.compiled_ddl,
+            results=True,
+            query_parameters=self.query_parameters
+        ) as cur:
+            result = self._fetch(cur)
+
+        return self._wrap_result(result)
 
 
 class BigQueryAPIProxy(object):
 
     def __init__(self, project_id):
-        self._client = google.cloud.bigquery.Client(project_id)
+        self._client = bq.Client(project_id)
 
     @property
     def client(self):
@@ -84,6 +109,85 @@ class BigQueryDatabase(Database):
     pass
 
 
+bigquery_param = Dispatcher('bigquery_param')
+
+
+@bigquery_param.register(ir.StructScalar, collections.OrderedDict)
+def bq_param_struct(param, value):
+    field_params = [bigquery_param(param[k], v) for k, v in value.items()]
+    return bq.StructQueryParameter(param._name, *field_params)
+
+
+@bigquery_param.register(ir.ArrayValue, list)
+def bq_param_array(param, value):
+    param_type = param.type()
+    assert isinstance(param_type, dt.Array), str(param_type)
+
+    try:
+        bigquery_type = _IBIS_TYPE_TO_DTYPE[str(param_type.value_type)]
+    except KeyError:
+        raise com.UnsupportedBackendType(param_type)
+    else:
+        return bq.ArrayQueryParameter(param._name, bigquery_type, value)
+
+
+@bigquery_param.register(
+    ir.TimestampScalar,
+    six.string_types + (datetime.datetime, datetime.date)
+)
+def bq_param_timestamp(param, value):
+    assert isinstance(param.type(), dt.Timestamp)
+
+    # TODO(phillipc): Not sure if this is the correct way to do this.
+    timestamp_value = pd.Timestamp(value, tz='UTC').to_pydatetime()
+    return bq.ScalarQueryParameter(param._name, 'TIMESTAMP', timestamp_value)
+
+
+_IBIS_TYPE_TO_DTYPE = {
+    'string': 'STRING',
+    'int64': 'INT64',
+    'double': 'FLOAT64',
+    'boolean': 'BOOL',
+    'timestamp': 'TIMESTAMP',
+    'date': 'DATE',
+}
+
+
+@bigquery_param.register(ir.StringScalar, six.string_types)
+def bq_param_string(param, value):
+    return bq.ScalarQueryParameter(param._name, 'STRING', value)
+
+
+@bigquery_param.register(ir.Int64Scalar, six.integer_types)
+def bq_param_integer(param, value):
+    return bq.ScalarQueryParameter(param._name, 'INT64', value)
+
+
+@bigquery_param.register(ir.DoubleScalar, float)
+def bq_param_double(param, value):
+    return bq.ScalarQueryParameter(param._name, 'FLOAT64', value)
+
+
+@bigquery_param.register(ir.BooleanScalar, bool)
+def bq_param_boolean(param, value):
+    return bq.ScalarQueryParameter(param._name, 'BOOL', value)
+
+
+@bigquery_param.register(ir.DateScalar, six.string_types)
+def bq_param_date_string(param, value):
+    return bigquery_param(param, pd.Timestamp(value).to_pydatetime().date())
+
+
+@bigquery_param.register(ir.DateScalar, datetime.datetime)
+def bq_param_date_datetime(param, value):
+    return bigquery_param(param, value.date())
+
+
+@bigquery_param.register(ir.DateScalar, datetime.date)
+def bq_param_date(param, value):
+    return bq.ScalarQueryParameter(param._name, 'DATE', value)
+
+
 class BigQueryClient(SQLClient):
 
     sync_query = BigQuery
@@ -92,7 +196,7 @@ class BigQueryClient(SQLClient):
     dialect = comp.BigQueryDialect
 
     def __init__(self, project_id, dataset_id):
-        self._proxy = self.__class__.proxy_class(project_id)
+        self._proxy = type(self).proxy_class(project_id)
         self._dataset_id = dataset_id
 
     @property
@@ -107,8 +211,14 @@ class BigQueryClient(SQLClient):
     def _table_expr_klass(self):
         return ir.TableExpr
 
-    def _build_ast(self, expr, params=None):
-        return comp.build_ast(expr, params=params)
+    def _build_ast(self, expr, context):
+        result = comp.build_ast(expr, context)
+        return result
+
+    def _execute_query(self, ddl, async=False):
+        klass = self.async_query if async else self.sync_query
+        inst = klass(self, ddl, query_parameters=ddl.context.params)
+        return inst.execute()
 
     def _fully_qualified_name(self, name, database):
         dataset_id = database or self.dataset_id
@@ -117,10 +227,17 @@ class BigQueryClient(SQLClient):
     def _get_table_schema(self, qualified_name):
         return self.get_schema(qualified_name)
 
-    def _execute(self, stmt, results=True):
+    def _execute(self, stmt, results=True, query_parameters=None):
         # TODO(phillipc): Allow **kwargs in calls to execute
         query = self._proxy.client.run_sync_query(stmt)
+
         query.use_legacy_sql = False
+
+        query.query_parameters = [
+            bigquery_param(param, value)
+            for param, value in query_parameters.items()
+        ]
+
         query.run()
         return BigQueryCursor(query)
 

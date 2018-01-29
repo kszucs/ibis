@@ -17,7 +17,7 @@ import contextlib
 
 import sqlalchemy as sa
 
-from ibis.sql.postgres.compiler import PostgreSQLDialect
+import ibis.sql.postgres.compiler as comp
 import ibis.sql.alchemy as alch
 
 
@@ -42,7 +42,7 @@ class PostgreSQLClient(alch.AlchemyClient):
     con : sqlalchemy.engine.Engine
     """
 
-    dialect = PostgreSQLDialect
+    dialect = comp.PostgreSQLDialect
     database_class = PostgreSQLDatabase
     default_database_name = 'public'
 

@@ -774,5 +774,4 @@ compiles = PostgreSQLExprTranslator.compiles
 
 
 class PostgreSQLDialect(alch.AlchemyDialect):
-
     translator = PostgreSQLExprTranslator

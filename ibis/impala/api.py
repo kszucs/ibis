@@ -11,16 +11,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ibis.impala.client import (ImpalaConnection,  # noqa
+from ibis.impala.client import (ImpalaConnection,  # noqa: F401
                                 ImpalaClient,
                                 ImpalaDatabase,
-                                ImpalaTable)
-from ibis.impala.udf import *  # noqa
+                                ImpalaTable,
+                                ImpalaDialect)
+from ibis.impala.udf import *  # noqa: F401,F403
 from ibis.config import options
 import ibis.common as com
 
 
-def compile(expr):
+def compile(expr, params=None):
     """
     Force compilation of expression as though it were an expression depending
     on Impala. Note you can also call expr.compile()
@@ -30,15 +31,15 @@ def compile(expr):
     compiled : string
     """
     from .compiler import to_sql
-    return to_sql(expr)
+    return to_sql(expr, ImpalaDialect.make_context(params=params))
 
 
-def verify(expr):
+def verify(expr, params=None):
     """
     Determine if expression can be successfully translated to execute on Impala
     """
     try:
-        compile(expr)
+        compile(expr, params=params)
         return True
     except com.TranslationError:
         return False

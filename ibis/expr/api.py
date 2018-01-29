@@ -1998,7 +1998,7 @@ def _struct_get_field(expr, field_name):
     value_expr : ibis.expr.types.ValueExpr
         An expression with the type of the field being accessed.
     """
-    return _ops.StructField(expr, field_name).to_expr()
+    return _ops.StructField(expr, field_name).to_expr().name(field_name)
 
 
 _struct_column_methods = dict(

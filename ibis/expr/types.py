@@ -537,7 +537,7 @@ _parameter_counter = itertools.count()
 
 
 def _parameter_name():
-    return 'param[{:d}]'.format(next(_parameter_counter))
+    return 'param_{:d}'.format(next(_parameter_counter))
 
 
 class ScalarParameter(ValueOp):
@@ -1444,7 +1444,7 @@ def literal(value, type=None):
     if type is not None:
         try:
             # check that dtype is implicitly castable to explicitly given dtype
-            dtype = dtype.cast(type)
+            dtype = dtype.cast(type, value=value)
         except com.IbisTypeError:
             raise TypeError('Value {!r} cannot be safely coerced '
                             'to {}'.format(value, type))

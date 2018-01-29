@@ -31,6 +31,8 @@ import ibis
 
 class QueryAST(object):
 
+    __slots__ = 'context', 'queries'
+
     def __init__(self, context, queries):
         self.context = context
         self.queries = queries
@@ -48,7 +50,7 @@ class SelectBuilder(object):
     relevant query unit aliases to be used when actually generating SQL.
     """
 
-    def __init__(self, expr, context, params):
+    def __init__(self, expr, context):
         self.expr = expr
 
         self.query_expr, self.result_handler = _adapt_expr(self.expr)
@@ -69,7 +71,6 @@ class SelectBuilder(object):
         self.distinct = False
 
         self.op_memo = util.IbisSet()
-        self.params = params
 
     def get_result(self):
         # make idempotent
@@ -118,8 +119,7 @@ class SelectBuilder(object):
                      distinct=self.distinct,
                      result_handler=self.result_handler,
                      parent_expr=self.query_expr,
-                     context=self.context,
-                     params=self.params)
+                     context=self.context)
 
     def _populate_context(self):
         # Populate aliases for the distinct relations used to output this
@@ -840,10 +840,15 @@ def _adapt_expr(expr):
         else:
             base_table = ir.find_base_table(expr)
             if base_table is None:
-                # expr with no table refs
+                # exprs with no table refs
+                # TODO(phillipc): remove ScalarParameter hack
+                if isinstance(expr.op(), ir.ScalarParameter):
+                    assert expr._name is not None, \
+                        'scalar parameter {} has no name'.format(expr)
+                    return expr, _get_scalar(expr._name)
                 return expr.name('tmp'), _get_scalar('tmp')
-            else:
-                raise NotImplementedError(expr._repr())
+
+            raise NotImplementedError(repr(expr))
 
     elif isinstance(expr, ir.AnalyticExpr):
         return expr.to_aggregation(), as_is
@@ -907,18 +912,9 @@ class QueryBuilder(object):
 
     select_builder = SelectBuilder
 
-    def __init__(self, expr, context=None, params=None):
+    def __init__(self, expr, context):
         self.expr = expr
-
-        if context is None:
-            context = self._make_context()
-
         self.context = context
-        self.params = params if params is not None else {}
-
-    @property
-    def _make_context(self):
-        raise NotImplementedError
 
     @property
     def _union_class(self):
@@ -940,11 +936,10 @@ class QueryBuilder(object):
         op = self.expr.op()
         return self._union_class(op.left, op.right, self.expr,
                                  distinct=op.distinct,
-                                 context=self.context,
-                                 params=self.params)
+                                 context=self.context)
 
     def _make_select(self):
-        builder = self.select_builder(self.expr, self.context, self.params)
+        builder = self.select_builder(self.expr, self.context)
         return builder.get_result()
 
 
@@ -954,7 +949,9 @@ class QueryContext(object):
     Records bits of information used during ibis AST to SQL translation
     """
 
-    def __init__(self, indent=2, parent=None, memo=None):
+    def __init__(
+        self, indent=2, parent=None, memo=None, dialect=None, params=None
+    ):
         self._table_refs = {}
         self.extracted_subexprs = set()
         self.subquery_memo = {}
@@ -967,6 +964,8 @@ class QueryContext(object):
 
         self._table_key_memo = {}
         self.memo = memo or format.FormatMemo()
+        self.dialect = dialect
+        self.params = params if params is not None else {}
 
     def _compile_subquery(self, expr):
         sub_ctx = self.subcontext()
@@ -1052,7 +1051,7 @@ class QueryContext(object):
         self.make_alias(expr)
 
     def subcontext(self):
-        return type(self)(indent=self.indent, parent=self)
+        return type(self)(indent=self.indent, parent=self, params=self.params)
 
     # Maybe temporary hacks for correlated / uncorrelated subqueries
 
@@ -1109,21 +1108,18 @@ class ExprTranslator(object):
 
     _rewrites = {}
 
-    def __init__(
-        self,
-        expr, context=None, named=False, permit_subquery=False, params=None
-    ):
+    context_class = QueryContext
+
+    def __init__(self, expr, context, named=False, permit_subquery=False):
         self.expr = expr
         self.permit_subquery = permit_subquery
-        self.context = self._context_class() if context is None else context
+
+        assert context is not None, \
+            'context is None in {}'.format(type(self).__name__)
+        self.context = context
 
         # For now, governing whether the result will have a name
         self.named = named
-        self.params = params
-
-    @property
-    def _context_class(self):
-        raise NotImplementedError
 
     def get_result(self):
         """
@@ -1175,7 +1171,9 @@ class ExprTranslator(object):
             )
 
     def _trans_param(self, expr):
-        return self.params[expr]
+        raw_value = self.context.params[expr]
+        literal = ibis.literal(raw_value, type=expr.type())
+        return self.translate(literal)
 
     @classmethod
     def rewrites(cls, klass, f=None):
@@ -1291,6 +1289,15 @@ def _notall_expand(expr):
     return arg.sum() < t.count()
 
 
+class Dialect(object):
+
+    translator = ExprTranslator
+
+    @classmethod
+    def make_context(cls, **kwargs):
+        return cls.translator.context_class(dialect=cls(), **kwargs)
+
+
 class DDL(object):
     pass
 
@@ -1303,12 +1310,11 @@ class Select(DDL):
     generated it
     """
 
-    def __init__(self, table_set, select_set,
+    def __init__(self, table_set, select_set, context,
                  subqueries=None, where=None, group_by=None, having=None,
                  order_by=None, limit=None,
                  distinct=False, indent=2,
-                 result_handler=None, parent_expr=None,
-                 context=None, params=None):
+                 result_handler=None, parent_expr=None):
         self.context = context
 
         self.select_set = select_set
@@ -1330,19 +1336,16 @@ class Select(DDL):
         self.indent = indent
 
         self.result_handler = result_handler
-        self.params = params
 
-    translator = None
+    @property
+    def translator(self):
+        return self.context.dialect.translator
 
-    def _translate(self, expr, context=None, named=False,
-                   permit_subquery=False):
-        if context is None:
-            context = self.context
-
+    def _translate(self, expr, named=False, permit_subquery=False):
+        context = self.context
         translator = self.translator(expr, context=context,
                                      named=named,
-                                     permit_subquery=permit_subquery,
-                                     params=self.params)
+                                     permit_subquery=permit_subquery)
         return translator.get_result()
 
     def equals(self, other, cache=None):
@@ -1614,7 +1617,7 @@ class TableSetFormatter(object):
         self.join_predicates = []
 
     def _translate(self, expr):
-        return self.parent._translate(expr, context=self.context)
+        return self.parent._translate(expr)
 
     def _walk_join_tree(self, op):
         left = op.left.op()
@@ -1738,15 +1741,13 @@ class TableSetFormatter(object):
 
 class Union(DDL):
 
-    def __init__(self, left_table, right_table, expr, distinct=False,
-                 context=None, params=None):
+    def __init__(self, left_table, right_table, expr, context, distinct=False):
         self.context = context
         self.left = left_table
         self.right = right_table
         self.distinct = distinct
         self.table_set = expr
         self.filters = []
-        self.params = params
 
     def _extract_subqueries(self):
         self.subqueries = _extract_subqueries(self)
