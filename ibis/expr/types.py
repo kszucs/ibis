@@ -540,7 +540,16 @@ def _parameter_name():
     return 'param[{:d}]'.format(next(_parameter_counter))
 
 
-class ScalarParameter(ValueOp):
+class Param(ValueOp):
+
+    def root_tables(self):
+        return []
+
+    def resolve_name(self):
+        return self.name
+
+
+class ScalarParameter(Param):
 
     def __init__(self, type, name=None):
         super(ScalarParameter, self).__init__(type)
@@ -562,12 +571,6 @@ class ScalarParameter(ValueOp):
             self.name == other.name and
             self.type.equals(other.type, cache=cache)
         )
-
-    def root_tables(self):
-        return []
-
-    def resolve_name(self):
-        return self.name
 
 
 def param(type, name=None):
@@ -598,7 +601,12 @@ def param(type, name=None):
     """
     if name is None:
         name = _parameter_name()
-    expr = ScalarParameter(dt.validate_type(type), name=name).to_expr()
+
+    if isinstance(type, (tuple, list)):
+        dtype = dt.highest_precedence(map(dt.dtype, type))
+        return ParamList([param(dtype)]).to_expr()
+
+    expr = ScalarParameter(dt.dtype(type), name=name).to_expr()
     return expr.name(name)
 
 
@@ -1560,6 +1568,10 @@ class ValueList(ValueOp):
 
     def _make_expr(self):
         return ListExpr(self)
+
+
+class ParamList(ValueList, Param):
+    pass
 
 
 def bind_expr(table, expr):
