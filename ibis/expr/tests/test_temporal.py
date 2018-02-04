@@ -10,6 +10,25 @@ import ibis.expr.api as api
 from ibis.compat import PY2
 
 
+@pytest.mark.parametrize('timedelta', [
+    api.timedelta,
+    api.year,
+    api.quarter,
+    api.month,
+    api.week,
+    api.day,
+    api.hour,
+    api.minute,
+    api.second,
+    api.millisecond,
+    api.microsecond,
+    api.nanosecond
+])
+def test_timedelta_deprecated(timedelta):
+    with pytest.deprecated_call():
+        timedelta(1)
+
+
 def test_temporal_literals():
     date = ibis.literal('2015-01-01', 'date')
     assert isinstance(date, ir.DateScalar)
