@@ -1112,6 +1112,9 @@ class ImpalaDialect(comp.Dialect):
     translator = ImpalaExprTranslator
 
 
+dialect = ImpalaDialect
+
+
 compiles = ImpalaExprTranslator.compiles
 rewrites = ImpalaExprTranslator.rewrites
 

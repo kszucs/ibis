@@ -8,7 +8,7 @@ from ibis.pandas.decimal import execute_node  # noqa: F401
 from ibis.pandas.execution import execute  # noqa: F401
 
 
-__all__ = 'connect', 'execute'
+__all__ = 'connect', 'execute', 'dialect'
 
 
 def connect(dictionary):
@@ -82,4 +82,4 @@ class PandasDialect(ibis.sql.compiler.Dialect):
     translator = PandasExprTranslator
 
 
-PandasClient.dialect = PandasDialect
+PandasClient.dialect = dialect = PandasDialect

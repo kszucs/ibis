@@ -14,8 +14,8 @@
 from ibis.impala.client import (ImpalaConnection,  # noqa: F401
                                 ImpalaClient,
                                 ImpalaDatabase,
-                                ImpalaTable,
-                                ImpalaDialect)
+                                ImpalaTable)
+from ibis.impala.compiler import dialect  # noqa: F401
 from ibis.impala.udf import *  # noqa: F401,F403
 from ibis.config import options
 import ibis.common as com
@@ -30,8 +30,8 @@ def compile(expr, params=None):
     -------
     compiled : string
     """
-    from .compiler import to_sql
-    return to_sql(expr, ImpalaDialect.make_context(params=params))
+    from ibis.impala.compiler import to_sql
+    return to_sql(expr, dialect.make_context(params=params))
 
 
 def verify(expr, params=None):

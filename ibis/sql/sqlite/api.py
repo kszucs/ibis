@@ -14,7 +14,7 @@
 
 
 from ibis.sql.sqlite.client import SQLiteClient
-from ibis.sql.sqlite.compiler import rewrites, SQLiteDialect  # noqa: F401
+from ibis.sql.sqlite.compiler import rewrites, dialect  # noqa: F401
 
 
 def compile(expr, params=None):
@@ -22,7 +22,7 @@ def compile(expr, params=None):
     Force compilation of expression for the SQLite target
     """
     from ibis.sql.alchemy import to_sqlalchemy
-    return to_sqlalchemy(expr, SQLiteDialect.make_context(params=params))
+    return to_sqlalchemy(expr, dialect.make_context(params=params))
 
 
 def connect(path=None, create=False):

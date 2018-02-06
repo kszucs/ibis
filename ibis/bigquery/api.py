@@ -2,7 +2,7 @@ import google.cloud.bigquery  # noqa: F401 fail early if bigquery is missing
 import ibis.common as com
 from ibis.config import options  # noqa: F401
 from ibis.bigquery.client import BigQueryClient
-from ibis.bigquery.compiler import BigQueryDialect
+from ibis.bigquery.compiler import dialect
 
 
 def compile(expr, params=None):
@@ -14,8 +14,8 @@ def compile(expr, params=None):
     -------
     compiled : string
     """
-    from .compiler import to_sql
-    return to_sql(expr, BigQueryDialect.make_context(params=params))
+    from ibis.bigquery.compiler import to_sql
+    return to_sql(expr, dialect.make_context(params=params))
 
 
 def verify(expr, params=None):

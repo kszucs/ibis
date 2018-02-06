@@ -693,3 +693,6 @@ compiles = PostgreSQLExprTranslator.compiles
 
 class PostgreSQLDialect(alch.AlchemyDialect):
     translator = PostgreSQLExprTranslator
+
+
+dialect = PostgreSQLDialect

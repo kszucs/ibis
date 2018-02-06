@@ -2,10 +2,10 @@ import ibis.common as com
 
 from ibis.config import options
 from ibis.clickhouse.client import ClickhouseClient, external_table
-from ibis.clickhouse.compiler import ClickhouseDialect
+from ibis.clickhouse.compiler import dialect
 
 
-__all__ = ('compile', 'verify', 'connect', 'external_table')
+__all__ = 'compile', 'verify', 'connect', 'external_table', 'dialect'
 
 
 try:
@@ -24,8 +24,8 @@ def compile(expr, params=None):
     -------
     compiled : string
     """
-    from .compiler import to_sql
-    return to_sql(expr, ClickhouseDialect.make_context(params=params))
+    from ibis.clickhouse.compiler import to_sql
+    return to_sql(expr, dialect.make_context(params=params))
 
 
 def verify(expr, params=None):

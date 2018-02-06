@@ -172,6 +172,8 @@ class ClickhouseDialect(comp.Dialect):
     translator = ClickhouseExprTranslator
 
 
+dialect = ClickhouseDialect
+
 compiles = ClickhouseExprTranslator.compiles
 rewrites = ClickhouseExprTranslator.rewrites
 

@@ -309,3 +309,6 @@ class BigQuerySelect(ImpalaSelect):
 class BigQueryDialect(impala_compiler.ImpalaDialect):
 
     translator = BigQueryExprTranslator
+
+
+dialect = BigQueryDialect

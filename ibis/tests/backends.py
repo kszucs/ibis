@@ -57,6 +57,10 @@ class Backend(object):
     def awards_players(self):
         return self.connection.database().awards_players
 
+    @classmethod
+    def make_context(cls, params=None):
+        return cls.module.dialect.make_context(params=params)
+
 
 class UnorderedSeriesComparator(object):
 
@@ -69,6 +73,8 @@ class UnorderedSeriesComparator(object):
 
 class Csv(Backend):
     check_names = False
+
+    module = ibis.csv
 
     def connect(self, data_directory):
         filename = data_directory / 'functional_alltypes.csv'
@@ -88,6 +94,8 @@ class Csv(Backend):
 class Parquet(Backend):
     check_names = False
 
+    module = ibis.parquet
+
     def connect(self, data_directory):
         filename = data_directory / 'functional_alltypes.parquet'
         if not filename.exists():
@@ -98,6 +106,8 @@ class Parquet(Backend):
 class Pandas(Backend):
     check_names = False
     additional_skipped_operations = frozenset({ops.StringSQLLike})
+
+    module = ibis.pandas
 
     def connect(self, data_directory):
         return ibis.pandas.connect({
@@ -123,6 +133,8 @@ class SQLite(Backend):
     supports_window_operations = False
     check_dtype = False
 
+    module = ibis.sqlite
+
     def connect(self, data_directory):
         path = os.environ.get('IBIS_TEST_SQLITE_DATABASE',
                               data_directory / 'ibis_testing.db')
@@ -137,6 +149,8 @@ class SQLite(Backend):
 
 
 class Postgres(Backend):
+
+    module = ibis.postgres
 
     def connect(self, data_directory):
         user = os.environ.get('IBIS_TEST_POSTGRES_USER',
@@ -154,6 +168,8 @@ class Postgres(Backend):
 class MySQL(Backend):
     check_dtype = False
     supports_window_operations = False
+
+    module = ibis.mysql
 
     def connect(self, data_directory):
         user = os.environ.get('IBIS_TEST_MYSQL_USER', 'ibis')
@@ -187,6 +203,8 @@ class Clickhouse(Backend):
     check_dtype = False
     supports_window_operations = False
 
+    module = ibis.clickhouse
+
     def connect(self, data_directory):
         host = os.environ.get('IBIS_TEST_CLICKHOUSE_HOST', 'localhost')
         port = int(os.environ.get('IBIS_TEST_CLICKHOUSE_PORT', 9000))
@@ -203,6 +221,8 @@ class Clickhouse(Backend):
 
 
 class BigQuery(UnorderedSeriesComparator, Backend):
+
+    module = ibis.bigquery
 
     def connect(self, data_directory):
         ga = pytest.importorskip('google.auth')
@@ -226,6 +246,8 @@ class Impala(UnorderedSeriesComparator, Backend):
     supports_arrays = True
     supports_arrays_outside_of_select = False
     check_dtype = False
+
+    module = ibis.impala
 
     @classmethod
     def connect(cls, data_directory):

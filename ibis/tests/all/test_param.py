@@ -49,9 +49,8 @@ def test_timestamp_accepts_date_literals(backend, alltypes):
     param = ibis.param(dt.timestamp, name='param')
     expr = alltypes.mutate(param=param)
     params = {param: date_string}
-    assert expr.op().args[1][-1] in params
-    result = expr.compile(params=params)
-    expected = """\
-SELECT *, @param AS `param`
-FROM testing.functional_alltypes"""
-    assert result == expected
+
+    param_in_expr = expr.op().args[1][-1]
+
+    assert param_in_expr in params
+    assert param_in_expr.equals(param)
