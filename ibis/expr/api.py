@@ -2734,6 +2734,13 @@ def add_column(table, expr, name=None):
         return table.mutate(expr)
 
 
+def _safe_get_name(expr):
+    try:
+        return expr.get_name()
+    except _com.ExpressionError:
+        return None
+
+
 def mutate(table, exprs=None, **kwds):
     """
     Convenience function for table projections involving adding columns
@@ -2764,7 +2771,7 @@ def mutate(table, exprs=None, **kwds):
             v = as_value_expr(v)
 
         # TODO(phillipc): Fix this by making expressions hashable
-        named_v = v.name(k) if v.get_name() != k else v
+        named_v = v.name(k) if _safe_get_name(v) != k else v
         exprs.append(named_v)
 
     has_replacement = False
