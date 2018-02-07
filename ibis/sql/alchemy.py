@@ -123,6 +123,11 @@ def sa_float(satype, nullable=True):
     return dt.Float(nullable=nullable)
 
 
+@dt.dtype.register(sa.types.REAL)
+def sa_real(satype, nullable=True):
+    return dt.Double(nullable=nullable)
+
+
 @dt.dtype.register(sa.types.String)
 def sa_string(satype, nullable=True):
     return dt.String(nullable=nullable)
