@@ -14,8 +14,8 @@ def test_version(backend, con):
 
 @pytest.mark.parametrize(('expr_fn', 'expected'), [
     (lambda t: t.string_col, [('string_col', 'string')]),
-    (lambda t: t[t.string_col, t.double_col],
-     [('string_col', 'string'), ('double_col', 'double')])
+    (lambda t: t[t.string_col, t.month],
+     [('string_col', 'string'), ('month', 'int64')])
 ])
 def test_query_schema(backend, con, alltypes, expr_fn, expected):
     if not hasattr(con, '_build_ast'):
@@ -26,6 +26,7 @@ def test_query_schema(backend, con, alltypes, expr_fn, expected):
         )
 
     expr = expr_fn(alltypes)
+
     # we might need a public API for it
     ast = con._build_ast(expr, backend.make_context())
     query = con.sync_query(con, ast.queries[0])
