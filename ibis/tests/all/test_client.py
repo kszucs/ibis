@@ -15,7 +15,7 @@ def test_version(backend, con):
 @pytest.mark.parametrize(('expr_fn', 'expected'), [
     (lambda t: t.string_col, [('string_col', 'string')]),
     (lambda t: t[t.string_col, t.month],
-     [('string_col', 'string'), ('month', 'int64')])
+     [('string_col', 'string'), ('bigint_col', 'int64')])
 ])
 def test_query_schema(backend, con, alltypes, expr_fn, expected):
     if not hasattr(con, '_build_ast'):
