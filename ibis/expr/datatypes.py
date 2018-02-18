@@ -994,7 +994,7 @@ validate_type = dtype
 
 @dtype.register(object)
 def default(value, **kwargs):
-    raise TypeError('Value {!r} is not a valid type or string'.format(value))
+    raise com.IbisTypeError('Value {!r} is not a valid datatype'.format(value))
 
 
 @dtype.register(DataType)
@@ -1004,7 +1004,11 @@ def from_ibis_dtype(value):
 
 @dtype.register(six.string_types)
 def from_string(value):
-    return TypeParser(value).parse()
+    try:
+        return TypeParser(value).parse()
+    except SyntaxError:
+        raise com.IbisTypeError('{!r} cannot be parsed as a '
+                                'datatype'.format(value))
 
 
 infer = Dispatcher('infer')
@@ -1117,8 +1121,9 @@ def can_cast_subtype(source, target, **kwargs):
 
 
 @castable.register(Any, DataType)
+@castable.register(DataType, Any)
 @castable.register(Integer, Category)
-@castable.register(Integer, (Floating, Decimal))
+@castable.register(Integer, (Integer, Floating, Decimal))
 @castable.register(Floating, Decimal)
 @castable.register(Decimal, Floating)
 @castable.register((Date, Timestamp), (Date, Timestamp))
@@ -1131,7 +1136,8 @@ def can_cast_null(source, target, **kwargs):
     return target.nullable
 
 
-@castable.register(Integer, Integer)
+@castable.register(SignedInteger, SignedInteger)
+@castable.register(UnsignedInteger, UnsignedInteger)
 def can_cast_integers(source, target, **kwargs):
     return target._nbytes >= source._nbytes
 
@@ -1199,12 +1205,13 @@ def cast(source, target, **kwargs):
     return target
 
 
+# TODO: remove
 def issubtype(dtype, dtype_or_tuple):
     if not isinstance(dtype_or_tuple, tuple):
         parents = (dtype_or_tuple,)
     for parent in parents:
         # TODO cleanup
-
+        # modify castable rule instead
         if isinstance(dtype, type(parent)):
             return True
         elif isinstance(dtype, Any):
