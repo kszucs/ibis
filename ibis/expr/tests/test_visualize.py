@@ -9,6 +9,7 @@ import ibis.expr.types as ir  # noqa: E402
 import ibis.expr.visualize as viz  # noqa: E402
 
 from ibis.expr import rules  # noqa: E402
+import ibis.expr.rlz as rlz
 
 
 @pytest.mark.parametrize(
@@ -38,16 +39,13 @@ def test_custom_expr():
         pass
 
     class MyExprNode(ir.Node):
-
-        input_type = [
-            rules.string(name='foo'),
-            rules.number(name='bar'),
-        ]
+        foo = rlz.string
+        bar = rlz.numeric
 
         def output_type(self):
             return MyExpr
 
-    op = MyExprNode(['Hello!', 42.3])
+    op = MyExprNode('Hello!', 42.3)
     expr = op.to_expr()
     graph = viz.to_graph(expr)
     assert str(hash(repr(op))) in graph.source
@@ -63,16 +61,13 @@ def test_custom_expr_with_not_implemented_type():
             raise NotImplementedError
 
     class MyExprNode(ir.Node):
-
-        input_type = [
-            rules.string(name='foo'),
-            rules.number(name='bar'),
-        ]
+        foo = rlz.string
+        bar = rlz.numeric
 
         def output_type(self):
             return MyExpr
 
-    op = MyExprNode(['Hello!', 42.3])
+    op = MyExprNode('Hello!', 42.3)
     expr = op.to_expr()
     graph = viz.to_graph(expr)
     assert str(hash(repr(op))) in graph.source

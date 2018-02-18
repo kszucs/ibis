@@ -821,7 +821,7 @@ def _adapt_expr(expr):
 
     if isinstance(expr, ir.ScalarExpr):
 
-        if L.is_scalar_reduce(expr):
+        if L.is_scalar_reduction(expr):
             table_expr, name = L.reduction_to_aggregation(
                 expr, default_name='tmp')
             return table_expr, _get_scalar(name)
@@ -830,7 +830,7 @@ def _adapt_expr(expr):
             if base_table is None:
                 # exprs with no table refs
                 # TODO(phillipc): remove ScalarParameter hack
-                if isinstance(expr.op(), ir.ScalarParameter):
+                if isinstance(expr.op(), ops.ScalarParameter):
                     assert expr._name is not None, \
                         'scalar parameter {} has no name'.format(expr)
                     return expr, _get_scalar(expr._name)
@@ -848,7 +848,7 @@ def _adapt_expr(expr):
         any_aggregation = False
 
         for x in exprs:
-            if not L.is_scalar_reduce(x):
+            if not L.is_scalar_reduction(x):
                 is_aggregation = False
             else:
                 any_aggregation = True
@@ -1151,7 +1151,7 @@ class ExprTranslator(object):
             op = expr.op()
 
         # TODO: use op MRO for subclasses instead of this isinstance spaghetti
-        if isinstance(op, ir.ScalarParameter):
+        if isinstance(op, ops.ScalarParameter):
             return self._trans_param(expr)
         elif isinstance(op, ops.TableNode):
             # HACK/TODO: revisit for more complex cases

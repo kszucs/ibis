@@ -559,6 +559,9 @@ class Map(Variadic):
 any = Any()
 null = Null()
 boolean = Boolean()
+integer = Integer()
+floating = Floating()
+decimal = Decimal(12, 2)
 int_ = Integer()
 int8 = Int8()
 int16 = Int16()
@@ -1200,9 +1203,13 @@ def issubtype(dtype, dtype_or_tuple):
     if not isinstance(dtype_or_tuple, tuple):
         parents = (dtype_or_tuple,)
     for parent in parents:
+        # TODO cleanup
+
         if isinstance(dtype, type(parent)):
             return True
         elif isinstance(dtype, Any):
+            return True
+        elif isinstance(parent, Any):
             return True
 
     return False
