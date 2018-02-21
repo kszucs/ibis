@@ -54,9 +54,9 @@ def optional(inner, arg, default=None):
         if default is None:
             return None
         elif callable(default):
-            arg = default()  # required by genname
+            return default()  # required by genname
         else:
-            arg = default
+            return default
     return inner(arg)
 
 
@@ -101,6 +101,19 @@ def datatype(arg):
 @validator
 def instanceof(klass, arg):
     """Require that a value has a particular Python type."""
+    if issubclass(klass, ir.Expr) and not isinstance(arg, ir.Expr):
+        # we expect ibis Expression thus we coerce python literals to ibis ones
+        arg = ir.literal(arg)
+    elif issubclass(klass, dt.DataType) and not isinstance(arg, dt.DataType):
+        # we expect ibis DataType thus we coerce python literals (in particular
+        # strings) to ibis datatypes
+        arg = dt.dtype(arg)
+    elif issubclass(klass, sch.Schema) and not isinstance(arg, sch.Schema):
+        arg = sch.schema(arg)
+    else:
+        pass  # TODO might try to coerce other types too
+
+
     if not isinstance(arg, klass):
         raise com.IbisTypeError(
             '{!r} is not an instance of {!r}'.format(arg, klass)
@@ -154,8 +167,8 @@ def interval(arg, units=None):
 
 
 # TODO: previouse number rules allowed booleans by default
-numeric = oneof([integer, floating, decimal])
-temporal = oneof([timestamp, date, time])
+# numeric = oneof([integer, floating, decimal])
+# temporal = oneof([timestamp, date, time])
 
 
 # TODO: instead of inner might just
@@ -173,3 +186,53 @@ def column(inner, arg):
 
 table = instanceof(ir.TableExpr)
 schema = instanceof(sch.Schema)
+
+
+# really just a syntactic sugar to resemple python typing
+
+class E(object):
+    pass
+
+
+class _Mixin(E):
+
+    __slots__ = ()
+
+    def __getitem__(self, classes):
+        return allof(map(instanceof, classes))
+
+
+class _List(E):
+
+    __slots__ = ()
+
+    def __getitem__(self, klass):
+        return listof(klass)
+
+    def __call__(self, *args, **kwargs):
+        return listof(*args, **kwargs)
+
+
+class _Union(E):
+
+    __slots__ = ()
+
+    def __getitem__(self, classes):
+        return oneof(list(map(instanceof, classes)))
+
+
+class _Optional(E):
+
+    __slots__ = ()
+
+    def __getitem__(self, inner):
+        return optional(inner)
+
+    def __call__(self, *args, **kwargs):
+        return optional(*args, **kwargs)
+
+
+Mixin = _Mixin()
+List = _List()
+Union = _Union()
+Optional = _Optional()

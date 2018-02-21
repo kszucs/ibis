@@ -111,6 +111,7 @@ class DataType(object):
         return getattr(ir, '{}Column'.format(self.name))
 
 
+# TODO: Any == DataType
 class Any(DataType):
 
     __slots__ = ()

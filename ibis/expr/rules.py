@@ -370,3 +370,12 @@ def _array_binop_invariant_output_type(self):
             )
         )
     return left_type
+
+
+def _ceil_floor_output(self):
+    # TODO: cleanup
+    arg = self.args[0]
+    if isinstance(arg, ir.DecimalValue):
+        return arg._factory
+    else:
+        return shape_like(arg, 'int64')
