@@ -1122,6 +1122,8 @@ def can_cast_subtype(source, target, **kwargs):
 
 @castable.register(Any, DataType)
 @castable.register(DataType, Any)
+@castable.register(Any, Any)
+@castable.register(Null, Any)
 @castable.register(Integer, Category)
 @castable.register(Integer, (Integer, Floating, Decimal))
 @castable.register(Floating, Decimal)
