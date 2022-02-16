@@ -42,7 +42,7 @@ def compute_projection_scalar_expr(
     timecontext: Optional[TimeContext] = None,
     **kwargs,
 ):
-    name = expr._name
+    name = expr.get_name()
     assert name is not None, 'Scalar selection name is None'
 
     op = expr.op()
@@ -76,7 +76,7 @@ def compute_projection_column_expr(
     timecontext: Optional[TimeContext],
     **kwargs,
 ):
-    result_name = getattr(expr, '_name', None)
+    result_name = expr.get_name()
     op = expr.op()
     parent_table_op = parent.table.op()
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from public import public
 
-from .generic import Expr
+from .generic import Expr, HasName
 
 
 @public

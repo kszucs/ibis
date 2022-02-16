@@ -24,6 +24,10 @@ if TYPE_CHECKING:
     from .generic import ValueExpr
 
 
+# TODO(kszucs): value exprs should expose a dtype() function
+# TODO(kszucs): table exprs should expose a schema() function
+
+
 @public
 class Expr:
     """Base expression class"""

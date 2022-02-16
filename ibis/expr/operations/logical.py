@@ -2,7 +2,7 @@ from contextlib import suppress
 
 from public import public
 
-from ...common import exceptions as com
+from ...common.exceptions import IbisTypeError
 from .. import datatypes as dt
 from .. import rules as rlz
 from .core import BinaryOp, UnaryOp, ValueOp
@@ -12,13 +12,15 @@ from .core import BinaryOp, UnaryOp, ValueOp
 class LogicalBinaryOp(BinaryOp):
     left = rlz.boolean
     right = rlz.boolean
-    output_type = rlz.shape_like('args', dt.boolean)
+
+    output_dtype = dt.boolean
 
 
 @public
 class Not(UnaryOp):
     arg = rlz.boolean
-    output_type = rlz.shape_like('arg', dt.boolean)
+
+    output_dtype = dt.boolean
 
 
 @public
@@ -41,37 +43,34 @@ class Comparison(BinaryOp):
     left = rlz.any
     right = rlz.any
 
+    output_dtype = dt.boolean
+
     def __init__(self, left, right):
         """
         Casting rules for type promotions (for resolving the output type) may
         depend in some cases on the target backend.
-
         TODO: how will overflows be handled? Can we provide anything useful in
         Ibis to help the user avoid them?
-
         :param left:
         :param right:
         """
         left, right = self._maybe_cast_args(left, right)
+        if not rlz.comparable(left, right):
+            raise TypeError(
+                'Arguments with datatype {} and {} are '
+                'not comparable'.format(left.type(), right.type())
+            )
         super().__init__(left=left, right=right)
 
     def _maybe_cast_args(self, left, right):
         # it might not be necessary?
-        with suppress(com.IbisTypeError):
+        with suppress(IbisTypeError):
             return left, rlz.cast(right, left)
 
-        with suppress(com.IbisTypeError):
+        with suppress(IbisTypeError):
             return rlz.cast(left, right), right
 
         return left, right
-
-    def output_type(self):
-        if not rlz.comparable(self.left, self.right):
-            raise TypeError(
-                'Arguments with datatype {} and {} are '
-                'not comparable'.format(self.left.type(), self.right.type())
-            )
-        return rlz.shape_like(self.args, dt.boolean)
 
 
 @public
@@ -115,13 +114,20 @@ class Between(ValueOp):
     lower_bound = rlz.any
     upper_bound = rlz.any
 
-    def output_type(self):
-        arg, lower, upper = self.args
+    output_dtype = dt.boolean
 
-        if not (rlz.comparable(arg, lower) and rlz.comparable(arg, upper)):
-            raise TypeError('Arguments are not comparable')
-
-        return rlz.shape_like(self.args, dt.boolean)
+    def __init__(self, arg, lower_bound, upper_bound):
+        if not rlz.comparable(arg, lower_bound):
+            raise TypeError(
+                f'Argument with datatype {arg.type()} and lower bound '
+                f'with datatype {lower_bound.type()} are not comparable'
+            )
+        if not rlz.comparable(arg, upper_bound):
+            raise TypeError(
+                f'Argument with datatype {arg.type()} and upper bound '
+                f'with datatype {upper_bound.type()} are not comparable'
+            )
+        super().__init__(arg=arg, lower_bound=lower_bound, upper_bound=upper_bound)
 
 
 @public
@@ -135,9 +141,7 @@ class Contains(ValueOp):
             rlz.array_of(rlz.any),
         ]
     )
-
-    def output_type(self):
-        return rlz.shape_like(self.flat_args(), dt.boolean)
+    output_dtype = dt.boolean
 
 
 @public
@@ -160,5 +164,5 @@ class Where(ValueOp):
     true_expr = rlz.any
     false_null_expr = rlz.any
 
-    def output_type(self):
-        return rlz.shape_like(self.bool_expr, self.true_expr.type())
+    output_shape = rlz.shape_like('bool_expr')
+    output_dtype = rlz.dtype_like('true_expr')

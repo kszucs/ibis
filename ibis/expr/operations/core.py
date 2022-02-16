@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 from __future__ import annotations
+=======
+import collections
+import functools
+import itertools
+from abc import abstractmethod
+>>>>>>> d0cec7ad (refactor(ir): simplify expressions by not storing dtype and name)
 
 import toolz
 from public import public
@@ -8,7 +15,11 @@ from ...common.grounds import Comparable
 from ...common.validators import immutable_property
 from ...util import is_iterable
 from .. import rules as rlz
+<<<<<<< HEAD
 from ..schema import Schema
+=======
+from .. import types as ir
+>>>>>>> d0cec7ad (refactor(ir): simplify expressions by not storing dtype and name)
 from ..signature import Annotable
 
 
@@ -64,8 +75,6 @@ class Node(Annotable, Comparable):
 
     @property
     def exprs(self):
-        from .. import types as ir
-
         return [arg for arg in self.args if isinstance(arg, ir.Expr)]
 
     def blocks(self):
@@ -87,9 +96,11 @@ class Node(Annotable, Comparable):
     def to_expr(self):
         return self._make_expr()
 
-    def _make_expr(self):
-        klass = self.output_type()
-        return klass(self)
+    def resolve_name(self):
+        raise com.ExpressionError(f'Expression is not named: {type(self)}')
+
+    def has_resolved_name(self):
+        return False
 
     def output_type(self):
         """Resolve the output type of the expression."""
@@ -107,14 +118,80 @@ class Node(Annotable, Comparable):
 
 @public
 class ValueOp(Node):
+    # columnar if any of the arguments is column-like
+    output_shape = rlz.shape_like("args")
+
+    # TODO(kszucs): we may want to enable this by default instead of
+    # requiring to implement output_dtype abstract property
+    # data type which all of the arguments are implicitly castable to
+    # output_dtype = rlz.dtype_like("args")
+
     def root_tables(self):
         return distinct_roots(*self.exprs)
 
-    def resolve_name(self):
-        raise ExpressionError(f'Expression is not named: {type(self)}')
+    # def resolve_name(self):
+    #     raise ExpressionError(f'Expression is not named: {type(self)}')
+
+    @property
+    @abstractmethod
+    def output_dtype(self):
+        ...
+
+    @property
+    def output_type(self):
+        if self.output_shape is rlz.Shape.COLUMNAR:
+            return self.output_dtype.column
+        else:
+            return self.output_dtype.scalar
+
+    # We could materialize output_type on construction as well or
+    # just cache the properties.
+    #
+    # @property
+    # def output_dtype(self):
+    #     raise NotImplementedError
+
+    # @property
+    # def output_shape(self):
+    #     raise NotImplementedError
+
+    # For ValueOp output_type would have a default implementation
+    # calling to output_Dtype and output_shape:
+    #
+    # @property
+    # def output_type(self):
+    #     if self.output_shape() == "columnar":
+    #         return self.output_dtype.column
+    #     else:
+    #         return self.output_dtype.scalar
+    #
+    # Whereas for example a ops.DatabaseTable could simply just
+    # define the target expr class:
+    #
+    # class ops.DatabaseTable:
+    #     output_type = ir.TableExpr
+    #
+    # e.g.:
+    # output_dtype = rlz.dtype_like('')
+    # output_shape = rlz.shape_like('')
+    #
+    # Could be a direct class since all expressions would be
+    # contructable by just passing the op, no additional fields.
+
+
+@public
+class Alias(ValueOp):
+    arg = rlz.any
+    name = rlz.instance_of((str, ir.UnnamedMarker))
+
+    output_shape = rlz.shape_like('arg')
+    output_dtype = rlz.dtype_like('arg')
 
     def has_resolved_name(self):
-        return False
+        return True
+
+    def resolve_name(self):
+        return self.name
 
 
 @public
@@ -122,6 +199,9 @@ class UnaryOp(ValueOp):
     """A unary operation."""
 
     arg = rlz.any
+
+    # specialization of the parent class' rule to only check a single field
+    output_shape = rlz.shape_like("arg")
 
 
 @public

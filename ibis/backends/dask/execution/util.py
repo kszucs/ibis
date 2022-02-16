@@ -90,7 +90,7 @@ def coerce_to_output(
 
     Examples
     --------
-    xamples below use pandas objects for legibility, but functionality is the
+    Examples below use pandas objects for legibility, but functionality is the
     same on dask objects.
 
     >>> coerce_to_output(pd.Series(1), expr)
