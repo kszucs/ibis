@@ -13,6 +13,7 @@ from ibis.backends.base.sql.registry import (
     operation_registry,
     quote_identifier,
 )
+from ibis.expr.types.core import unnamed
 
 
 class QueryContext:
@@ -200,6 +201,27 @@ class ExprTranslator:
         # For now, governing whether the result will have a name
         self.named = named
 
+    def _needs_name(self, expr):
+        if not self.named:
+            return False
+
+        op = expr.op()
+        if isinstance(op, ops.TableColumn):
+            # This column has been given an explicitly different name
+            if expr.get_name() != op.name:
+                return True
+            return False
+
+        if expr.get_name() is unnamed:
+            return False
+
+        return True
+
+    def name(self, translated, name, force=True):
+        return '{} AS {}'.format(
+            translated, quote_identifier(name, force=force)
+        )
+
     def get_result(self):
         """Compile SQL expression into a string."""
         translated = self.translate(self.expr)
@@ -220,27 +242,6 @@ class ExprTranslator:
         UDFs which are added dynamically.
         """
         cls._registry[operation] = translate_function
-
-    def _needs_name(self, expr):
-        if not self.named:
-            return False
-
-        op = expr.op()
-        if isinstance(op, ops.TableColumn):
-            # This column has been given an explicitly different name
-            if expr.get_name() != op.name:
-                return True
-            return False
-
-        if expr.get_name() is ir.core.unnamed:
-            return False
-
-        return True
-
-    def name(self, translated: str, name: str, force: bool = True) -> str:
-        return '{} AS {}'.format(
-            translated, quote_identifier(name, force=force)
-        )
 
     def translate(self, expr):
         # The operation node type the typed expression wraps
@@ -287,6 +288,7 @@ class ExprTranslator:
 rewrites = ExprTranslator.rewrites
 
 
+# TODO(kszucs): is this used?
 @rewrites(ops.Bucket)
 def _bucket(expr):
     op = expr.op()
@@ -331,9 +333,14 @@ def _bucket(expr):
         stmt = stmt.when(cmp(op.buckets[-1], op.arg), bucket_id)
         bucket_id += 1
 
-    return stmt.end().name(expr._name)
+    result = stmt.end()
+    if expr.has_name():
+        result = result.name(expr.get_name())
+
+    return result
 
 
+# TODO(kszucs): is this used?
 @rewrites(ops.CategoryLabel)
 def _category_label(expr):
     op = expr.op()
@@ -345,7 +352,11 @@ def _category_label(expr):
     if op.nulls is not None:
         stmt = stmt.else_(op.nulls)
 
-    return stmt.end().name(expr._name)
+    result = stmt.end()
+    if expr.has_name():
+        result = result.name(expr.get_name())
+
+    return result
 
 
 @rewrites(ops.Any)

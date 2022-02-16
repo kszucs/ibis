@@ -131,6 +131,7 @@ class DataType(Annotable, Comparable):
             )
         return super().__cached_equals__(other)
 
+    # TODO(kszucs): remove it
     def _factory(self, nullable: bool = True) -> DataType:
         kwargs = dict(zip(self.argnames, self.args))
         kwargs["nullable"] = nullable
@@ -143,14 +144,6 @@ class DataType(Annotable, Comparable):
     def cast(self, target, **kwargs):
         """Cast this data type to `target`."""
         return cast(self, target, **kwargs)
-
-    def scalar_type(self):
-        """Return a scalar expression with this data type."""
-        return functools.partial(self.scalar, dtype=self)
-
-    def column_type(self):
-        """Return a column expression with this data type."""
-        return functools.partial(self.column, dtype=self)
 
 
 @dtype.register(DataType)
@@ -1297,14 +1290,10 @@ def infer_floating(value: float) -> Float64:
 
 
 @infer.register(int)
-def infer_integer(value: int, allow_overflow: bool = False) -> Integer:
+def infer_integer(value: int) -> Integer:
     for dtype in (int8, int16, int32, int64):
         if dtype.bounds.lower <= value <= dtype.bounds.upper:
             return dtype
-
-    if not allow_overflow:
-        raise OverflowError(value)
-
     return int64
 
 
@@ -1445,7 +1434,7 @@ def can_cast_integer_to_boolean(
 
 @castable.register(Integer, Interval)
 def can_cast_integer_to_interval(
-    source: Interval, target: Interval, **kwargs
+    source: Integer, target: Interval, **kwargs
 ) -> bool:
     return castable(source, target.value_type)
 
@@ -1536,14 +1525,13 @@ def can_cast_special_string(source, target, **kwargs):
 
 def cast(source: str | DataType, target: str | DataType, **kwargs) -> DataType:
     """Attempts to implicitly cast from source dtype to target dtype"""
-    source, result_target = dtype(source), dtype(target)
+    source, target = dtype(source), dtype(target)
 
-    if not castable(source, result_target, **kwargs):
+    if not castable(source, target, **kwargs):
         raise IbisTypeError(
-            'Datatype {} cannot be implicitly '
-            'casted to {}'.format(source, result_target)
+            f'Datatype {source} cannot be implicitly casted to {target}'
         )
-    return result_target
+    return target
 
 
 same_kind = Dispatcher(

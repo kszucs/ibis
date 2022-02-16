@@ -3,6 +3,7 @@ import operator
 import toolz
 from public import public
 
+from ... import util
 from .. import datatypes as dt
 from .. import rules as rlz
 from .. import types as ir
@@ -78,28 +79,36 @@ _timestamp_units = toolz.merge(_date_units, _time_units)
 class TimestampTruncate(ValueOp):
     arg = rlz.timestamp
     unit = rlz.isin(_timestamp_units)
-    output_type = rlz.shape_like('arg', dt.timestamp)
+
+    output_shape = rlz.shape_like("arg")
+    output_dtype = dt.timestamp
 
 
 @public
 class DateTruncate(ValueOp):
     arg = rlz.date
     unit = rlz.isin(_date_units)
-    output_type = rlz.shape_like('arg', dt.date)
+
+    output_shape = rlz.shape_like("arg")
+    output_dtype = dt.date
 
 
 @public
 class TimeTruncate(ValueOp):
     arg = rlz.time
     unit = rlz.isin(_time_units)
-    output_type = rlz.shape_like('arg', dt.time)
+
+    output_shape = rlz.shape_like("arg")
+    output_dtype = dt.time
 
 
 @public
 class Strftime(ValueOp):
     arg = rlz.temporal
     format_str = rlz.string
-    output_type = rlz.shape_like('arg', dt.string)
+
+    output_shape = rlz.shape_like("arg")
+    output_dtype = dt.string
 
 
 @public
@@ -107,12 +116,14 @@ class StringToTimestamp(ValueOp):
     arg = rlz.string
     format_str = rlz.string
     timezone = rlz.optional(rlz.string)
-    output_type = rlz.shape_like('arg', dt.Timestamp(timezone='UTC'))
+
+    output_shape = rlz.shape_like("arg")
+    output_dtype = dt.Timestamp(timezone='UTC')
 
 
 @public
 class ExtractTemporalField(TemporalUnaryOp):
-    output_type = rlz.shape_like('arg', dt.int32)
+    output_dtype = dt.int32
 
 
 ExtractTimestampField = ExtractTemporalField
@@ -186,31 +197,29 @@ class ExtractMillisecond(ExtractTimeField):
 @public
 class DayOfWeekIndex(UnaryOp):
     arg = rlz.one_of([rlz.date, rlz.timestamp])
-    output_type = rlz.shape_like('arg', dt.int16)
+    output_dtype = dt.int16
 
 
 @public
 class DayOfWeekName(UnaryOp):
     arg = rlz.one_of([rlz.date, rlz.timestamp])
-    output_type = rlz.shape_like('arg', dt.string)
+    output_dtype = dt.string
 
 
 @public
 class DayOfWeekNode(Node):
     arg = rlz.one_of([rlz.date, rlz.timestamp])
-
-    def output_type(self):
-        return ir.DayOfWeek
+    output_type = ir.DayOfWeek
 
 
 @public
 class Time(UnaryOp):
-    output_type = rlz.shape_like('arg', dt.time)
+    output_dtype = dt.time
 
 
 @public
 class Date(UnaryOp):
-    output_type = rlz.shape_like('arg', dt.date)
+    output_dtype = dt.date
 
 
 @public
@@ -246,49 +255,50 @@ class TimestampFromUNIX(ValueOp):
     arg = rlz.any
     # Only pandas-based backends support 'ns'
     unit = rlz.isin({'s', 'ms', 'us', 'ns'})
-    output_type = rlz.shape_like('arg', dt.timestamp)
+    output_shape = rlz.shape_like('arg')
+    output_dtype = dt.timestamp
 
 
 @public
 class DateAdd(BinaryOp):
     left = rlz.date
     right = rlz.interval(units={'Y', 'Q', 'M', 'W', 'D'})
-    output_type = rlz.shape_like('left')
+    output_dtype = rlz.dtype_like('left')
 
 
 @public
 class DateSub(BinaryOp):
     left = rlz.date
     right = rlz.interval(units={'Y', 'Q', 'M', 'W', 'D'})
-    output_type = rlz.shape_like('left')
+    output_dtype = rlz.dtype_like('left')
 
 
 @public
 class DateDiff(BinaryOp):
     left = rlz.date
     right = rlz.date
-    output_type = rlz.shape_like('left', dt.Interval('D'))
+    output_dtype = dt.Interval('D')
 
 
 @public
 class TimeAdd(BinaryOp):
     left = rlz.time
     right = rlz.interval(units={'h', 'm', 's', 'ms', 'us', 'ns'})
-    output_type = rlz.shape_like('left')
+    output_dtype = rlz.dtype_like('left')
 
 
 @public
 class TimeSub(BinaryOp):
     left = rlz.time
     right = rlz.interval(units={'h', 'm', 's', 'ms', 'us', 'ns'})
-    output_type = rlz.shape_like('left')
+    output_dtype = rlz.dtype_like('left')
 
 
 @public
 class TimeDiff(BinaryOp):
     left = rlz.time
     right = rlz.time
-    output_type = rlz.shape_like('left', dt.Interval('s'))
+    output_dtype = dt.Interval('s')
 
 
 @public
@@ -297,7 +307,7 @@ class TimestampAdd(BinaryOp):
     right = rlz.interval(
         units={'Y', 'Q', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns'}
     )
-    output_type = rlz.shape_like('left')
+    output_dtype = rlz.dtype_like('left')
 
 
 @public
@@ -306,35 +316,56 @@ class TimestampSub(BinaryOp):
     right = rlz.interval(
         units={'Y', 'Q', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns'}
     )
-    output_type = rlz.shape_like('left')
+    output_dtype = rlz.dtype_like('left')
 
 
 @public
 class TimestampDiff(BinaryOp):
     left = rlz.timestamp
     right = rlz.timestamp
-    output_type = rlz.shape_like('left', dt.Interval('s'))
+    output_dtype = dt.Interval('s')
+
+
+@public
+class ToIntervalUnit(ValueOp):
+    arg = rlz.interval
+    unit = rlz.isin({'Y', 'Q', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns'})
+
+    output_shape = rlz.shape_like("arg")
+
+    def _validate(self):
+        dtype = self.arg.type()
+        if dtype.unit != self.unit:
+            self.arg = util.convert_unit(self.arg, dtype.unit, self.unit)
+
+    @property
+    def output_dtype(self):
+        # TODO(kszucs): Perhaps should handle the value type as well?
+        dtype = self.arg.type()
+        return dt.Interval(
+            unit=self.unit,
+            value_type=dtype.value_type,
+            nullable=dtype.nullable,
+        )
 
 
 @public
 class IntervalBinaryOp(BinaryOp):
-    def output_type(self):
-        args = [
+    @property
+    def output_dtype(self):
+        integer_args = [
             arg.cast(arg.type().value_type)
             if isinstance(arg.type(), dt.Interval)
             else arg
             for arg in self.args
         ]
-        expr = rlz.numeric_like(args, self.__class__.op)(self)
+        value_dtype = rlz._promote_numeric_binop(integer_args, self.op)
         left_dtype = self.left.type()
-        dtype_type = type(left_dtype)
-        additional_args = {
-            attr: getattr(left_dtype, attr)
-            for attr in left_dtype.argnames
-            if attr not in ("unit", "value_type")
-        }
-        dtype = dtype_type(left_dtype.unit, expr.type(), **additional_args)
-        return rlz.shape_like(self.args, dtype=dtype)
+        return dt.Interval(
+            unit=left_dtype.unit,
+            value_type=value_dtype,
+            nullable=left_dtype.nullable,
+        )
 
 
 @public
@@ -370,13 +401,15 @@ class IntervalFromInteger(ValueOp):
     arg = rlz.integer
     unit = rlz.isin({'Y', 'Q', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns'})
 
+    output_shape = rlz.shape_like("arg")
+
+    @property
+    def output_dtype(self):
+        return dt.Interval(self.unit, self.arg.type())
+
     @property
     def resolution(self):
         return dt.Interval(self.unit).resolution
-
-    def output_type(self):
-        dtype = dt.Interval(self.unit, self.arg.type())
-        return rlz.shape_like(self.arg, dtype=dtype)
 
 
 @public

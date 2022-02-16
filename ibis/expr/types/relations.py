@@ -15,6 +15,7 @@ import ibis
 from ... import util
 from ...common import exceptions as com
 from .core import Expr
+from .generic import HasName
 
 if TYPE_CHECKING:
     from .. import schema as sch
@@ -74,13 +75,7 @@ def _regular_join_method(
 
 
 @public
-class TableExpr(Expr):
-    @property
-    def _factory(self):
-        def factory(arg):
-            return TableExpr(arg)
-
-        return factory
+class TableExpr(Expr, HasName):
 
     def _is_valid(self, exprs):
         try:
@@ -170,10 +165,12 @@ class TableExpr(Expr):
     def __dir__(self):
         return sorted(frozenset(dir(type(self)) + self.columns))
 
+    # TODO(kszucs): should be removed
     def _resolve(self, exprs):
         exprs = util.promote_list(exprs)
-        return list(self._ensure_expr(x) for x in exprs)
+        return list(map(self._ensure_expr, exprs))
 
+    # TODO(kszucs): should be removed
     def _ensure_expr(self, expr):
         if isinstance(expr, str):
             return self[expr]
@@ -184,11 +181,13 @@ class TableExpr(Expr):
         else:
             return expr
 
+    # TODO(kszucs): should be removed
     def _get_type(self, name):
         return self._arg.get_type(name)
 
     def get_columns(self, iterable: Iterable[str]) -> list[ColumnExpr]:
-        """Get multiple columns from the table.
+        """
+        Get multiple columns from the table
 
         Examples
         --------
@@ -212,7 +211,8 @@ class TableExpr(Expr):
         return [self.get_column(x) for x in iterable]
 
     def get_column(self, name: str) -> ColumnExpr:
-        """Get a reference to a single column from the table.
+        """
+        Get a reference to a single column from the table
 
         Returns
         -------
@@ -229,7 +229,8 @@ class TableExpr(Expr):
         return list(self.schema().names)
 
     def schema(self) -> sch.Schema:
-        """Return the table's schema.
+        """
+        Get the schema for this table (if one is known)
 
         Returns
         -------
@@ -243,7 +244,8 @@ class TableExpr(Expr):
         by=None,
         **additional_grouping_expressions: Any,
     ) -> GroupedTableExpr:
-        """Create a grouped table expression.
+        """
+        Create a grouped table expression.
 
         Parameters
         ----------
@@ -881,7 +883,7 @@ class TableExpr(Expr):
         """
         expr = self._ensure_expr(expr)
 
-        if expr._name != name:
+        if expr.get_name() != name:
             expr = expr.name(name)
 
         if name not in self:
