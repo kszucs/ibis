@@ -46,7 +46,7 @@ class Backend(BasePandasBackend):
         >>> ibis.dask.connect(data)
         """
         # register dispatchers
-        from . import udf  # noqa: F401
+        from . import execution  # noqa: F401
 
         super().do_connect(dictionary)
 

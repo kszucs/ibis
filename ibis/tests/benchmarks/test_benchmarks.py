@@ -12,7 +12,7 @@ from packaging.version import parse as vparse
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.types as ir
-from ibis.backends.pandas.udf import udf
+import ibis.udf.vectorized as udf
 
 
 def make_t():
