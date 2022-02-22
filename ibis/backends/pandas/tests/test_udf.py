@@ -9,8 +9,8 @@ from packaging.version import parse as vparse
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.types as ir
+import ibis.udf.vectorized as udf
 from ibis.backends.pandas import Backend
-from ibis.backends.pandas.udf import udf
 
 
 @pytest.fixture
