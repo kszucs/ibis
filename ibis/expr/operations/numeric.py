@@ -152,7 +152,7 @@ class Floor(UnaryOp):
 @public
 class Round(ValueOp):
     arg = rlz.numeric
-    digits = rlz.optional(rlz.scalar(rlz.numeric))
+    digits = rlz.optional(rlz.numeric)
 
     output_shape = rlz.shape_like("arg")
 

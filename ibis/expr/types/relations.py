@@ -879,7 +879,7 @@ class TableExpr(Expr, HasName):
         """
         expr = self._ensure_expr(expr)
 
-        if expr.get_name() != name:
+        if expr._safe_name != name:
             expr = expr.name(name)
 
         if name not in self:

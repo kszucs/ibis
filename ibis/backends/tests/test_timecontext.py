@@ -43,11 +43,11 @@ def filter_by_time_context(df, context):
 @pytest.mark.parametrize(
     'window',
     [
-        param(
+        pytest.param(
             ibis.trailing_window(ibis.interval(days=3), order_by=ORDERBY_COL),
             id="order_by",
         ),
-        param(
+        pytest.param(
             ibis.trailing_window(
                 ibis.interval(days=3),
                 order_by=ORDERBY_COL,
@@ -63,10 +63,8 @@ def filter_by_time_context(df, context):
         ),
     ],
 )
-def test_context_adjustment_window_udf(alltypes, df, context, window):
-    """This test case aims to test context adjustment of
-    udfs in window method.
-    """
+def test_context_adjustment_window_udf(alltypes, context, window):
+    """Test context adjustment of udfs in window function expressions."""
     with option_context('context_adjustment.time_col', 'timestamp_col'):
         expr = alltypes.mutate(v1=calc_mean(alltypes[TARGET_COL]).over(window))
         result = expr.execute(timecontext=context)
@@ -80,7 +78,7 @@ def test_context_adjustment_window_udf(alltypes, df, context, window):
 
 
 @pytest.mark.notimpl(["dask", "duckdb"])
-def test_context_adjustment_filter_before_window(alltypes, df, context):
+def test_context_adjustment_filter_before_window(alltypes, context):
     with option_context('context_adjustment.time_col', 'timestamp_col'):
         window = ibis.trailing_window(
             ibis.interval(days=3), order_by=ORDERBY_COL
@@ -99,7 +97,7 @@ def test_context_adjustment_filter_before_window(alltypes, df, context):
 
 
 @pytest.mark.notimpl(["duckdb", "pyspark"])
-def test_context_adjustment_multi_col_udf_non_grouped(alltypes, df, context):
+def test_context_adjustment_multi_col_udf_non_grouped(alltypes, context):
     with option_context('context_adjustment.time_col', 'timestamp_col'):
         w = ibis.window(preceding=None, following=None)
 

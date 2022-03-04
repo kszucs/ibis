@@ -368,7 +368,7 @@ def _any_expand(expr):
 @rewrites(ops.NotAny)
 def _notany_expand(expr):
     arg = expr.op().args[0]
-    return arg.max() == 0
+    return arg.max() == ibis.literal(0, type=arg.type())
 
 
 @rewrites(ops.All)
@@ -380,7 +380,7 @@ def _all_expand(expr):
 @rewrites(ops.NotAll)
 def _notall_expand(expr):
     arg = expr.op().args[0]
-    return arg.min() == 0
+    return arg.min() == ibis.literal(0, type=arg.type())
 
 
 @rewrites(ops.Cast)

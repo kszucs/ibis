@@ -762,7 +762,7 @@ def windowize_function(expr, w=None):
 
         if not unchanged:
             new_op = type(op)(*windowed_args)
-            expr = type(x)(new_op)
+            expr = new_op.to_expr()
             if x.has_name():
                 expr = expr.name(x.get_name())
             return expr
