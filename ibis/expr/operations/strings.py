@@ -59,7 +59,7 @@ class Substring(ValueOp):
 @public
 class StrRight(ValueOp):
     arg = rlz.string
-    nchars = rlz.scalar(rlz.integer)
+    nchars = rlz.integer
     output_shape = rlz.shape_like("arg")
     output_dtype = dt.string
 

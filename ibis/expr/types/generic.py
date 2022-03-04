@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Sequence
 
 if TYPE_CHECKING:
     import ibis.expr.types as ir
-    import ibis.expr.operations as ops
     import ibis.expr.window as win
 
 from public import public
@@ -423,9 +422,9 @@ class AnyValue(ValueExpr):
 
         prior_op = self.op()
 
-        # # TODO(kszucs): fix this ugly hack
-        # if isinstance(prior_op, ops.Alias):
-        #     return over(prior_op.arg, window)
+        # TODO(kszucs): fix this ugly hack
+        if isinstance(prior_op, ops.Alias):
+            return prior_op.arg.over(window).name(prior_op.name)
 
         if isinstance(prior_op, ops.WindowOp):
             op = prior_op.over(window)
