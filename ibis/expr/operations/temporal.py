@@ -227,7 +227,7 @@ class DateFromYMD(ValueOp):
     year = rlz.integer
     month = rlz.integer
     day = rlz.integer
-    output_type = rlz.shape_like('args', dt.date)
+    output_dtype = dt.date
 
 
 @public
@@ -235,7 +235,7 @@ class TimeFromHMS(ValueOp):
     hours = rlz.integer
     minutes = rlz.integer
     seconds = rlz.integer
-    output_type = rlz.shape_like('args', dt.time)
+    output_dtype = dt.time
 
 
 @public
@@ -247,7 +247,7 @@ class TimestampFromYMDHMS(ValueOp):
     minutes = rlz.integer
     seconds = rlz.integer
     timezone = rlz.optional(rlz.string)
-    output_type = rlz.shape_like('args', dt.timestamp)
+    output_dtype = dt.timestamp
 
 
 @public

@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 from __future__ import annotations
-=======
-import collections
-import functools
-import itertools
+
 from abc import abstractmethod
->>>>>>> d0cec7ad (refactor(ir): simplify expressions by not storing dtype and name)
 
 import toolz
 from public import public
@@ -15,11 +10,8 @@ from ...common.grounds import Comparable
 from ...common.validators import immutable_property
 from ...util import is_iterable
 from .. import rules as rlz
-<<<<<<< HEAD
 from ..schema import Schema
-=======
 from .. import types as ir
->>>>>>> d0cec7ad (refactor(ir): simplify expressions by not storing dtype and name)
 from ..signature import Annotable
 
 
@@ -94,10 +86,10 @@ class Node(Annotable, Comparable):
         return self.equals(other)
 
     def to_expr(self):
-        return self._make_expr()
+        return self.output_type(self)
 
     def resolve_name(self):
-        raise com.ExpressionError(f'Expression is not named: {type(self)}')
+        raise ExpressionError(f'Expression is not named: {type(self)}')
 
     def has_resolved_name(self):
         return False
