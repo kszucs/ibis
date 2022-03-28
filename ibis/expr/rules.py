@@ -64,21 +64,22 @@ def comparable(left, right):
     return castable(left, right) or castable(right, left)
 
 
-def cast(source, target):
-    """Currently Literal to *Scalar implicit casts are allowed"""
-    import ibis.expr.operations as ops  # TODO: don't use ops here
+# shouldn't hit this
+# def cast(source, target):
+#     """Currently Literal to *Scalar implicit casts are allowed"""
+#     import ibis.expr.operations as ops  # TODO: don't use ops here
 
-    if not castable(source, target):
-        raise com.IbisTypeError('Source is not castable to target type!')
+#     if not castable(source, target):
+#         raise com.IbisTypeError('Source is not castable to target type!')
 
-    # currently it prevents column -> scalar implicit castings
-    # however the datatypes are matching
-    op = source.op()
-    if not isinstance(op, ops.Literal):
-        raise com.IbisTypeError('Only able to implicitly cast literals!')
+#     # currently it prevents column -> scalar implicit castings
+#     # however the datatypes are matching
+#     op = source.op()
+#     if not isinstance(op, ops.Literal):
+#         raise com.IbisTypeError('Only able to implicitly cast literals!')
 
-    out_type = target.type().scalar_type()
-    return out_type(op)
+#     out_type = target.type().scalar
+#     return out_type(op)
 
 
 # ---------------------------------------------------------------------

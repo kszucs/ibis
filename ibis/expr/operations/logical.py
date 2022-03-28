@@ -54,7 +54,7 @@ class Comparison(BinaryOp):
         :param left:
         :param right:
         """
-        left, right = self._maybe_cast_args(left, right)
+        # left, right = self._maybe_cast_args(left, right)
         if not rlz.comparable(left, right):
             raise TypeError(
                 'Arguments with datatype {} and {} are '
@@ -62,15 +62,15 @@ class Comparison(BinaryOp):
             )
         super().__init__(left=left, right=right)
 
-    def _maybe_cast_args(self, left, right):
-        # it might not be necessary?
-        with suppress(IbisTypeError):
-            return left, rlz.cast(right, left)
+    # def _maybe_cast_args(self, left, right):
+    #     # it might not be necessary?
+    #     with suppress(IbisTypeError):
+    #         return left, rlz.cast(right, left)
 
-        with suppress(IbisTypeError):
-            return rlz.cast(left, right), right
+    #     with suppress(IbisTypeError):
+    #         return rlz.cast(left, right), right
 
-        return left, right
+    #     return left, right
 
 
 @public
