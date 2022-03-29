@@ -333,10 +333,11 @@ class ToIntervalUnit(ValueOp):
 
     output_shape = rlz.shape_like("arg")
 
-    def _validate(self):
-        dtype = self.arg.type()
-        if dtype.unit != self.unit:
-            self.arg = util.convert_unit(self.arg, dtype.unit, self.unit)
+    def __init__(self, arg, unit):
+        dtype = arg.type()
+        if dtype.unit != unit:
+            arg = util.convert_unit(arg, dtype.unit, unit)
+        super().__init__(arg=arg, unit=unit)
 
     @property
     def output_dtype(self):

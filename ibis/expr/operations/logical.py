@@ -1,8 +1,5 @@
-from contextlib import suppress
-
 from public import public
 
-from ...common.exceptions import IbisTypeError
 from .. import datatypes as dt
 from .. import rules as rlz
 from .core import BinaryOp, UnaryOp, ValueOp
@@ -54,23 +51,12 @@ class Comparison(BinaryOp):
         :param left:
         :param right:
         """
-        # left, right = self._maybe_cast_args(left, right)
         if not rlz.comparable(left, right):
             raise TypeError(
                 'Arguments with datatype {} and {} are '
                 'not comparable'.format(left.type(), right.type())
             )
         super().__init__(left=left, right=right)
-
-    # def _maybe_cast_args(self, left, right):
-    #     # it might not be necessary?
-    #     with suppress(IbisTypeError):
-    #         return left, rlz.cast(right, left)
-
-    #     with suppress(IbisTypeError):
-    #         return rlz.cast(left, right), right
-
-    #     return left, right
 
 
 @public
@@ -127,7 +113,9 @@ class Between(ValueOp):
                 f'Argument with datatype {arg.type()} and upper bound '
                 f'with datatype {upper_bound.type()} are not comparable'
             )
-        super().__init__(arg=arg, lower_bound=lower_bound, upper_bound=upper_bound)
+        super().__init__(
+            arg=arg, lower_bound=lower_bound, upper_bound=upper_bound
+        )
 
 
 @public

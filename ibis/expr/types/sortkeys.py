@@ -6,6 +6,6 @@ from .generic import Expr, HasName
 
 
 @public
-class SortExpr(Expr):
+class SortExpr(Expr, HasName):
     def get_name(self) -> str | None:
         return self.op().resolve_name()
