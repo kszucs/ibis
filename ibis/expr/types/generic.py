@@ -49,6 +49,8 @@ class HasName:
           a int64
         b: r0.a
         """
+        import ibis.expr.operations as ops
+
         # TODO(kszucs): shouldn't do simplification here, but rather later
         # when simplifying the whole operation tree
         # the expression's name is idendical to the new one
