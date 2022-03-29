@@ -76,7 +76,6 @@ def _regular_join_method(
 
 @public
 class TableExpr(Expr, HasName):
-
     def _is_valid(self, exprs):
         try:
             self._assert_valid(util.promote_list(exprs))

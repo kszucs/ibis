@@ -276,7 +276,11 @@ def shape_like(name):
         arg = getattr(self, name)
         if util.is_iterable(arg):
             for expr in arg:
-                if expr.op().output_shape is Shape.COLUMNAR:
+                try:
+                    op = expr.op()
+                except AttributeError:
+                    continue
+                if op.output_shape is Shape.COLUMNAR:
                     return Shape.COLUMNAR
             return Shape.SCALAR
         else:

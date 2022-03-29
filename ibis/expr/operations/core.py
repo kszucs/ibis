@@ -10,8 +10,8 @@ from ...common.grounds import Comparable
 from ...common.validators import immutable_property
 from ...util import is_iterable
 from .. import rules as rlz
-from ..schema import Schema
 from .. import types as ir
+from ..schema import Schema
 from ..signature import Annotable
 
 
