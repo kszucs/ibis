@@ -8,7 +8,7 @@ from public import public
 from ...common.exceptions import ExpressionError
 from ...common.grounds import Comparable
 from ...common.validators import immutable_property
-from ...util import is_iterable
+from ...util import UnnamedMarker, is_iterable
 from .. import rules as rlz
 from .. import types as ir
 from ..schema import Schema
@@ -174,7 +174,7 @@ class ValueOp(Node):
 @public
 class Alias(ValueOp):
     arg = rlz.any
-    name = rlz.instance_of((str, ir.UnnamedMarker))
+    name = rlz.instance_of((str, UnnamedMarker))
 
     output_shape = rlz.shape_like('arg')
     output_dtype = rlz.dtype_like('arg')
