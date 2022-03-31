@@ -132,16 +132,6 @@ class Cast(ValueOp):
     # see #396 for the issue preventing an implementation of resolve_name
 
 
-# TODO(kszucs): find a better name
-# @public
-# class ReinterpretCast(ValueOp):
-#     """
-#     Change the interpretation of underlying value's datatype.
-
-#     Useful
-#     """
-
-
 @public
 class TypeOf(UnaryOp):
     output_dtype = dt.string
@@ -323,7 +313,6 @@ class ValueList(ValueOp):
     # NOTE: this proxies the ValueOp behaviour to the underlying values
 
     values = rlz.tuple_of(rlz.any)
-    display_argnames = False  # disable showing argnames in repr
 
     output_type = ir.ListExpr
     output_dtype = rlz.dtype_like("values")

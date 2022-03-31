@@ -288,7 +288,6 @@ class ExprTranslator:
 rewrites = ExprTranslator.rewrites
 
 
-# TODO(kszucs): is this used?
 @rewrites(ops.Bucket)
 def _bucket(expr):
     op = expr.op()
@@ -340,7 +339,6 @@ def _bucket(expr):
     return result
 
 
-# TODO(kszucs): is this used?
 @rewrites(ops.CategoryLabel)
 def _category_label(expr):
     op = expr.op()

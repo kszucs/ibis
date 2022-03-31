@@ -9,9 +9,6 @@ from .core import ValueOp, distinct_roots
 
 @public
 class WindowOp(ValueOp):
-    # TODO(kszucs): remove this property
-    display_argnames = False
-
     expr = rlz.analytic
     window = rlz.window(from_base_table_of="expr")
 

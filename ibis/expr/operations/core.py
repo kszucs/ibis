@@ -121,54 +121,18 @@ class ValueOp(Node):
     def root_tables(self):
         return distinct_roots(*self.exprs)
 
-    # def resolve_name(self):
-    #     raise ExpressionError(f'Expression is not named: {type(self)}')
-
     @property
     @abstractmethod
     def output_dtype(self):
         ...
 
+    # TODO(kszucs): use immutable_property instead
     @property
     def output_type(self):
         if self.output_shape is rlz.Shape.COLUMNAR:
             return self.output_dtype.column
         else:
             return self.output_dtype.scalar
-
-    # We could materialize output_type on construction as well or
-    # just cache the properties.
-    #
-    # @property
-    # def output_dtype(self):
-    #     raise NotImplementedError
-
-    # @property
-    # def output_shape(self):
-    #     raise NotImplementedError
-
-    # For ValueOp output_type would have a default implementation
-    # calling to output_Dtype and output_shape:
-    #
-    # @property
-    # def output_type(self):
-    #     if self.output_shape() == "columnar":
-    #         return self.output_dtype.column
-    #     else:
-    #         return self.output_dtype.scalar
-    #
-    # Whereas for example a ops.DatabaseTable could simply just
-    # define the target expr class:
-    #
-    # class ops.DatabaseTable:
-    #     output_type = ir.TableExpr
-    #
-    # e.g.:
-    # output_dtype = rlz.dtype_like('')
-    # output_shape = rlz.shape_like('')
-    #
-    # Could be a direct class since all expressions would be
-    # contructable by just passing the op, no additional fields.
 
 
 @public

@@ -30,9 +30,7 @@ class ArrayColumn(ValueOp):
 class ArrayLength(UnaryOp):
     arg = rlz.array
 
-    # TODO(kszucs): output shape should be defined by UnaryUp already
     output_dtype = dt.int64
-    output_shape = rlz.shape_like("arg")
 
 
 @public

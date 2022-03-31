@@ -479,8 +479,8 @@ class SelectBuilder:
                     new_args.append(arg)
 
             if not unchanged:
-                # TODO(kszucs): remove it
-                return expr._factory(type(op)(*new_args))
+                new_op = type(op)(*new_args)
+                return new_op.to_expr()
             else:
                 return expr
         else:
@@ -563,8 +563,7 @@ class SelectBuilder:
                 return expr
             else:
                 new_op = type(op)(left, right)
-                new_expr = type(expr)(new_op)
-                return new_expr
+                return new_op.to_expr()
         elif isinstance(op, (ops.Any, ops.TableColumn, ops.Literal)):
             return expr
         elif isinstance(op, ops.ValueOp):
@@ -577,7 +576,8 @@ class SelectBuilder:
                 if new is not old:
                     unchanged = False
             if not unchanged:
-                return type(expr)(type(op)(*visited))
+                new_op = type(op)(*visited)
+                return new_op.to_expr()
             else:
                 return expr
         else:
