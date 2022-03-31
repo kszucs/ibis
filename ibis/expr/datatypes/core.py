@@ -102,7 +102,9 @@ class DataType(Annotable, Comparable):
                 "Please construct a new instance of the type to change the "
                 "values of the attributes."
             )
-        return self._factory(nullable=nullable)
+        kwargs = dict(zip(self.argnames, self.args))
+        kwargs["nullable"] = nullable
+        return self.__class__(**kwargs)
 
     @property
     def _pretty_piece(self) -> str:
@@ -130,12 +132,6 @@ class DataType(Annotable, Comparable):
                 f"{type(other)}"
             )
         return super().__cached_equals__(other)
-
-    # TODO(kszucs): remove it
-    def _factory(self, nullable: bool = True) -> DataType:
-        kwargs = dict(zip(self.argnames, self.args))
-        kwargs["nullable"] = nullable
-        return self.__class__(**kwargs)
 
     def castable(self, target, **kwargs):
         """Return whether this data type is castable to `target`."""

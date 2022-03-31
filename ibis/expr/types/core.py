@@ -187,10 +187,6 @@ class Expr:
     def op(self) -> ops.Node:
         return self._arg
 
-    @property
-    def _factory(self) -> type[Expr]:
-        return type(self)
-
     def _find_backends(self) -> list[BaseBackend]:
         """Return the possible backends for an expression.
 
