@@ -1,7 +1,6 @@
 import pandas as pd
 import pandas.testing as tm
 import pytest
-from pytest import param
 
 import ibis
 from ibis.config import option_context
