@@ -459,7 +459,16 @@ def deprecated(*, instead, version=''):
     return decorator
 
 
-def to_op_dag(expr: ir.Expr) -> Graph:
+# def _to_operation(arg):
+#     if hasattr(arg, "op"):
+#         return arg.op()
+#     elif isinstance(arg, tuple):
+#         return tuple(map(_to_operation, arg))
+#     else:
+#         return arg
+
+
+def to_op_dag(expr: ir.Expr, flatten=True) -> Graph:
     """Convert `expr` into a directed acyclic graph.
 
     Parameters
@@ -477,6 +486,7 @@ def to_op_dag(expr: ir.Expr) -> Graph:
 
     while stack:
         if (node := stack.pop()) not in dag:
+            # don't flatten the args, just append the flattened in extend
             dag[node] = children = node._flat_ops
             stack.extend(children)
     return dag

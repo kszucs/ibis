@@ -2,6 +2,7 @@ from multipledispatch import Dispatcher
 
 import ibis.common.exceptions as com
 import ibis.expr.operations as ops
+from ibis.expr.datatypes.core import DataType
 
 from .trace import TraceTwoLevelDispatcher
 
@@ -46,3 +47,8 @@ datatype : ibis.expr.datatypes.DataType
 
 
 execute = Dispatcher("execute")
+
+
+@execute_node.register(ops.Literal, object, DataType)
+def execute_node_literal(node, value, dtype, **kwargs):
+    return execute_literal(node, value, dtype)

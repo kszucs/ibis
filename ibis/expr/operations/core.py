@@ -8,7 +8,7 @@ from public import public
 from ...common.exceptions import ExpressionError
 from ...common.grounds import Comparable
 from ...common.validators import immutable_property
-from ...util import UnnamedMarker, is_iterable
+from ...util import UnnamedMarker
 from .. import rules as rlz
 from .. import types as ir
 from ..schema import Schema
@@ -102,10 +102,17 @@ class Node(Annotable, Comparable):
 
     def flat_args(self):
         for arg in self.args:
-            if not isinstance(arg, Schema) and is_iterable(arg):
+            # print(type(arg))
+            if isinstance(arg, tuple):
                 yield from arg
             else:
                 yield arg
+            # if not isinstance(arg, Schema) and is_iterable(arg):
+            #     print("flattened")
+            #     yield from arg
+            # else:
+            #     print("not flattened")
+            #     yield arg
 
 
 @public

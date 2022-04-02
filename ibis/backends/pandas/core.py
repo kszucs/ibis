@@ -293,6 +293,78 @@ def execute_until_in_scope(
     return Scope({op: result}, timecontext)
 
 
+class Result:
+    __slots__ = ("_value",)
+
+    def get(self):
+        return self._value
+
+    def set(self, value):
+        self._value = value
+
+
+class ResultStore:
+
+    __slots__ = ("_results", "_arguments")
+
+    def __init__(self, dag):
+        self._results = {op: Result() for op in dag.keys()}
+        self._arguments = {}
+
+        for op in dag.keys():
+            self._arguments[op] = tuple(map(self._construct_args, op.args))
+
+        # convert to weak dict to clean up memory as soon as results not needed
+        # results = weakref.WeakValueDictionary(results)
+
+    def _construct_args(self, expr):
+        if isinstance(expr, tuple):
+            return tuple(self._results[e.op()] for e in expr)
+        elif isinstance(expr, ir.Expr):
+            return self._results[expr.op()]
+        else:
+            return expr
+
+    def _retrieve_args(self, result):
+        if isinstance(result, tuple):
+            return tuple(map(self._retrieve_args, result))
+        elif isinstance(result, Result):
+            return result.get()
+        else:
+            return result
+
+    def arguments_for(self, op):
+        args = self._arguments[op]
+        args = tuple(map(self._retrieve_args, args))
+        return args
+
+    def set(self, op, value):
+        self._results[op].set(value)
+
+    def get(self, op):
+        self._results[op].get()
+
+
+def execute_with_scope(
+    expr,
+    scope: Scope,
+    timecontext: Optional[TimeContext] = None,
+    aggcontext=None,
+    clients=None,
+    **kwargs,
+):
+    dag = ibis.util.to_op_dag(expr)
+
+    store = ResultStore(dag)
+
+    for op in ibis.util.toposort(dag):
+        args = store.arguments_for(op)
+        value = execute_node(op, *args, timecontext=None, aggcontext=None)
+        store.set(op, value)
+
+    return value
+
+
 execute = Dispatcher('execute')
 
 
