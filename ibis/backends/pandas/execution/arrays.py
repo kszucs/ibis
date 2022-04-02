@@ -112,5 +112,8 @@ def execute_array_repeat_scalar(op, data, n, **kwargs):
 
 
 @execute_node.register(ops.ArrayCollect, (pd.Series, SeriesGroupBy))
-def execute_array_collect(op, data, aggcontext=None, **kwargs):
-    return aggcontext.agg(data, np.array)
+def execute_array_collect(op, data, **kwargs):
+    def metric(aggcontext):
+        return aggcontext.agg(data, np.array)
+
+    return metric

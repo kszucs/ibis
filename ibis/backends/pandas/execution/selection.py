@@ -387,17 +387,23 @@ def execute_selection_dataframe(
     result = data
 
     # Build up the individual pandas structures from column expressions
+    print("$$$$$$$$$$$$$$$$$$$")
+    print([type(e) for e in selections])
+    print(selections)
     if selections:
-        if all(isinstance(s.op(), ops.TableColumn) for s in selections):
-            result = build_df_from_selection(selections, data, op.table.op())
-        else:
-            result = build_df_from_projection(
-                selections,
-                op,
-                data,
-                timecontext=timecontext,
-                **kwargs,
-            )
+        result = pd.concat(selections, axis=1)
+        # if all(isinstance(s.op(), ops.TableColumn) for s in selections):
+        #     # should be simpler since we should have pandas objects in the arguments
+        #     result = build_df_from_selection(selections, data, op.table.op())
+        # else:
+        #     result = build_df_from_projection(
+        #         selections,
+        #         op,
+        #         data,
+        #         timecontext=timecontext,
+        #         **kwargs,
+        #     )
+    print(result)
 
     if predicates:
         predicates = _compute_predicates(

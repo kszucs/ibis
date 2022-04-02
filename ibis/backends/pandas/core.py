@@ -312,7 +312,10 @@ class ResultStore:
         self._arguments = {}
 
         for op in dag.keys():
-            self._arguments[op] = tuple(map(self._construct_args, op.args))
+            if isinstance(op, ops.Literal):
+                self._arguments[op] = op.args
+            else:
+                self._arguments[op] = tuple(map(self._construct_args, op.args))
 
         # convert to weak dict to clean up memory as soon as results not needed
         # results = weakref.WeakValueDictionary(results)
@@ -432,7 +435,7 @@ def main_execute(
     # params = {k.op() if hasattr(k, 'op') else k: v for k, v in params.items()}
     # scope = scope.merge_scope(Scope(params, timecontext))
 
-    print(type(expr), type(expr.op()))
+    # print(type(expr), type(expr.op()))
 
     return execute_with_scope(
         expr,
@@ -546,7 +549,6 @@ See ``computable_args`` in ``execute_until_in_scope``
 @compute_time_context.register(ops.Node)
 def compute_time_context_default(
     node: ops.Node,
-    scope: Scope,
     timecontext: Optional[TimeContext] = None,
     **kwargs,
 ):

@@ -448,14 +448,16 @@ def execute_aggregation_dataframe(
         #     if hasattr(by_op, 'name')
         # )
         grouping_keys = [s.name for s in by]
+        print(grouping_keys)
         source = data.groupby(grouping_keys)
     else:
         source = data
 
     # scope = scope.merge_scope(Scope({op.table.op(): source}, timecontext))
     aggcontext = agg_ctx.Summarize()
+
     pieces = [
-        coerce_to_output(metric(aggcontext), expr)
+        coerce_to_output(metric(aggcontext, source), expr)
         for expr, metric in zip(op.metrics, metrics)
     ]
 
@@ -490,236 +492,6 @@ def execute_aggregation_dataframe(
         ), 'length of predicate does not match length of DataFrame'
         result = result.loc[predicate.values]
     return result
-
-
-@execute_node.register(ops.Reduction, SeriesGroupBy, type(None))
-def execute_reduction_series_groupby(op, data, mask, **kwargs):
-    def metric(aggcontext):
-        return aggcontext.agg(data, type(op).__name__.lower())
-
-    return metric
-
-
-variance_ddof = {'pop': 0, 'sample': 1}
-
-
-@execute_node.register(ops.Variance, SeriesGroupBy, type(None))
-def execute_reduction_series_groupby_var(op, data, _, **kwargs):
-    def metric(aggcontext):
-        return aggcontext.agg(data, 'var', ddof=variance_ddof[op.how])
-
-    return metric
-
-
-@execute_node.register(ops.StandardDev, SeriesGroupBy, type(None))
-def execute_reduction_series_groupby_std(op, data, _, **kwargs):
-    def metric(aggcontext):
-        return aggcontext.agg(data, 'std', ddof=variance_ddof[op.how])
-
-    return metric
-
-
-@execute_node.register(
-    (ops.CountDistinct, ops.HLLCardinality), SeriesGroupBy, type(None)
-)
-def execute_count_distinct_series_groupby(op, data, _, **kwargs):
-    def metric(aggcontext):
-        return aggcontext.agg(data, 'nunique')
-
-    return metric
-
-
-@execute_node.register(ops.Arbitrary, SeriesGroupBy, type(None))
-def execute_arbitrary_series_groupby(op, data, _, **kwargs):
-    how = op.how
-    if how is None:
-        how = 'first'
-
-    if how not in {'first', 'last'}:
-        raise com.OperationNotDefinedError(
-            f'Arbitrary {how!r} is not supported'
-        )
-
-    def metric(aggcontext):
-        return aggcontext.agg(data, how)
-
-    return metric
-
-
-def _filtered_reduction(mask, method, data):
-    return method(data[mask[data.index]])
-
-
-@execute_node.register(ops.Reduction, SeriesGroupBy, SeriesGroupBy)
-def execute_reduction_series_gb_mask(op, data, mask, **kwargs):
-    method = operator.methodcaller(type(op).__name__.lower())
-    function = functools.partial(_filtered_reduction, mask.obj, method)
-
-    def metric(aggcontext):
-        return aggcontext.agg(data, function)
-
-
-@execute_node.register(
-    (ops.CountDistinct, ops.HLLCardinality), SeriesGroupBy, SeriesGroupBy
-)
-def execute_count_distinct_series_groupby_mask(
-    op, data, mask, aggcontext=None, **kwargs
-):
-    function = (
-        functools.partial(_filtered_reduction, mask.obj, pd.Series.nunique),
-    )
-
-    def metric(aggcontext):
-        return aggcontext.agg(data, function)
-
-    return metric
-
-
-@execute_node.register(ops.Variance, SeriesGroupBy, SeriesGroupBy)
-def execute_var_series_groupby_mask(op, data, mask, **kwargs):
-    def function(x, mask=mask.obj, ddof=variance_ddof[op.how]):
-        return x[mask[x.index]].var(ddof=ddof)
-
-    def metric(aggcontext):
-        return aggcontext.agg(data, function)
-
-    return metric
-
-
-@execute_node.register(ops.StandardDev, SeriesGroupBy, SeriesGroupBy)
-def execute_std_series_groupby_mask(op, data, mask, **kwargs):
-    def function(x, mask=mask.obj, ddof=variance_ddof[op.how]):
-        return x[mask[x.index]].std(ddof=ddof)
-
-    def metric(aggcontext):
-        return aggcontext.agg(data, function)
-
-    return metric
-
-
-@execute_node.register(ops.Count, DataFrameGroupBy, type(None))
-def execute_count_frame_groupby(op, data, _, **kwargs):
-    result = data.size()
-    # FIXME(phillipc): We should not hard code this column name
-    result.name = 'count'
-    return result
-
-
-@execute_node.register(ops.Reduction, pd.Series, (pd.Series, type(None)))
-def execute_reduction_series_mask(op, data, mask, **kwargs):
-    def metric(aggcontext):
-        operand = data[mask] if mask is not None else data
-        return aggcontext.agg(operand, type(op).__name__.lower())
-
-    return metric
-
-
-@execute_node.register(
-    (ops.CountDistinct, ops.HLLCardinality), pd.Series, (pd.Series, type(None))
-)
-def execute_count_distinct_series_mask(op, data, mask, **kwargs):
-    def metric(aggcontext):
-        return aggcontext.agg(
-            data[mask] if mask is not None else data, 'nunique'
-        )
-
-    return metric
-
-
-@execute_node.register(ops.Arbitrary, pd.Series, (pd.Series, type(None)))
-def execute_arbitrary_series_mask(op, data, mask, **kwargs):
-    if op.how == 'first':
-        index = 0
-    elif op.how == 'last':
-        index = -1
-    else:
-        raise com.OperationNotDefinedError(
-            f'Arbitrary {op.how!r} is not supported'
-        )
-
-    def metric(aggcontext):
-        data = data[mask] if mask is not None else data
-        return data.iloc[index]
-
-    return metric
-
-
-@execute_node.register(
-    ops.StandardDev, pd.Series, str, (pd.Series, type(None))
-)
-def execute_standard_dev_series(op, data, how, mask, **kwargs):
-    def metric(aggcontext):
-        return aggcontext.agg(
-            data[mask] if mask is not None else data,
-            'std',
-            ddof=variance_ddof[how],
-        )
-
-    return metric
-
-
-@execute_node.register(ops.Variance, pd.Series, str, (pd.Series, type(None)))
-def execute_variance_series(op, data, how, mask, **kwargs):
-    def metric(aggcontext):
-        return aggcontext.agg(
-            data[mask] if mask is not None else data,
-            'var',
-            ddof=variance_ddof[how],
-        )
-
-    return metric
-
-
-@execute_node.register((ops.Any, ops.All), (pd.Series, SeriesGroupBy))
-def execute_any_all_series(op, data, **kwargs):
-    def metric(aggcontext):
-        if isinstance(aggcontext, (agg_ctx.Summarize, agg_ctx.Transform)):
-            result = aggcontext.agg(data, type(op).__name__.lower())
-        else:
-            result = aggcontext.agg(
-                data, lambda data: getattr(data, type(op).__name__.lower())()
-            )
-        try:
-            return result.astype(bool)
-        except TypeError:
-            return result
-
-    return metric
-
-
-@execute_node.register(ops.NotAny, (pd.Series, SeriesGroupBy))
-def execute_notany_series(op, data, **kwargs):
-    def metric(aggcontext):
-        if isinstance(aggcontext, (agg_ctx.Summarize, agg_ctx.Transform)):
-            result = ~(aggcontext.agg(data, 'any'))
-        else:
-            result = aggcontext.agg(data, lambda data: ~(data.any()))
-        try:
-            return result.astype(bool)
-        except TypeError:
-            return result
-
-    return metric
-
-
-@execute_node.register(ops.NotAll, (pd.Series, SeriesGroupBy))
-def execute_notall_series(op, data, **kwargs):
-    def metric(aggcontext):
-        if isinstance(aggcontext, (agg_ctx.Summarize, agg_ctx.Transform)):
-            result = ~(aggcontext.agg(data, 'all'))
-        else:
-            result = aggcontext.agg(data, lambda data: ~(data.all()))
-        try:
-            return result.astype(bool)
-        except TypeError:
-            return result
-
-    return metric
-
-
-@execute_node.register(ops.Count, pd.DataFrame, type(None))
-def execute_count_frame(op, data, _, **kwargs):
-    return len(data)
 
 
 @execute_node.register(ops.Not, (bool, np.bool_))
@@ -903,14 +675,14 @@ def execute_alias(op, arg, name, **kwargs):
     return arg
 
 
-@execute_node.register(ops.Alias, pd.Series, str)
-def execute_alias(op, arg, name, **kwargs):
-    # # just compile the underlying argument because the naming is handled
-    # # by the translator for the top level expression
-    # return execute(op.arg, **kwargs
+# @execute_node.register(ops.Alias, pd.Series, str)
+# def execute_alias(op, arg, name, **kwargs):
+#     # # just compile the underlying argument because the naming is handled
+#     # # by the translator for the top level expression
+#     # return execute(op.arg, **kwargs
 
-    # rename serieses and anything if possible
-    return arg.rename(name)
+#     # rename serieses and anything if possible
+#     return arg.rename(name)
 
 
 @execute_node.register(ops.ValueList, collections.abc.Sequence)

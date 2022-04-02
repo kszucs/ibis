@@ -124,7 +124,6 @@ get_aggcontext = Dispatcher('get_aggcontext')
 def get_aggcontext_default(
     window,
     *,
-    scope,
     operand,
     parent,
     group_by,
@@ -140,7 +139,6 @@ def get_aggcontext_default(
 def get_aggcontext_window(
     window,
     *,
-    scope,
     operand,
     parent,
     group_by,
@@ -253,12 +251,11 @@ def trim_window_result(
     return indexed_subset[name]
 
 
-@execute_node.register(ops.WindowOp, pd.Series, win.Window)
+@execute_node.register(ops.WindowOp, object, win.Window)
 def execute_window_op(
     op,
     data,
     window,
-    scope: Scope = None,
     timecontext: Optional[TimeContext] = None,
     aggcontext=None,
     clients=None,
@@ -273,7 +270,9 @@ def execute_window_op(
     adjusted_timecontext = None
     if timecontext:
         arg_timecontexts = compute_time_context(
-            op, timecontext=timecontext, clients=clients, scope=scope
+            op,
+            timecontext=timecontext,
+            clients=clients,
         )
         # timecontext is the original time context required by parent node
         # of this WindowOp, while adjusted_timecontext is the adjusted context
@@ -281,15 +280,11 @@ def execute_window_op(
         # adjusted_timecontext in later execution phases
         adjusted_timecontext = arg_timecontexts[0]
 
-    if scope is None:
-        scope = Scope()
-
     (root,) = op.root_tables()
     root_expr = root.to_expr()
 
     data = execute(
         root_expr,
-        scope=scope,
         timecontext=adjusted_timecontext,
         clients=clients,
         aggcontext=aggcontext,
@@ -314,7 +309,6 @@ def execute_window_op(
         if isinstance(key_op, ops.TableColumn)
         else execute(
             key,
-            scope=scope,
             clients=clients,
             timecontext=adjusted_timecontext,
             aggcontext=aggcontext,
@@ -361,20 +355,8 @@ def execute_window_op(
             source = data
             post_process = _post_process_empty
 
-    # Here groupby object should be add to the corresponding node in scope
-    # for execution, data will be overwrite to a groupby object, so we
-    # force an update regardless of time context
-    new_scope = scope.merge_scopes(
-        [
-            Scope({t: source}, adjusted_timecontext)
-            for t in operand.op().root_tables()
-        ],
-        overwrite=True,
-    )
-
     aggcontext = get_aggcontext(
         window,
-        scope=scope,
         operand=operand,
         parent=source,
         group_by=grouping_keys,
@@ -383,7 +365,6 @@ def execute_window_op(
     )
     result = execute(
         operand,
-        scope=new_scope,
         timecontext=adjusted_timecontext,
         aggcontext=aggcontext,
         clients=clients,

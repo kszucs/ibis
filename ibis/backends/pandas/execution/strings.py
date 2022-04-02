@@ -210,37 +210,43 @@ def execute_string_like_series_groupby_string(
 @execute_node.register(
     ops.GroupConcat, pd.Series, str, (pd.Series, type(None))
 )
-def execute_group_concat_series_mask(
-    op, data, sep, mask, aggcontext=None, **kwargs
-):
-    return aggcontext.agg(
-        data[mask] if mask is not None else data,
-        lambda series, sep=sep: sep.join(series.values),
-    )
+def execute_group_concat_series_mask(op, data_, sep, mask, **kwargs):
+    def metric(aggcontext, data):
+        data = data[data_.name]
+        return aggcontext.agg(
+            data[mask] if mask is not None else data,
+            lambda series, sep=sep: sep.join(series.values),
+        )
+
+    return metric
 
 
 @execute_node.register(ops.GroupConcat, SeriesGroupBy, str, type(None))
-def execute_group_concat_series_gb(
-    op, data, sep, _, aggcontext=None, **kwargs
-):
-    return aggcontext.agg(
-        data, lambda data, sep=sep: sep.join(data.values.astype(str))
-    )
+def execute_group_concat_series_gb(op, data_, sep, _, **kwargs):
+    def metric(aggcontext, data):
+        data = data[data_.name]
+        return aggcontext.agg(
+            data, lambda data, sep=sep: sep.join(data.values.astype(str))
+        )
+
+    return metric
 
 
 @execute_node.register(ops.GroupConcat, SeriesGroupBy, str, SeriesGroupBy)
-def execute_group_concat_series_gb_mask(
-    op, data, sep, mask, aggcontext=None, **kwargs
-):
+def execute_group_concat_series_gb_mask(op, data_, sep, mask, **kwargs):
     def method(series, sep=sep):
         return sep.join(series.values.astype(str))
 
-    return aggcontext.agg(
-        data,
-        lambda data, mask=mask.obj, method=method: method(
-            data[mask[data.index]]
-        ),
-    )
+    def metric(aggcontext, data):
+        data = data[data_.name]
+        return aggcontext.agg(
+            data,
+            lambda data, mask=mask.obj, method=method: method(
+                data[mask[data.index]]
+            ),
+        )
+
+    return metric
 
 
 @execute_node.register(ops.StringAscii, pd.Series)
