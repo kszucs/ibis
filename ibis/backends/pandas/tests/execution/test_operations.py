@@ -250,7 +250,9 @@ def test_reduction(t, df, reduction, where):
     ],
 )
 def test_boolean_aggregation(t, df, reduction):
+
     expr = reduction(t.plain_int64 == 1)
+
     result = expr.execute()
     expected = reduction(df.plain_int64 == 1)
     assert result == expected
@@ -672,6 +674,7 @@ def test_summary_execute(t):
             t.plain_datetimes_utc.summary(suffix='_datetime'),
         ]
     )
+
     result = expr.execute()
     assert isinstance(result, pd.DataFrame)
 

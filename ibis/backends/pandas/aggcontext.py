@@ -218,7 +218,16 @@ import abc
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Dict, Iterator, Optional, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -365,6 +374,9 @@ class Summarize(AggregationContext):
     def agg(self, grouped_data, function, *args, **kwargs):
         if isinstance(function, str):
             return getattr(grouped_data, function)(*args, **kwargs)
+
+        # if isinstance(function, Mapping):
+        #     return grouped_data.agg(function)
 
         if not callable(function):
             raise TypeError(f'Object {function} is not callable or a string')

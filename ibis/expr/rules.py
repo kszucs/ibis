@@ -534,6 +534,7 @@ def window(win, *, from_base_table_of, this):
         order_var = win._order_by[0].op().args[0]
         if not isinstance(order_var.type(), dt.Timestamp):
             raise com.IbisInputError(error_msg)
+    print(type(win))
     return win
 
 

@@ -347,7 +347,7 @@ class ResultStore:
 
 def execute_with_scope(
     expr,
-    scope: Scope,
+    # scope: Scope,
     timecontext: Optional[TimeContext] = None,
     aggcontext=None,
     clients=None,
@@ -362,7 +362,13 @@ def execute_with_scope(
         value = execute_node(op, *args, timecontext=None, aggcontext=None)
         store.set(op, value)
 
-    return value
+    # FIXME(kszucs): hack, should wrap the incoming operation to another
+    # used for single field reductions: t.int64.sum()
+    if callable(value):
+        aggcontext = agg_ctx.Summarize()
+        return value(aggcontext)
+    else:
+        return value
 
 
 execute = Dispatcher('execute')
@@ -373,7 +379,7 @@ execute = Dispatcher('execute')
 def main_execute(
     expr,
     params=None,
-    scope=None,
+    # scope=None,
     timecontext: Optional[TimeContext] = None,
     aggcontext=None,
     **kwargs,
@@ -411,8 +417,8 @@ def main_execute(
         * If no data are bound to the input expression
     """
 
-    if scope is None:
-        scope = Scope()
+    # if scope is None:
+    #     scope = Scope()
 
     if timecontext is not None:
         # convert timecontext to datetime type, if time strings are provided
@@ -423,11 +429,14 @@ def main_execute(
 
     # TODO: make expresions hashable so that we can get rid of these .op()
     # calls everywhere
-    params = {k.op() if hasattr(k, 'op') else k: v for k, v in params.items()}
-    scope = scope.merge_scope(Scope(params, timecontext))
+    # params = {k.op() if hasattr(k, 'op') else k: v for k, v in params.items()}
+    # scope = scope.merge_scope(Scope(params, timecontext))
+
+    print(type(expr), type(expr.op()))
+
     return execute_with_scope(
         expr,
-        scope,
+        # scope,
         timecontext=timecontext,
         aggcontext=aggcontext,
         **kwargs,
@@ -483,11 +492,12 @@ def execute_and_reset(
     result = execute(
         expr,
         params=params,
-        scope=scope,
+        # scope=scope,
         timecontext=timecontext,
         aggcontext=aggcontext,
         **kwargs,
     )
+
     if isinstance(result, pd.DataFrame):
         schema = expr.schema()
         df = result.reset_index()

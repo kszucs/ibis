@@ -53,7 +53,7 @@ def compute_projection_scalar_expr(
     expr,
     parent,
     data,
-    scope: Scope = None,
+    # scope: Scope = None,
     timecontext: Optional[TimeContext] = None,
     **kwargs,
 ):
@@ -65,24 +65,24 @@ def compute_projection_scalar_expr(
 
     data_columns = frozenset(data.columns)
 
-    if scope is None:
-        scope = Scope()
+    # if scope is None:
+    #     scope = Scope()
 
-    scope = scope.merge_scopes(
-        Scope(
-            {
-                t: map_new_column_names_to_data(
-                    remap_overlapping_column_names(
-                        parent_table_op, t, data_columns
-                    ),
-                    data,
-                )
-            },
-            timecontext,
-        )
-        for t in op.root_tables()
-    )
-    scalar = execute(expr, scope=scope, **kwargs)
+    # scope = scope.merge_scopes(
+    #     Scope(
+    #         {
+    #             t: map_new_column_names_to_data(
+    #                 remap_overlapping_column_names(
+    #                     parent_table_op, t, data_columns
+    #                 ),
+    #                 data,
+    #             )
+    #         },
+    #         timecontext,
+    #     )
+    #     for t in op.root_tables()
+    # )
+    scalar = execute(expr, **kwargs)
     result = pd.Series([scalar], name=name).repeat(len(data.index))
     result.index = data.index
     return result
@@ -93,7 +93,7 @@ def compute_projection_column_expr(
     expr,
     parent,
     data,
-    scope: Scope,
+    # scope: Scope,
     timecontext: Optional[TimeContext],
     **kwargs,
 ):
@@ -120,20 +120,20 @@ def compute_projection_column_expr(
 
     data_columns = frozenset(data.columns)
 
-    scope = scope.merge_scopes(
-        Scope(
-            {
-                t: map_new_column_names_to_data(
-                    remap_overlapping_column_names(
-                        parent_table_op, t, data_columns
-                    ),
-                    data,
-                )
-            },
-            timecontext,
-        )
-        for t in op.root_tables()
-    )
+    # scope = scope.merge_scopes(
+    #     Scope(
+    #         {
+    #             t: map_new_column_names_to_data(
+    #                 remap_overlapping_column_names(
+    #                     parent_table_op, t, data_columns
+    #                 ),
+    #                 data,
+    #             )
+    #         },
+    #         timecontext,
+    #     )
+    #     for t in op.root_tables()
+    # )
 
     result = coerce_to_output(
         execute(expr, scope=scope, timecontext=timecontext, **kwargs),
@@ -381,7 +381,6 @@ def execute_selection_dataframe(
     selections,
     predicates,
     sort_keys,
-    scope: Scope,
     timecontext: Optional[TimeContext],
     **kwargs,
 ):
@@ -396,14 +395,13 @@ def execute_selection_dataframe(
                 selections,
                 op,
                 data,
-                scope=scope,
                 timecontext=timecontext,
                 **kwargs,
             )
 
     if predicates:
         predicates = _compute_predicates(
-            op.table.op(), predicates, data, scope, timecontext, **kwargs
+            op.table.op(), predicates, data, timecontext, **kwargs
         )
         predicate = functools.reduce(operator.and_, predicates)
         assert len(predicate) == len(
@@ -415,7 +413,6 @@ def execute_selection_dataframe(
         result, grouping_keys, ordering_keys = util.compute_sorted_frame(
             result,
             order_by=sort_keys,
-            scope=scope,
             timecontext=timecontext,
             **kwargs,
         )
