@@ -64,14 +64,18 @@ class ResultStore:
         self._results[op].get()
 
 
-def execute(expr, clients=None, **kwargs):
+def execute(expr, clients=None, params=None, **kwargs):
+    from . import execution
+
+    params = {expr.op(): value for expr, value in (params or {}).items()}
+
     dag = util.to_op_dag(expr)
 
     store = ResultStore(dag)
 
     for op in util.toposort(dag):
         args = store.arguments_for(op)
-        result = execute_node(op, *args, timecontext=None, aggcontext=None)
+        result = execute_node(op, *args, params=params, **kwargs)
         store.set(op, result)
 
     # FIXME(kszucs): hack, should wrap the incoming operation to another

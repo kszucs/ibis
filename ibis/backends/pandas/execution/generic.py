@@ -2,6 +2,7 @@
 
 import datetime
 import numbers
+from multiprocessing.sharedctypes import Value
 
 import numpy as np
 import pandas as pd
@@ -71,3 +72,8 @@ def execute_interval_literal(op, value, dtype, **kwargs):
 @register(ops.Alias, pd.Series, str)
 def execute_alias(op, obj, name, **kwargs):
     return obj.rename(name)
+
+
+@register(ops.ScalarParameter, dt.DataType, int)
+def execute_scalar_parameter(op, dtype, counter, *, params, **kwargs):
+    return params[op]
