@@ -137,6 +137,19 @@ def fmt_table_op(op: ops.TableNode, **_: Any) -> str:
 
 
 @fmt_table_op.register
+def _fmt_table_op(op: ops.TableNode, **_: Any) -> str:
+    """Format a table as value.
+
+    This function is called when a table is used in a value expression. An
+    example is `table.count()`.
+    """
+    top = f"{op.__class__.__name__}:"
+    # formatted_schema = fmt_schema(op.schema)
+    # return f"{top}\n{formatted_schema}"
+    return top
+
+
+@fmt_table_op.register
 def _fmt_table_op_physical_table(op: ops.PhysicalTable, **_: Any) -> str:
     top = f"{op.__class__.__name__}: {op.name}"
     formatted_schema = fmt_schema(op.schema)

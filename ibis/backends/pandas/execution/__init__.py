@@ -12,4 +12,6 @@
 # from .window import *  # noqa: F401,F403
 
 from .generic import *
+from .numeric import *
 from .relations import *
+from .strings import *

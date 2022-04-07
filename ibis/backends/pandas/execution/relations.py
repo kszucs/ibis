@@ -9,11 +9,12 @@ import pandas as pd
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.schema as sch
+from ibis import util
 from ibis.common.exceptions import UnboundExpressionError
 from ibis.expr.operations.generic import TableColumn
 
 from .. import Backend as PandasBackend
-from ..core import PandasTable, execute_node
+from ..core import PandasJoin, PandasProjection, PandasTable, execute_node
 
 register = execute_node.register
 
@@ -104,3 +105,25 @@ def execute_selection(op, df, selections, predicates, sort_keys, **kwargs):
 
     # # drop every temporary column we created for ordering or grouping
     # return result.drop(temporary_columns, axis=1)
+
+
+_join_suffixes = (f'_ibis_left_{util.guid()}', f'_ibis_right_{util.guid()}')
+
+
+@register(PandasJoin, pd.DataFrame, pd.DataFrame, str, tuple, tuple)
+def execute_pandas_join(op, left, right, how, left_on, right_on, **kwargs):
+    return pd.merge(
+        left,
+        right,
+        how=how,
+        left_on=left_on,
+        right_on=right_on,
+        suffixes=_join_suffixes,
+    )
+    # remap column names or create an Op for remapping column names
+
+
+@register(PandasProjection, pd.DataFrame, tuple)
+def execute_pandas_selection(op, table, columns, **kwargs):
+    print(table)
+    return table[list(columns)]

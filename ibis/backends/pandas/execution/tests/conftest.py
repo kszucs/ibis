@@ -5,8 +5,7 @@ import pandas as pd
 import pytest
 
 import ibis.expr.datatypes as dt
-
-from ... import Backend
+from ibis.backends.pandas import Backend as PandasBackend
 
 
 @pytest.fixture(scope='module')
@@ -195,7 +194,7 @@ def client(
     time_keyed_df2,
     intersect_df2,
 ):
-    return Backend().connect(
+    return PandasBackend().connect(
         {
             'df': df,
             'df1': df1,
@@ -243,7 +242,7 @@ def t(client):
 
 @pytest.fixture(scope='module')
 def lahman(batting_df, awards_players_df):
-    return Backend().connect(
+    return PandasBackend().connect(
         {'batting': batting_df, 'awards_players': awards_players_df}
     )
 
