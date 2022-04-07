@@ -1,4 +1,4 @@
-from functools import singledispatch
+from functools import reduce, singledispatch
 
 import pandas as pd
 import toolz
@@ -178,7 +178,9 @@ class PandasProjection(ops.TableNode, PandasOp):
         return sch.schema({name: schema[name] for name in self.columns})
 
 
-# class PandasProjection
+class PandasFilter(ops.TableNode, PandasOp):
+    table = rlz.table()
+    predicate = rlz.boolean
 
 
 @singledispatch
@@ -277,5 +279,9 @@ def rewrite_selection(op):
         table = PandasProjection(
             table=table, columns=tuple(toolz.unique(columns))
         )
+
+    if op.predicates:
+        predicate = reduce(ops.And, op.predicates)
+        table = PandasFilter(table, predicate=predicate)
 
     return table

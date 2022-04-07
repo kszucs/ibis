@@ -152,31 +152,31 @@ def test_join_with_duplicate_non_key_columns_not_selected(
 #     tm.assert_frame_equal(result, expected)
 
 
-# @mutating_join_type
-# def test_multi_join_with_post_expression_filter(how, left, df1):
-#     lhs = left[['key', 'key2']]
-#     rhs = left[['key2', 'value']]
-#     rhs2 = left[['key2', 'value']].relabel({'value': 'value2'})
+@mutating_join_type
+def test_multi_join_with_post_expression_filter(how, left, df1):
+    lhs = left[['key', 'key2']]
+    rhs = left[['key2', 'value']]
+    rhs2 = left[['key2', 'value']].relabel({'value': 'value2'})
 
-#     joined = lhs.join(rhs, 'key2', how=how)
-#     projected = joined[lhs, rhs.value]
-#     filtered = projected[projected.value == 4]
+    joined = lhs.join(rhs, 'key2', how=how)
+    projected = joined[lhs, rhs.value]
+    filtered = projected[projected.value == 4]
 
-#     joined2 = filtered.join(rhs2, 'key2')
-#     projected2 = joined2[filtered.key, rhs2.value2]
-#     expr = projected2[projected2.value2 == 3]
+    joined2 = filtered.join(rhs2, 'key2')
+    projected2 = joined2[filtered.key, rhs2.value2]
+    expr = projected2[projected2.value2 == 3]
 
-#     result = expr.execute()
+    result = expr.execute()
 
-#     df1 = lhs.execute()
-#     df2 = rhs.execute()
-#     df3 = rhs2.execute()
-#     expected = pd.merge(df1, df2, on='key2', how=how)
-#     expected = expected.loc[expected.value == 4].reset_index(drop=True)
-#     expected = pd.merge(expected, df3, on='key2')[['key', 'value2']]
-#     expected = expected.loc[expected.value2 == 3].reset_index(drop=True)
+    df1 = lhs.execute()
+    df2 = rhs.execute()
+    df3 = rhs2.execute()
+    expected = pd.merge(df1, df2, on='key2', how=how)
+    expected = expected.loc[expected.value == 4].reset_index(drop=True)
+    expected = pd.merge(expected, df3, on='key2')[['key', 'value2']]
+    expected = expected.loc[expected.value2 == 3].reset_index(drop=True)
 
-#     tm.assert_frame_equal(result, expected)
+    tm.assert_frame_equal(result, expected)
 
 
 # @mutating_join_type

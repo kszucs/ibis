@@ -14,7 +14,13 @@ from ibis.common.exceptions import UnboundExpressionError
 from ibis.expr.operations.generic import TableColumn
 
 from .. import Backend as PandasBackend
-from ..core import PandasJoin, PandasProjection, PandasTable, execute_node
+from ..core import (
+    PandasFilter,
+    PandasJoin,
+    PandasProjection,
+    PandasTable,
+    execute_node,
+)
 
 register = execute_node.register
 
@@ -124,6 +130,9 @@ def execute_pandas_join(op, left, right, how, left_on, right_on, **kwargs):
 
 
 @register(PandasProjection, pd.DataFrame, tuple)
-def execute_pandas_selection(op, table, columns, **kwargs):
+def execute_pandas_projection(op, table, columns, **kwargs):
     print(table)
     return table[list(columns)]
+
+
+# @register(PandasFilter,)
