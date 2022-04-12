@@ -42,16 +42,61 @@ def _compare_tuples(a, b):
 
 
 def _erase_exprs(arg):
+    """
+    Remove intermediate expressions.
+    """
     if isinstance(arg, ir.Expr):
-        return arg.op()._erase_exprs()
+        return arg.op()
     elif isinstance(arg, tuple):
         return tuple(map(_erase_exprs, arg))
     else:
         return arg
 
 
+def _create_exprs(arg):
+    if isinstance(arg, Node):
+        return arg.to_expr()
+    elif isinstance(arg, tuple):
+        return tuple(map(_create_exprs, arg))
+    else:
+        return arg
+
+
+# TODO(kszucs): should rename to Operator
 @public
 class Node(Annotable, Comparable):
+
+    __slots__ = ('_cached_expr', 'args')
+
+    def __init__(self, **kwargs):
+        object.__setattr__(self, 'args', tuple(kwargs.values()))
+        kwargs = {k: _erase_exprs(v) for k, v in kwargs.items()}
+        super().__init__(**kwargs)
+
+    def __post_init__(self):
+        expr = self.output_type(self)
+        object.__setattr__(self, '_cached_expr', expr)
+
+    def __post_init__(self):
+        for arg in self.__args__:
+            assert not isinstance(arg, ir.Expr)
+        for arg in self.args:
+            assert not isinstance(arg, Node)
+
+    @property
+    def argnames(self):
+        return self.__argnames__
+
+    def __getattribute__(self, name):
+        arg = super().__getattribute__(name)
+        if name in type(self).__argnames__:
+            arg = _create_exprs(arg)
+        return arg
+
+    def __reduce__(self):
+        kwargs = dict(zip(self.argnames, self.args))
+        return (self._reconstruct, (kwargs,))
+
     @immutable_property
     def _flat_ops(self):
         import ibis.expr.types as ir
@@ -60,22 +105,8 @@ class Node(Annotable, Comparable):
             arg.op() for arg in self.flat_args() if isinstance(arg, ir.Expr)
         )
 
-    def _erase_exprs(self):
-        """
-        Remove intermediate expressions.
-
-        Note that this method is only for internal use.
-        """
-        cls = self.__class__
-        new = cls.__new__(cls)
-        for name, arg in zip(self.argnames, self.args):
-            object.__setattr__(new, name, _erase_exprs(arg))
-        return new
-
     def __equals__(self, other):
-        return self._hash == other._hash and _compare_tuples(
-            self.args, other.args
-        )
+        return self._hash == other._hash and self.__args__ == other.__args__
 
     def equals(self, other):
         if not isinstance(other, Node):
@@ -110,7 +141,7 @@ class Node(Annotable, Comparable):
         return self.equals(other)
 
     def to_expr(self):
-        return self.output_type(self)
+        return self._cached_expr
 
     def resolve_name(self):
         raise ExpressionError(f'Expression is not named: {type(self)}')
