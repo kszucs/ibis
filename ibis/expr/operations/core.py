@@ -5,6 +5,8 @@ from abc import abstractmethod
 import toolz
 from public import public
 
+from ibis import util
+
 from ...common.exceptions import ExpressionError
 from ...common.grounds import Comparable
 from ...common.validators import immutable_property
@@ -39,6 +41,15 @@ def _compare_tuples(a, b):
     return all(map(_compare_items, a, b))
 
 
+def _erase_exprs(arg):
+    if isinstance(arg, ir.Expr):
+        return arg.op()._erase_exprs()
+    elif isinstance(arg, tuple):
+        return tuple(map(_erase_exprs, arg))
+    else:
+        return arg
+
+
 @public
 class Node(Annotable, Comparable):
     @immutable_property
@@ -48,6 +59,18 @@ class Node(Annotable, Comparable):
         return tuple(
             arg.op() for arg in self.flat_args() if isinstance(arg, ir.Expr)
         )
+
+    def _erase_exprs(self):
+        """
+        Remove intermediate expressions.
+
+        Note that this method is only for internal use.
+        """
+        cls = self.__class__
+        new = cls.__new__(cls)
+        for name, arg in zip(self.argnames, self.args):
+            object.__setattr__(new, name, _erase_exprs(arg))
+        return new
 
     def __equals__(self, other):
         return self._hash == other._hash and _compare_tuples(
