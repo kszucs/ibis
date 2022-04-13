@@ -386,14 +386,14 @@ def execute_node_nullif_scalar_series(op, value, series, **kwargs):
     return dd.from_array(da.where(series.eq(value).values, np.nan, value))
 
 
-def wrap_case_result(raw: np.ndarray, expr: ir.ValueExpr):
+def wrap_case_result(raw: np.ndarray, expr: ir.Value):
     """Wrap a CASE statement result in a Series and handle returning scalars.
 
     Parameters
     ----------
     raw : ndarray[T]
         The raw results of executing the ``CASE`` expression
-    expr : ValueExpr
+    expr : Value
         The expression from the which `raw` was computed
 
     Returns
@@ -408,7 +408,7 @@ def wrap_case_result(raw: np.ndarray, expr: ir.ValueExpr):
             raw_1d.astype(constants.IBIS_TYPE_TO_PANDAS_TYPE[expr.type()])
         )
     # TODO - we force computation here
-    if isinstance(expr, ir.ScalarExpr) and result.size.compute() == 1:
+    if isinstance(expr, ir.Scalar) and result.size.compute() == 1:
         return result.head().item()
     return result
 

@@ -26,7 +26,7 @@ from ibis.expr.types import (  # noqa
     BooleanValue,
     CategoryScalar,
     CategoryValue,
-    ColumnExpr,
+    Column,
     DateColumn,
     DateScalar,
     DateValue,
@@ -76,7 +76,7 @@ from ibis.expr.types import (  # noqa
     PolygonColumn,
     PolygonScalar,
     PolygonValue,
-    ScalarExpr,
+    Scalar,
     StringColumn,
     StringScalar,
     StringValue,
@@ -90,7 +90,7 @@ from ibis.expr.types import (  # noqa
     TimestampScalar,
     TimestampValue,
     TimeValue,
-    ValueExpr,
+    Value,
     array,
     literal,
     map,
@@ -214,7 +214,7 @@ T = TypeVar("T")
 negate = ir.NumericValue.negate
 
 
-def param(type: dt.DataType) -> ir.ScalarExpr:
+def param(type: dt.DataType) -> ir.Scalar:
     """Create a deferred parameter of a given type.
 
     Parameters
@@ -224,7 +224,7 @@ def param(type: dt.DataType) -> ir.ScalarExpr:
 
     Returns
     -------
-    ScalarExpr
+    Scalar
         A scalar expression backend by a parameter
 
     Examples
@@ -322,7 +322,7 @@ def table(schema: sch.Schema, name: str | None = None) -> ir.TableExpr:
     return node.to_expr()
 
 
-def desc(expr: ir.ColumnExpr | str) -> ir.SortExpr | ops.DeferredSortKey:
+def desc(expr: ir.Column | str) -> ir.SortExpr | ops.DeferredSortKey:
     """Create a descending sort key from `expr` or column name.
 
     Parameters
@@ -347,7 +347,7 @@ def desc(expr: ir.ColumnExpr | str) -> ir.SortExpr | ops.DeferredSortKey:
         return ops.SortKey(expr, ascending=False).to_expr()
 
 
-def asc(expr: ir.ColumnExpr | str) -> ir.SortExpr | ops.DeferredSortKey:
+def asc(expr: ir.Column | str) -> ir.SortExpr | ops.DeferredSortKey:
     """Create a ascending sort key from `asc` or column name.
 
     Parameters
@@ -633,9 +633,9 @@ def _add_methods(klass, method_table):
 
 def where(
     boolean_expr: ir.BooleanValue,
-    true_expr: ir.ValueExpr,
-    false_null_expr: ir.ValueExpr,
-) -> ir.ValueExpr:
+    true_expr: ir.Value,
+    false_null_expr: ir.Value,
+) -> ir.Value:
     """Return `true_expr` if `boolean_expr` is `True` else `false_null_expr`.
 
     Parameters
@@ -649,7 +649,7 @@ def where(
 
     Returns
     -------
-    ir.ValueExpr
+    ir.Value
         An expression
     """
     op = ops.Where(boolean_expr, true_expr, false_null_expr)

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Iterable
 
 from public import public
 
-from .generic import AnyColumn, AnyScalar, AnyValue, ColumnExpr, literal
+from .generic import AnyColumn, AnyScalar, AnyValue, Column, literal
 from .typing import V
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ class ArrayValue(AnyValue):
     def __getitem__(
         self,
         index: int | ir.IntegerValue | slice,
-    ) -> ir.ValueExpr:
+    ) -> ir.Value:
         """Extract one or more elements of `self`.
 
         Parameters
@@ -48,7 +48,7 @@ class ArrayValue(AnyValue):
 
         Returns
         -------
-        ValueExpr
+        Value
             - If `index` is an [`int`][int] or
               [`IntegerValue`][ibis.expr.types.IntegerValue] then the return
               type is the element type of `self`.
@@ -244,9 +244,9 @@ def array(
     """
     import ibis.expr.operations as ops
 
-    if all([isinstance(value, ColumnExpr) for value in values]):
+    if all([isinstance(value, Column) for value in values]):
         return ops.ArrayColumn(values).to_expr()
-    elif any([isinstance(value, ColumnExpr) for value in values]):
+    elif any([isinstance(value, Column) for value in values]):
         raise com.IbisTypeError(
             'To create an array column using `array`, all input values must '
             'be column expressions.'

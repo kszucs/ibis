@@ -74,14 +74,12 @@ class Node(Annotable, Comparable):
         super().__init__(**kwargs)
 
     def __post_init__(self):
-        expr = self.output_type(self)
-        object.__setattr__(self, '_cached_expr', expr)
-
-    def __post_init__(self):
         for arg in self.__args__:
             assert not isinstance(arg, ir.Expr)
         for arg in self.args:
             assert not isinstance(arg, Node)
+        expr = self.output_type(self)
+        object.__setattr__(self, '_cached_expr', expr)
 
     @property
     def argnames(self):

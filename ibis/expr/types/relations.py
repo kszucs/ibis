@@ -20,7 +20,7 @@ from .core import Expr
 if TYPE_CHECKING:
     from .. import schema as sch
     from .. import types as ir
-    from .generic import ColumnExpr
+    from .generic import Column
     from .groupby import GroupedTableExpr
 
 
@@ -45,9 +45,7 @@ def _regular_join_method(
         right: TableExpr,
         predicates: str
         | Sequence[
-            str
-            | tuple[str | ir.ColumnExpr, str | ir.ColumnExpr]
-            | ir.BooleanValue
+            str | tuple[str | ir.Column, str | ir.Column] | ir.BooleanValue
         ] = (),
         suffixes: tuple[str, str] = ("_x", "_y"),
     ) -> TableExpr:
@@ -100,7 +98,7 @@ class TableExpr(Expr):
 
     def __getitem__(self, what):
         from .analytic import AnalyticExpr
-        from .generic import ColumnExpr
+        from .generic import Column
         from .logical import BooleanColumn
 
         if isinstance(what, (str, int)):
@@ -132,7 +130,7 @@ class TableExpr(Expr):
         elif isinstance(what, BooleanColumn):
             # Boolean predicate
             return self.filter([what])
-        elif isinstance(what, ColumnExpr):
+        elif isinstance(what, Column):
             # Projection convenience
             return self.projection(what)
         else:
@@ -184,7 +182,7 @@ class TableExpr(Expr):
     def _get_type(self, name):
         return self._arg.get_type(name)
 
-    def get_columns(self, iterable: Iterable[str]) -> list[ColumnExpr]:
+    def get_columns(self, iterable: Iterable[str]) -> list[Column]:
         """
         Get multiple columns from the table
 
@@ -204,18 +202,18 @@ class TableExpr(Expr):
 
         Returns
         -------
-        list[ir.ColumnExpr]
+        list[ir.Column]
             List of column expressions
         """
         return [self.get_column(x) for x in iterable]
 
-    def get_column(self, name: str) -> ColumnExpr:
+    def get_column(self, name: str) -> Column:
         """
         Get a reference to a single column from the table
 
         Returns
         -------
-        ColumnExpr
+        Column
             A column named `name`.
         """
         import ibis.expr.operations as ops
@@ -336,10 +334,10 @@ class TableExpr(Expr):
 
     def aggregate(
         self,
-        metrics: Sequence[ir.ScalarExpr] | None = None,
-        by: Sequence[ir.ValueExpr] | None = None,
+        metrics: Sequence[ir.Scalar] | None = None,
+        by: Sequence[ir.Value] | None = None,
         having: Sequence[ir.BooleanValue] | None = None,
-        **kwargs: ir.ValueExpr,
+        **kwargs: ir.Value,
     ) -> TableExpr:
         """Aggregate a table with a given set of reductions grouping by `by`.
 
@@ -418,10 +416,10 @@ class TableExpr(Expr):
     def sort_by(
         self,
         sort_exprs: str
-        | ir.ColumnExpr
+        | ir.Column
         | ir.SortKey
-        | tuple[str | ir.ColumnExpr, bool]
-        | Sequence[tuple[str | ir.ColumnExpr, bool]],
+        | tuple[str | ir.Column, bool]
+        | Sequence[tuple[str | ir.Column, bool]],
     ) -> TableExpr:
         """Sort table by `sort_exprs`
 
@@ -494,12 +492,12 @@ class TableExpr(Expr):
 
         return ops.Intersection(self, right).to_expr()
 
-    def to_array(self) -> ir.ColumnExpr:
+    def to_array(self) -> ir.Column:
         """View a single column table as an array.
 
         Returns
         -------
-        ValueExpr
+        Value
             A single column view of a table
         """
         from .. import operations as ops
@@ -521,7 +519,7 @@ class TableExpr(Expr):
     def mutate(
         self,
         exprs: Sequence[ir.Expr] | None = None,
-        **mutations: ir.ValueExpr,
+        **mutations: ir.Value,
     ) -> TableExpr:
         """Add columns to a table expression.
 
@@ -557,7 +555,7 @@ class TableExpr(Expr):
             baz: 5
             qux: r0.foo + r0.bar
 
-        Use the [`name`][ibis.expr.types.generic.ValueExpr.name] method to name
+        Use the [`name`][ibis.expr.types.generic.Value.name] method to name
         the new columns.
 
         >>> new_columns = [ibis.literal(5).name('baz',),
@@ -585,7 +583,7 @@ class TableExpr(Expr):
 
     def select(
         self,
-        exprs: ir.ValueExpr | str | Sequence[ir.ValueExpr | str],
+        exprs: ir.Value | str | Sequence[ir.Value | str],
     ) -> TableExpr:
         """Compute a new table expression using `exprs`.
 
@@ -792,7 +790,7 @@ class TableExpr(Expr):
 
     def fillna(
         self,
-        replacements: ir.ScalarExpr | Mapping[str, ir.ScalarExpr],
+        replacements: ir.Scalar | Mapping[str, ir.Scalar],
     ) -> TableExpr:
         """Fill null values in a table expression.
 
@@ -875,7 +873,7 @@ class TableExpr(Expr):
         footer_line = "-" * width
         print("\n".join([tabulated, footer_line, row_count]), file=buf)
 
-    def set_column(self, name: str, expr: ir.ValueExpr) -> TableExpr:
+    def set_column(self, name: str, expr: ir.Value) -> TableExpr:
         """Replace an existing column with a new expression.
 
         Parameters
@@ -912,9 +910,7 @@ class TableExpr(Expr):
         right: TableExpr,
         predicates: str
         | Sequence[
-            str
-            | tuple[str | ir.ColumnExpr, str | ir.ColumnExpr]
-            | ir.BooleanColumn
+            str | tuple[str | ir.Column, str | ir.Column] | ir.BooleanColumn
         ] = (),
         how: Literal[
             'inner',
@@ -987,7 +983,7 @@ class TableExpr(Expr):
         predicates: str
         | ir.BooleanColumn
         | Sequence[str | ir.BooleanColumn] = (),
-        by: str | ir.ColumnExpr | Sequence[str | ir.ColumnExpr] = (),
+        by: str | ir.Column | Sequence[str | ir.Column] = (),
         tolerance: str | ir.IntervalScalar | None = None,
         *,
         suffixes: tuple[str, str] = ("_x", "_y"),

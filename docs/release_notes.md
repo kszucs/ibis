@@ -51,7 +51,7 @@ Release Notes
 * Unify implementation of fillna and isna in Pyspark backend ([#2882](https://github.com/ibis-project/ibis/issues/2882))
 * Support binary operation with Timedelta in Pyspark backend ([#2873](https://github.com/ibis-project/ibis/issues/2873))
 * Add `group_concat` operation for Clickhouse backend ([#2839](https://github.com/ibis-project/ibis/issues/2839))
-* Support comparison of ColumnExpr to timestamp literal ([#2808](https://github.com/ibis-project/ibis/issues/2808))
+* Support comparison of Column to timestamp literal ([#2808](https://github.com/ibis-project/ibis/issues/2808))
 * Make op schema a cached property ([#2805](https://github.com/ibis-project/ibis/issues/2805))
 * Implement `.insert()` for SQLAlchemy backends ([#2613](https://github.com/ibis-project/ibis/issues/2613), [#2613](https://github.com/ibis-project/ibis/issues/2778))
 * Infer categorical and decimal Series to more specific Ibis types in Pandas backend ([#2792](https://github.com/ibis-project/ibis/issues/2792))

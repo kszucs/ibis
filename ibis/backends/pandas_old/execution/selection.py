@@ -97,7 +97,10 @@ def compute_projection_column_expr(
     timecontext: Optional[TimeContext],
     **kwargs,
 ):
-    result_name = expr._safe_name
+    if expr.has_name():
+        result_name = expr.get_name()
+    else:
+        result_name = None
     op = expr.op()
     parent_table_op = parent.table.op()
 
@@ -137,6 +140,7 @@ def compute_projection_column_expr(
         expr,
         data.index,
     )
+    assert result_name is not None, 'Column selection name is None'
     return result
 
 
@@ -334,8 +338,7 @@ def build_df_from_selection(
             renamed_cols[from_col] = to_cols[0]
         else:
             for new_col in to_cols:
-                if from_col != new_col:
-                    result[new_col] = result[from_col]
+                result[new_col] = result.loc[:, from_col]
 
     if renamed_cols:
         result = result.rename(columns=renamed_cols)

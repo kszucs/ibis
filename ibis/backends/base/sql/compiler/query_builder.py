@@ -316,7 +316,7 @@ class Select(DML, Comparable):
         context = self.context
         formatted = []
         for expr in self.select_set:
-            if isinstance(expr, ir.ValueExpr):
+            if isinstance(expr, ir.Value):
                 expr_str = self._translate(expr, named=True)
             elif isinstance(expr, ir.TableExpr):
                 # A * selection, possibly prefixed
@@ -580,7 +580,7 @@ class Compiler:
         for query in reversed(query_ast.queries):
             if (
                 isinstance(query, Select)
-                and not isinstance(expr, ir.ScalarExpr)
+                and not isinstance(expr, ir.Scalar)
                 and query.table_set is not None
             ):
                 if query.limit is None:

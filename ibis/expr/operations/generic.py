@@ -322,6 +322,22 @@ class ValueList(ValueOp):
         return distinct_roots(*self.values)
 
 
+# @public
+# class OperationList(Node):
+#     """Data structure for a list of value expressions"""
+
+#     # NOTE: this proxies the ValueOp behaviour to the underlying values
+
+#     values = rlz.tuple_of(rlz.any)
+
+#     output_type = ir.ListExpr
+#     output_dtype = rlz.dtype_like("values")
+#     output_shape = rlz.shape_like("values")
+
+#     def root_tables(self):
+#         return distinct_roots(*self.values)
+
+
 @public
 class Constant(ValueOp):
     output_shape = rlz.Shape.SCALAR

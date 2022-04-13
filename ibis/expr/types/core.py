@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ...backends.base import BaseBackend
     from .. import operations as ops
     from .. import types as ir
-    from .generic import ValueExpr
+    from .generic import Value
 
 
 @public
@@ -241,7 +241,7 @@ class Expr:
         self,
         limit: int | str | None = 'default',
         timecontext: TimeContext | None = None,
-        params: Mapping[ValueExpr, Any] | None = None,
+        params: Mapping[Value, Any] | None = None,
         **kwargs: Any,
     ):
         """Execute an expression against its backend if one exists.
@@ -270,7 +270,7 @@ class Expr:
         self,
         limit: int | None = None,
         timecontext: TimeContext | None = None,
-        params: Mapping[ValueExpr, Any] | None = None,
+        params: Mapping[Value, Any] | None = None,
     ):
         """Compile to an execution target.
 
@@ -316,9 +316,9 @@ unnamed = UnnamedMarker()
 
 def _binop(
     op_class: type[ops.BinaryOp],
-    left: ir.ValueExpr,
-    right: ir.ValueExpr,
-) -> ir.ValueExpr | NotImplemented:
+    left: ir.Value,
+    right: ir.Value,
+) -> ir.Value | NotImplemented:
     """Try to construct a binary operation.
 
     Parameters
@@ -333,7 +333,7 @@ def _binop(
 
     Returns
     -------
-    ValueExpr
+    Value
         A value expression
 
     Examples

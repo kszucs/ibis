@@ -168,14 +168,14 @@ class Backend(BaseSQLBackend):
         self,
         expr: ir.Expr,
         timecontext: Mapping | None = None,
-        params: Mapping[ir.ScalarExpr, Any] | None = None,
+        params: Mapping[ir.Scalar, Any] | None = None,
         limit: str = 'default',
         **kwargs: Any,
     ) -> Any:
         """Execute an expression."""
         if isinstance(expr, types.TableExpr):
             return self.compile(expr, timecontext, params, **kwargs).toPandas()
-        elif isinstance(expr, types.ColumnExpr):
+        elif isinstance(expr, types.Column):
             # expression must be named for the projection
             if not expr.has_name():
                 expr = expr.name("tmp")

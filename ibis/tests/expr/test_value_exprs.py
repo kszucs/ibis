@@ -62,7 +62,7 @@ def test_null():
 def test_literal_with_implicit_type(value, expected_type):
     expr = ibis.literal(value)
 
-    assert isinstance(expr, ir.ScalarExpr)
+    assert isinstance(expr, ir.Scalar)
     assert expr.type() == dt.dtype(expected_type)
 
     assert isinstance(expr.op(), ops.Literal)
@@ -79,7 +79,7 @@ def test_literal_with_implicit_type(value, expected_type):
 def test_listeral_with_unhashable_values(value, expected_type, expected_value):
     expr = ibis.literal(value)
 
-    assert isinstance(expr, ir.ScalarExpr)
+    assert isinstance(expr, ir.Scalar)
     assert expr.type() == dt.dtype(expected_type)
 
     assert isinstance(expr.op(), ops.Literal)
@@ -381,7 +381,7 @@ def test_isnan_isinf_scalar(value):
 )
 def test_cumulative_yield_array_types(table, column, operation):
     expr = getattr(getattr(table, column), operation)()
-    assert isinstance(expr, ir.ColumnExpr)
+    assert isinstance(expr, ir.Column)
 
 
 @pytest.fixture(params=['ln', 'log', 'log2', 'log10'])
@@ -438,10 +438,10 @@ def test_string_to_number(table, type):
     casted = table.g.cast(type)
     casted_literal = ibis.literal('5').cast(type).name('bar')
 
-    assert isinstance(casted, ir.ColumnExpr)
+    assert isinstance(casted, ir.Column)
     assert casted.type() == dt.dtype(type)
 
-    assert isinstance(casted_literal, ir.ScalarExpr)
+    assert isinstance(casted_literal, ir.Scalar)
     assert casted_literal.type() == dt.dtype(type)
     assert casted_literal.get_name() == 'bar'
 
@@ -488,7 +488,7 @@ def test_arbitrary(table, column, how, condition_fn):
     where = condition_fn(table)
     expr = col.arbitrary(how=how, where=where)
     assert expr.type() == col.type()
-    assert isinstance(expr, ir.ScalarExpr)
+    assert isinstance(expr, ir.Scalar)
     assert L.is_reduction(expr)
 
 
@@ -1012,7 +1012,7 @@ def test_between_time_failure_time(case, creator, left, right):
 
 
 def test_custom_type_binary_operations():
-    class Foo(ir.ValueExpr):
+    class Foo(ir.Value):
         def __add__(self, other):
             op = self.op()
             return type(op)(op.value + other).to_expr()

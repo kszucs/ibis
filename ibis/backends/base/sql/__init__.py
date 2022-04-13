@@ -101,7 +101,7 @@ class BaseSQLBackend(BaseBackend):
     def execute(
         self,
         expr: ir.Expr,
-        params: Mapping[ir.ScalarExpr, Any] | None = None,
+        params: Mapping[ir.Scalar, Any] | None = None,
         limit: str = 'default',
         **kwargs: Any,
     ):
@@ -128,8 +128,8 @@ class BaseSQLBackend(BaseBackend):
         -------
         DataFrame | Series | Scalar
             * `TableExpr`: pandas.DataFrame
-            * `ColumnExpr`: pandas.Series
-            * `ScalarExpr`: Python scalar value
+            * `Column`: pandas.Series
+            * `Scalar`: Python scalar value
         """
         # TODO Reconsider having `kwargs` here. It's needed to support
         # `external_tables` in clickhouse, but better to deprecate that
@@ -179,7 +179,7 @@ class BaseSQLBackend(BaseBackend):
 
         if isinstance(expr, (ir.TableExpr, sch.HasSchema)):
             return expr.schema()
-        elif isinstance(expr, ir.ValueExpr):
+        elif isinstance(expr, ir.Value):
             return sch.schema([(expr.get_name(), expr.type())])
         else:
             raise ValueError(

@@ -276,7 +276,7 @@ class SelectBuilder:
 
             return scalar_handler
 
-        if isinstance(expr, ir.ScalarExpr):
+        if isinstance(expr, ir.Scalar):
 
             if L.is_scalar_reduction(expr):
                 table_expr, name = L.reduction_to_aggregation(
@@ -301,7 +301,7 @@ class SelectBuilder:
         elif isinstance(expr, ir.AnalyticExpr):
             return expr.to_aggregation(), toolz.identity
 
-        elif isinstance(expr, ir.ColumnExpr):
+        elif isinstance(expr, ir.Column):
             op = expr.op()
 
             def _get_column(name):
@@ -542,7 +542,7 @@ class SelectBuilder:
             return f(expr)
 
         unchanged = True
-        if isinstance(expr, ir.ScalarExpr):
+        if isinstance(expr, ir.Scalar):
             if L.is_reduction(expr):
                 return self._rewrite_reduction_filter(expr)
 
@@ -616,7 +616,7 @@ class SelectBuilder:
     # Analysis of table set
 
     def _collect_elements(self):
-        # If expr is a ValueExpr, we must seek out the TableExprs that it
+        # If expr is a Value, we must seek out the TableExprs that it
         # references, build their ASTs, and mark them in our QueryContext
 
         # For now, we need to make the simplifying assumption that a value
