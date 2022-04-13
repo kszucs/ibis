@@ -12,7 +12,7 @@ import ibis
 import ibis.common.exceptions as com
 
 from .. import datatypes as dt
-from .core import Expr, _binop
+from .core import Expr, List, _binop
 
 
 @public
@@ -840,42 +840,9 @@ class NullColumn(AnyColumn, NullValue):
     pass  # noqa: E701,E302
 
 
-class List(Expr, Sequence[Expr]):
-    pass
-
-
-class ValueList(List, Sequence[AnyValue]):
-    pass
-
-
-# TODO(kszucs): should remove the Column base class?
 @public
-class ListExpr(Column, Value):  # , AnyValue):
-    @property
-    def values(self):
-        return self.op().values
-
-    def __iter__(self):
-        return iter(self.values)
-
-    def __getitem__(self, key):
-        return self.values[key]
-
-    def __add__(self, other):
-        other_values = tuple(getattr(other, 'values', other))
-        return type(self.op())(self.values + other_values).to_expr()
-
-    def __radd__(self, other):
-        other_values = tuple(getattr(other, 'values', other))
-        return type(self.op())(other_values + self.values).to_expr()
-
-    def __bool__(self):
-        return bool(self.values)
-
-    __nonzero__ = __bool__
-
-    def __len__(self):
-        return len(self.values)
+class ValueList(Value, List, Sequence[AnyValue]):
+    pass
 
 
 _NULL = None
@@ -992,4 +959,6 @@ def literal(value: Any, type: dt.DataType | str | None = None) -> Scalar:
 
 
 # Aliases for backward compatibility
-public(ValueExpr=Expr, ScalarExpr=Scalar, ColumnExpr=Column)
+public(
+    ValueExpr=Expr, ScalarExpr=Scalar, ColumnExpr=Column, ListExpr=ValueList
+)

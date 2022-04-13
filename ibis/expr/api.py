@@ -241,7 +241,7 @@ def param(type: dt.DataType) -> ir.Scalar:
     return ops.ScalarParameter(dt.dtype(type)).to_expr()
 
 
-def sequence(values: Sequence[T | None]) -> ir.ListExpr:
+def sequence(values: Sequence[T | None]) -> ir.ValueList:
     """Wrap a list of Python values as an Ibis sequence type.
 
     Parameters
@@ -251,7 +251,7 @@ def sequence(values: Sequence[T | None]) -> ir.ListExpr:
 
     Returns
     -------
-    ListExpr
+    ValueList
         A list expression
     """
     return ops.ValueList(values).to_expr()
