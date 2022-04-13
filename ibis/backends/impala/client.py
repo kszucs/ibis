@@ -264,7 +264,7 @@ class ImpalaCursor:
             return self._cursor.fetchall()
 
 
-class ImpalaTable(ir.TableExpr):
+class ImpalaTable(ir.Table):
     """A physical table in the Impala-Hive metastore"""
 
     @property

@@ -173,7 +173,7 @@ class Backend(BaseSQLBackend):
         **kwargs: Any,
     ) -> Any:
         """Execute an expression."""
-        if isinstance(expr, types.TableExpr):
+        if isinstance(expr, types.Table):
             return self.compile(expr, timecontext, params, **kwargs).toPandas()
         elif isinstance(expr, types.Column):
             # expression must be named for the projection
@@ -227,7 +227,7 @@ class Backend(BaseSQLBackend):
             raise com.IbisInputError(str(e)) from e
         return jtable
 
-    def table(self, name: str, database: str | None = None) -> ir.TableExpr:
+    def table(self, name: str, database: str | None = None) -> ir.Table:
         """Return a table expression from a table or view in the database.
 
         Parameters
@@ -239,7 +239,7 @@ class Backend(BaseSQLBackend):
 
         Returns
         -------
-        TableExpr
+        Table
             Table named `name` from `database`
         """
         jtable = self._get_jtable(name, database)
@@ -375,7 +375,7 @@ class Backend(BaseSQLBackend):
     def create_table(
         self,
         table_name: str,
-        obj: ir.TableExpr | pd.DataFrame | None = None,
+        obj: ir.Table | pd.DataFrame | None = None,
         schema: sch.Schema | None = None,
         database: str | None = None,
         force: bool = False,
@@ -441,7 +441,7 @@ class Backend(BaseSQLBackend):
     def create_view(
         self,
         name: str,
-        expr: ir.TableExpr,
+        expr: ir.Table,
         database: str | None = None,
         can_exist: bool = False,
         temporary: bool = False,
@@ -536,7 +536,7 @@ class Backend(BaseSQLBackend):
     def insert(
         self,
         table_name: str,
-        obj: ir.TableExpr | pd.DataFrame | None = None,
+        obj: ir.Table | pd.DataFrame | None = None,
         database: str | None = None,
         overwrite: bool = False,
         values: Any | None = None,

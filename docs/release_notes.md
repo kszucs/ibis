@@ -425,7 +425,7 @@ Release Notes
 * Fix casting to float in the MapD backend ([#1737](https://github.com/ibis-project/ibis/issues/1737))
 * Fix testing for BigQuery after auth flow update ([#1741](https://github.com/ibis-project/ibis/issues/1741))
 * Fix skipping for new BigQuery auth flow ([#1738](https://github.com/ibis-project/ibis/issues/1738))
-* Fix bug in ``TableExpr.drop`` ([#1732](https://github.com/ibis-project/ibis/issues/1732))
+* Fix bug in ``Table.drop`` ([#1732](https://github.com/ibis-project/ibis/issues/1732))
 * Filter the ``raw`` warning from newer pandas to support older pandas ([#1729](https://github.com/ibis-project/ibis/issues/1729))
 * Fix BigQuery credentials link ([#1706](https://github.com/ibis-project/ibis/issues/1706))
 * Add Union as an unsuppoted operation for MapD ([#1639](https://github.com/ibis-project/ibis/issues/1639))
@@ -457,7 +457,7 @@ Release Notes
 * Add test for reduction returning lists ([#1650](https://github.com/ibis-project/ibis/issues/1650))
 * Fix Azure VM image name ([#1646](https://github.com/ibis-project/ibis/issues/1646))
 * Updated MapD server-CI ([#1641](https://github.com/ibis-project/ibis/issues/1641))
-* Add TableExpr.drop to API documentation ([#1645](https://github.com/ibis-project/ibis/issues/1645))
+* Add Table.drop to API documentation ([#1645](https://github.com/ibis-project/ibis/issues/1645))
 * Fix Azure deployment step ([#1642](https://github.com/ibis-project/ibis/issues/1642))
 * Set up CI with Azure Pipelines ([#1640](https://github.com/ibis-project/ibis/issues/1640))
 * Fix conda builds ([#1609](https://github.com/ibis-project/ibis/issues/1609))
@@ -483,7 +483,7 @@ this release.
 -   Require `google-cloud-bigquery >=1.0` ([#1424](https://github.com/ibis-project/ibis/issues/1424))
 -   Limited support for interval arithmetic in the pandas backend
     ([#1407](https://github.com/ibis-project/ibis/issues/1407))
--   Support for subclassing `TableExpr` ([#1439](https://github.com/ibis-project/ibis/issues/1439))
+-   Support for subclassing `Table` ([#1439](https://github.com/ibis-project/ibis/issues/1439))
 -   Fill out pandas backend operations ([#1423](https://github.com/ibis-project/ibis/issues/1423))
 -   Add common DDL APIs to the pandas backend ([#1464](https://github.com/ibis-project/ibis/issues/1464))
 -   Implement the `sql` method for BigQuery ([#1463](https://github.com/ibis-project/ibis/issues/1463))
@@ -600,7 +600,7 @@ that all users upgrade from earlier versions of Ibis.
 ## Bug Fixes
 
 -   Unbound parameters were failing in the simple case of a
-    `ibis.expr.types.TableExpr.mutate`
+    `ibis.expr.types.Table.mutate`
     call with no operation ([#1378](https://github.com/ibis-project/ibis/issues/1378))
 -   Fix parameterized subqueries ([#1300](https://github.com/ibis-project/ibis/issues/1300), [#1331](https://github.com/ibis-project/ibis/issues/1331),
     [#1303](https://github.com/ibis-project/ibis/issues/1303), [#1378](https://github.com/ibis-project/ibis/issues/1378))
@@ -993,7 +993,7 @@ improvements, bug fixes, and other new features.
     (#392, #91)
 -   Added experimental database object \"usability layer\", see
     `ImpalaClient.database`.
--   Add `TableExpr.info`
+-   Add `Table.info`
 -   Add `compute_stats` API to table expressions referencing physical
     Impala tables
 -   Add `explain` method to `ImpalaClient` to show query plan for an

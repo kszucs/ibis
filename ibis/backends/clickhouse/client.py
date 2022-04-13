@@ -111,7 +111,7 @@ def clickhouse_to_ibis_dtype(clickhouse_dtype):
     return clickhouse_dtype.to_ibis()
 
 
-class ClickhouseTable(ir.TableExpr):
+class ClickhouseTable(ir.Table):
     """References a physical table in Clickhouse"""
 
     @property

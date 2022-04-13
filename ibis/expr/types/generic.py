@@ -72,7 +72,7 @@ class Scalar(Value):
         """
         Promote this column expression to a table projection
         """
-        from .relations import TableExpr
+        from .relations import Table
 
         roots = self.op().root_tables()
         if len(roots) > 1:
@@ -82,7 +82,7 @@ class Scalar(Value):
                 'to a projection'
             )
 
-        table = TableExpr(roots[0])
+        table = Table(roots[0])
         return table.projection([self])
 
     def _repr_html_(self) -> str | None:
@@ -98,7 +98,7 @@ class Column(Value):
         """
         Promote this column expression to a table projection
         """
-        from .relations import TableExpr
+        from .relations import Table
 
         roots = self.op().root_tables()
         if len(roots) > 1:
@@ -108,7 +108,7 @@ class Column(Value):
                 'to a projection'
             )
 
-        table = TableExpr(roots[0])
+        table = Table(roots[0])
         return table.projection([self])
 
     def _repr_html_(self) -> str | None:
@@ -729,12 +729,12 @@ class AnyColumn(Column, AnyValue):
 
         return ops.Count(self, where).to_expr().name("count")
 
-    def value_counts(self, metric_name: str = "count") -> ir.TableExpr:
+    def value_counts(self, metric_name: str = "count") -> ir.Table:
         """Compute a frequency table.
 
         Returns
         -------
-        TableExpr
+        Table
             Frequency table expression
         """
         from .relations import find_base_table
@@ -840,17 +840,17 @@ class NullColumn(AnyColumn, NullValue):
     pass  # noqa: E701,E302
 
 
-class List(Expr):
+class List(Expr, Sequence[Expr]):
     pass
 
 
-class ValueList(List, AnyValue):
+class ValueList(List, Sequence[AnyValue]):
     pass
 
 
 # TODO(kszucs): should remove the Column base class?
 @public
-class ListExpr(Column, AnyValue):
+class ListExpr(Column, Value):  # , AnyValue):
     @property
     def values(self):
         return self.op().values

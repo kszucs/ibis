@@ -99,18 +99,18 @@ def test_array_input():
 
 
 def test_custom_table_expr():
-    class MyTableExpr(ir.TableExpr):
+    class MyTable(ir.Table):
         pass
 
     class SpecialTable(ops.DatabaseTable):
         @property
         def output_type(self):
-            return MyTableExpr
+            return MyTable
 
     con = ibis.pandas.connect({})
     node = SpecialTable('foo', ibis.schema([('a', 'int64')]), con)
     expr = node.to_expr()
-    assert isinstance(expr, MyTableExpr)
+    assert isinstance(expr, MyTable)
 
 
 @pytest.fixture(scope='session')

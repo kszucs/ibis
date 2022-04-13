@@ -148,7 +148,7 @@ class BaseAlchemyBackend(BaseSQLBackend):
     def create_table(
         self,
         name: str,
-        expr: pd.DataFrame | ir.TableExpr | None = None,
+        expr: pd.DataFrame | ir.Table | None = None,
         schema: sch.Schema | None = None,
         database: str | None = None,
         force: bool = False,
@@ -352,7 +352,7 @@ class BaseAlchemyBackend(BaseSQLBackend):
     ) -> sa.Table:
         return sa.Table(name, self.meta, schema=schema, autoload=autoload)
 
-    def _sqla_table_to_expr(self, table: sa.Table) -> ir.TableExpr:
+    def _sqla_table_to_expr(self, table: sa.Table) -> ir.Table:
         schema = self._schemas.get(table.name)
         node = self.table_class(
             source=self,
@@ -367,7 +367,7 @@ class BaseAlchemyBackend(BaseSQLBackend):
         name: str,
         database: str | None = None,
         schema: str | None = None,
-    ) -> ir.TableExpr:
+    ) -> ir.Table:
         """Create a table expression from a table in the database.
 
         Parameters
@@ -386,7 +386,7 @@ class BaseAlchemyBackend(BaseSQLBackend):
 
         Returns
         -------
-        TableExpr
+        Table
             Table expression
         """
         if database is not None and database != self.current_database:
@@ -405,7 +405,7 @@ class BaseAlchemyBackend(BaseSQLBackend):
     def insert(
         self,
         table_name: str,
-        obj: pd.DataFrame | ir.TableExpr,
+        obj: pd.DataFrame | ir.Table,
         database: str | None = None,
         overwrite: bool = False,
     ) -> None:
@@ -448,7 +448,7 @@ class BaseAlchemyBackend(BaseSQLBackend):
                 if_exists='replace' if overwrite else 'append',
                 schema=self._current_schema,
             )
-        elif isinstance(obj, ir.TableExpr):
+        elif isinstance(obj, ir.Table):
             to_table_expr = self.table(table_name)
             to_table_schema = to_table_expr.schema()
 
@@ -475,7 +475,7 @@ class BaseAlchemyBackend(BaseSQLBackend):
         else:
             raise ValueError(
                 "No operation is being performed. Either the obj parameter "
-                "is not a pandas DataFrame or is not a ibis TableExpr."
+                "is not a pandas DataFrame or is not a ibis Table."
                 f"The given obj is of type {type(obj).__name__} ."
             )
 

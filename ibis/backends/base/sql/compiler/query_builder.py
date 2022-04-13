@@ -318,7 +318,7 @@ class Select(DML, Comparable):
         for expr in self.select_set:
             if isinstance(expr, ir.Value):
                 expr_str = self._translate(expr, named=True)
-            elif isinstance(expr, ir.TableExpr):
+            elif isinstance(expr, ir.Table):
                 # A * selection, possibly prefixed
                 if context.need_aliases(expr):
                     alias = context.get_ref(expr)
@@ -475,16 +475,16 @@ class Difference(SetOp):
         return ["EXCEPT"] * (len(self.tables) - 1)
 
 
-def flatten_union(table: ir.TableExpr):
+def flatten_union(table: ir.Table):
     """Extract all union queries from `table`.
 
     Parameters
     ----------
-    table : TableExpr
+    table : Table
 
     Returns
     -------
-    Iterable[Union[TableExpr, bool]]
+    Iterable[Union[Table, bool]]
     """
     op = table.op()
     if isinstance(op, ops.Union):
@@ -499,16 +499,16 @@ def flatten_union(table: ir.TableExpr):
     return [table]
 
 
-def flatten(table: ir.TableExpr):
+def flatten(table: ir.Table):
     """Extract all intersection or difference queries from `table`.
 
     Parameters
     ----------
-    table : TableExpr
+    table : Table
 
     Returns
     -------
-    Iterable[Union[TableExpr]]
+    Iterable[Union[Table]]
     """
     op = table.op()
     return list(toolz.concatv(flatten_union(op.left), flatten_union(op.right)))
@@ -622,7 +622,7 @@ class Compiler:
         npieces = len(union_info)
         assert npieces >= 3 and npieces % 2 != 0, 'Invalid union expression'
 
-        # 1. every other object starting from 0 is a TableExpr instance
+        # 1. every other object starting from 0 is a Table instance
         # 2. every other object starting from 1 is a bool indicating the type
         #    of union (distinct or not distinct)
         table_exprs, distincts = union_info[::2], union_info[1::2]

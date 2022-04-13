@@ -56,7 +56,7 @@ def _get_group_by_key(table, value):
     return value
 
 
-class GroupedTableExpr:
+class GroupedTable:
     """An intermediate table expression to hold grouping information."""
 
     def __init__(
@@ -93,7 +93,7 @@ class GroupedTableExpr:
             metrics, by=self.by, having=self._having, **kwds
         )
 
-    def having(self, expr: ir.BooleanScalar) -> GroupedTableExpr:
+    def having(self, expr: ir.BooleanScalar) -> GroupedTable:
         """Add a post-aggregation result filter `expr`.
 
         Parameters
@@ -103,12 +103,12 @@ class GroupedTableExpr:
 
         Returns
         -------
-        GroupedTableExpr
+        GroupedTable
             A grouped table expression
         """
         exprs = util.promote_list(expr)
         new_having = self._having + exprs
-        return GroupedTableExpr(
+        return GroupedTable(
             self.table,
             self.by,
             having=new_having,
@@ -116,9 +116,7 @@ class GroupedTableExpr:
             window=self._window,
         )
 
-    def order_by(
-        self, expr: ir.Value | Iterable[ir.Value]
-    ) -> GroupedTableExpr:
+    def order_by(self, expr: ir.Value | Iterable[ir.Value]) -> GroupedTable:
         """Sort a grouped table expression by `expr`.
 
         Notes
@@ -132,12 +130,12 @@ class GroupedTableExpr:
 
         Returns
         -------
-        GroupedTableExpr
-            A sorted grouped GroupedTableExpr
+        GroupedTable
+            A sorted grouped GroupedTable
         """
         exprs = util.promote_list(expr)
         new_order = self._order_by + exprs
-        return GroupedTableExpr(
+        return GroupedTable(
             self.table,
             self.by,
             having=self._having,
@@ -191,7 +189,7 @@ class GroupedTableExpr:
 
         Returns
         -------
-        TableExpr
+        Table
             A table expression with window functions applied
         """  # noqa: E501
         if exprs is None:
@@ -212,7 +210,7 @@ class GroupedTableExpr:
 
         See Also
         --------
-        ibis.expr.groupby.GroupedTableExpr.mutate
+        ibis.expr.groupby.GroupedTable.mutate
         """
         w = self._get_window()
         windowed_exprs = []
@@ -244,7 +242,7 @@ class GroupedTableExpr:
             order_by=sorts,
         )
 
-    def over(self, window: _window.Window) -> GroupedTableExpr:
+    def over(self, window: _window.Window) -> GroupedTable:
         """Add a window frame clause to be applied to child analytic expressions.
 
         Parameters
@@ -254,10 +252,10 @@ class GroupedTableExpr:
 
         Returns
         -------
-        GroupedTableExpr
+        GroupedTable
             A new grouped table expression
         """
-        return GroupedTableExpr(
+        return GroupedTable(
             self.table,
             self.by,
             having=self._having,
@@ -265,7 +263,7 @@ class GroupedTableExpr:
             window=window,
         )
 
-    def count(self, metric_name: str = 'count') -> ir.TableExpr:
+    def count(self, metric_name: str = 'count') -> ir.Table:
         """Computing the number of rows per group.
 
         Parameters
@@ -275,7 +273,7 @@ class GroupedTableExpr:
 
         Returns
         -------
-        TableExpr
+        Table
             The aggregated table
         """
         metric = self.table.count().name(metric_name)

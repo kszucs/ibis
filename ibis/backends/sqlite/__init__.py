@@ -105,7 +105,7 @@ class Backend(BaseAlchemyBackend):
             autoload=autoload,
         )
 
-    def table(self, name: str, database: str | None = None) -> ir.TableExpr:
+    def table(self, name: str, database: str | None = None) -> ir.Table:
         """Create a table expression from a table in the SQLite database.
 
         Parameters
@@ -117,7 +117,7 @@ class Backend(BaseAlchemyBackend):
 
         Returns
         -------
-        TableExpr
+        Table
             Table expression
         """
         alch_table = self._get_sqla_table(name, schema=database)

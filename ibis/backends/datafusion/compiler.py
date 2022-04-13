@@ -83,10 +83,10 @@ def selection(op, expr):
     for expr in op.selections or [op.table]:
         # TODO(kszucs) it would be nice if we wouldn't need to handle the
         # specific cases in the backend implementations, we could add a
-        # new operator which retrieves all of the TableExpr columns
+        # new operator which retrieves all of the Table columns
         # (.e.g. Asterisk) so the translate() would handle this
         # automatically
-        if isinstance(expr, ir.TableExpr):
+        if isinstance(expr, ir.Table):
             for name in expr.columns:
                 column = expr.get_column(name)
                 field = translate(column)
