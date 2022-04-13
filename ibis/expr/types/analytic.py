@@ -9,7 +9,7 @@ from .core import Expr
 
 
 @public
-class AnalyticExpr(Expr):
+class Analytic(Expr):
 
     # TODO(kszucs): should be removed
     def type(self):
@@ -17,14 +17,14 @@ class AnalyticExpr(Expr):
 
 
 @public
-class ExistsExpr(AnalyticExpr):
+class Exists(Analytic):
     # TODO(kszucs): should be removed
     def type(self):
         return 'exists'
 
 
 @public
-class TopKExpr(AnalyticExpr):
+class TopK(Analytic):
     def type(self):
         return 'topk'
 
@@ -70,3 +70,7 @@ class TopKExpr(AnalyticExpr):
             )
 
         return agg.sort_by([(by.get_name(), False)]).limit(op.k)
+
+
+# aliases for backward compatibility
+public(AnalyticExpr=Analytic, ExistsExpr=Exists, TopKExpr=TopK)

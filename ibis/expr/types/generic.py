@@ -591,7 +591,7 @@ class AnyScalar(Scalar, AnyValue):
 
 @public
 class AnyColumn(Column, AnyValue):
-    def bottomk(self, k: int, by: Value | None = None) -> ir.TopKExpr:
+    def bottomk(self, k: int, by: Value | None = None) -> ir.TopK:
         raise NotImplementedError("bottomk is not implemented")
 
     def approx_nunique(
@@ -631,7 +631,7 @@ class AnyColumn(Column, AnyValue):
         self,
         k: int,
         by: ir.Value | None = None,
-    ) -> ir.TopKExpr:
+    ) -> ir.TopK:
         """Return a "top k" expression.
 
         Parameters
@@ -643,7 +643,7 @@ class AnyColumn(Column, AnyValue):
 
         Returns
         -------
-        TopKExpr
+        TopK
             A top-k expression
         """
         import ibis.expr.operations as ops

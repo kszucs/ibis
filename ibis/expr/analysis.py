@@ -1017,10 +1017,10 @@ class FilterValidator(ExprValidator):
                 if isinstance(arg, ir.Scalar):
                     # arg_valid = True
                     pass
-                elif isinstance(arg, ir.TopKExpr):
+                elif isinstance(arg, ir.TopK):
                     # TopK not subjected to further analysis for now
                     roots_valid.append(True)
-                elif isinstance(arg, (ir.Column, ir.AnalyticExpr)):
+                elif isinstance(arg, (ir.Column, ir.Analytic)):
                     roots_valid.append(self.shares_some_roots(arg))
                 elif isinstance(arg, ir.Expr):
                     raise NotImplementedError(repr((type(expr), type(arg))))

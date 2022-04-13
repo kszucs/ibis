@@ -97,7 +97,7 @@ class Table(Expr):
         return self.execute()._repr_html_()
 
     def __getitem__(self, what):
-        from .analytic import AnalyticExpr
+        from .analytic import Analytic
         from .generic import Column
         from .logical import BooleanColumn
 
@@ -121,7 +121,7 @@ class Table(Expr):
 
         what = bind_expr(self, what)
 
-        if isinstance(what, AnalyticExpr):
+        if isinstance(what, Analytic):
             what = what._table_getitem()
 
         if isinstance(what, (list, tuple, Table)):
@@ -1244,7 +1244,7 @@ def _resolve_predicates(table: Table, predicates) -> list[ir.BooleanValue]:
     predicates = [ir.relations.bind_expr(table, x) for x in predicates]
     resolved_predicates = []
     for pred in predicates:
-        if isinstance(pred, ir.AnalyticExpr):
+        if isinstance(pred, ir.Analytic):
             pred = pred.to_filter()
         resolved_predicates.append(pred)
 

@@ -298,7 +298,7 @@ class SelectBuilder:
 
                 raise NotImplementedError(repr(expr))
 
-        elif isinstance(expr, ir.AnalyticExpr):
+        elif isinstance(expr, ir.Analytic):
             return expr.to_aggregation(), toolz.identity
 
         elif isinstance(expr, ir.Column):
