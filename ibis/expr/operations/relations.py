@@ -12,7 +12,7 @@ from .. import datatypes as dt
 from .. import rules as rlz
 from .. import schema as sch
 from .. import types as ir
-from .core import Node, ValueOp, distinct_roots
+from .core import Node, Value, distinct_roots
 from .sortkeys import _maybe_convert_sort_keys
 
 _table_names = (f'unbound_table_{i:d}' for i in itertools.count())
@@ -752,7 +752,7 @@ class Distinct(TableNode, sch.HasSchema):
 
 
 @public
-class ExistsSubquery(ValueOp):
+class ExistsSubquery(Value):
     foreign_table = rlz.table
     predicates = rlz.tuple_of(rlz.boolean)
 

@@ -2,11 +2,11 @@ from public import public
 
 from .. import datatypes as dt
 from .. import rules as rlz
-from .core import BinaryOp, UnaryOp, ValueOp
+from .core import Binary, Unary, Value
 
 
 @public
-class LogicalBinaryOp(BinaryOp):
+class LogicalBinary(Binary):
     left = rlz.boolean
     right = rlz.boolean
 
@@ -14,29 +14,29 @@ class LogicalBinaryOp(BinaryOp):
 
 
 @public
-class Not(UnaryOp):
+class Not(Unary):
     arg = rlz.boolean
 
     output_dtype = dt.boolean
 
 
 @public
-class And(LogicalBinaryOp):
+class And(LogicalBinary):
     pass
 
 
 @public
-class Or(LogicalBinaryOp):
+class Or(LogicalBinary):
     pass
 
 
 @public
-class Xor(LogicalBinaryOp):
+class Xor(LogicalBinary):
     pass
 
 
 @public
-class Comparison(BinaryOp):
+class Comparison(Binary):
     left = rlz.any
     right = rlz.any
 
@@ -95,7 +95,7 @@ class IdenticalTo(Comparison):
 
 
 @public
-class Between(ValueOp):
+class Between(Value):
     arg = rlz.any
     lower_bound = rlz.any
     upper_bound = rlz.any
@@ -120,7 +120,7 @@ class Between(ValueOp):
 
 
 @public
-class Contains(ValueOp):
+class Contains(Value):
     value = rlz.any
     options = rlz.one_of(
         [
@@ -141,7 +141,7 @@ class NotContains(Contains):
 
 
 @public
-class Where(ValueOp):
+class Where(Value):
 
     """
     Ternary case expression, equivalent to

@@ -4,11 +4,11 @@ from ...common import exceptions as com
 from ...common.validators import immutable_property
 from .. import datatypes as dt
 from .. import rules as rlz
-from .core import UnaryOp, ValueOp
+from .core import Unary, Value
 
 
 @public
-class ArrayColumn(ValueOp):
+class ArrayColumn(Value):
     cols = rlz.value_list_of(rlz.column(rlz.any), min_length=1)
 
     output_shape = rlz.Shape.COLUMNAR
@@ -28,7 +28,7 @@ class ArrayColumn(ValueOp):
 
 
 @public
-class ArrayLength(UnaryOp):
+class ArrayLength(Unary):
     arg = rlz.array
 
     output_dtype = dt.int64
@@ -36,7 +36,7 @@ class ArrayLength(UnaryOp):
 
 
 @public
-class ArraySlice(ValueOp):
+class ArraySlice(Value):
     arg = rlz.array
     start = rlz.integer
     stop = rlz.optional(rlz.integer)
@@ -46,7 +46,7 @@ class ArraySlice(ValueOp):
 
 
 @public
-class ArrayIndex(ValueOp):
+class ArrayIndex(Value):
     arg = rlz.array
     index = rlz.integer
 
@@ -58,7 +58,7 @@ class ArrayIndex(ValueOp):
 
 
 @public
-class ArrayConcat(ValueOp):
+class ArrayConcat(Value):
     left = rlz.array
     right = rlz.array
 
@@ -78,7 +78,7 @@ class ArrayConcat(ValueOp):
 
 
 @public
-class ArrayRepeat(ValueOp):
+class ArrayRepeat(Value):
     arg = rlz.array
     times = rlz.integer
 

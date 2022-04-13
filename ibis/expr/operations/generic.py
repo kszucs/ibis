@@ -17,7 +17,7 @@ from ...util import frozendict
 from .. import datatypes as dt
 from .. import rules as rlz
 from .. import types as ir
-from .core import Node, UnaryOp, ValueOp, distinct_roots
+from .core import Node, Unary, Value, distinct_roots
 
 try:
     import shapely
@@ -28,7 +28,7 @@ else:
 
 
 @public
-class TableColumn(ValueOp):
+class TableColumn(Value):
     """Selects a column from a `Table`."""
 
     table = rlz.table
@@ -67,7 +67,7 @@ class TableColumn(ValueOp):
 
 
 @public
-class RowID(ValueOp):
+class RowID(Value):
     """The row number (an autonumeric) of the returned result."""
 
     output_shape = rlz.Shape.COLUMNAR
@@ -100,7 +100,7 @@ def find_all_base_tables(expr, memo=None):
 
 
 @public
-class TableArrayView(ValueOp):
+class TableArrayView(Value):
 
     """
     (Temporary?) Helper operation class for SQL translation (fully formed table
@@ -121,7 +121,7 @@ class TableArrayView(ValueOp):
 
 
 @public
-class Cast(ValueOp):
+class Cast(Value):
     """Explicitly cast value to a specific data type."""
 
     arg = rlz.any
@@ -134,12 +134,12 @@ class Cast(ValueOp):
 
 
 @public
-class TypeOf(UnaryOp):
+class TypeOf(Unary):
     output_dtype = dt.string
 
 
 @public
-class IsNull(UnaryOp):
+class IsNull(Unary):
     """Return true if values are null.
 
     Returns
@@ -152,7 +152,7 @@ class IsNull(UnaryOp):
 
 
 @public
-class NotNull(UnaryOp):
+class NotNull(Unary):
     """Returns true if values are not null
 
     Returns
@@ -165,12 +165,12 @@ class NotNull(UnaryOp):
 
 
 @public
-class ZeroIfNull(UnaryOp):
+class ZeroIfNull(Unary):
     output_dtype = rlz.dtype_like("arg")
 
 
 @public
-class IfNull(ValueOp):
+class IfNull(Value):
     """
     Equivalent to (but perhaps implemented differently):
 
@@ -186,7 +186,7 @@ class IfNull(ValueOp):
 
 
 @public
-class NullIf(ValueOp):
+class NullIf(Value):
     """Set values to NULL if they equal the null_if_expr"""
 
     arg = rlz.any
@@ -196,7 +196,7 @@ class NullIf(ValueOp):
 
 
 @public
-class CoalesceLike(ValueOp):
+class CoalesceLike(Value):
 
     # According to Impala documentation:
     # Return type: same as the initial argument value, except that integer
@@ -232,7 +232,7 @@ class Least(CoalesceLike):
 
 
 @public
-class Literal(ValueOp):
+class Literal(Value):
     value = rlz.one_of(
         (
             rlz.instance_of(
@@ -281,7 +281,7 @@ class NullLiteral(Literal):
 
 
 @public
-class ScalarParameter(ValueOp):
+class ScalarParameter(Value):
     _counter = itertools.count()
 
     dtype = rlz.datatype
@@ -307,39 +307,7 @@ class ScalarParameter(ValueOp):
 
 
 @public
-class ValueList(ValueOp):
-    """Data structure for a list of value expressions"""
-
-    # NOTE: this proxies the ValueOp behaviour to the underlying values
-
-    values = rlz.tuple_of(rlz.any)
-
-    output_type = ir.ListExpr
-    output_dtype = rlz.dtype_like("values")
-    output_shape = rlz.shape_like("values")
-
-    def root_tables(self):
-        return distinct_roots(*self.values)
-
-
-# @public
-# class OperationList(Node):
-#     """Data structure for a list of value expressions"""
-
-#     # NOTE: this proxies the ValueOp behaviour to the underlying values
-
-#     values = rlz.tuple_of(rlz.any)
-
-#     output_type = ir.ListExpr
-#     output_dtype = rlz.dtype_like("values")
-#     output_shape = rlz.shape_like("values")
-
-#     def root_tables(self):
-#         return distinct_roots(*self.values)
-
-
-@public
-class Constant(ValueOp):
+class Constant(Value):
     output_shape = rlz.Shape.SCALAR
 
 
@@ -364,7 +332,7 @@ class Pi(Constant):
 
 
 @public
-class StructField(ValueOp):
+class StructField(Value):
     arg = rlz.struct
     field = rlz.instance_of(str)
 
@@ -384,19 +352,19 @@ class StructField(ValueOp):
 
 
 @public
-class DecimalPrecision(UnaryOp):
+class DecimalPrecision(Unary):
     arg = rlz.decimal
     output_dtype = dt.int32
 
 
 @public
-class DecimalScale(UnaryOp):
+class DecimalScale(Unary):
     arg = rlz.decimal
     output_dtype = dt.int32
 
 
 @public
-class Hash(ValueOp):
+class Hash(Value):
     arg = rlz.any
     how = rlz.isin({'fnv', 'farm_fingerprint'})
 
@@ -405,7 +373,7 @@ class Hash(ValueOp):
 
 
 @public
-class HashBytes(ValueOp):
+class HashBytes(Value):
     arg = rlz.one_of({rlz.value(dt.string), rlz.value(dt.binary)})
     how = rlz.isin({'md5', 'sha1', 'sha256', 'sha512'})
 
@@ -414,7 +382,7 @@ class HashBytes(ValueOp):
 
 
 @public
-class SummaryFilter(ValueOp):
+class SummaryFilter(Value):
     expr = rlz.instance_of(ir.TopK)
 
     output_dtype = dt.boolean
@@ -448,7 +416,7 @@ class TopK(Node):
 # cases, results and default optional arguments like they are in
 # api.py
 @public
-class SimpleCase(ValueOp):
+class SimpleCase(Value):
     base = rlz.any
     cases = rlz.value_list_of(rlz.any)
     results = rlz.value_list_of(rlz.any)
@@ -473,7 +441,7 @@ class SimpleCase(ValueOp):
 
 
 @public
-class SearchedCase(ValueOp):
+class SearchedCase(Value):
     cases = rlz.value_list_of(rlz.boolean)
     results = rlz.value_list_of(rlz.any)
     default = rlz.any

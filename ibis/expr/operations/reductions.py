@@ -4,17 +4,17 @@ from ...common.validators import immutable_property
 from .. import datatypes as dt
 from .. import rules as rlz
 from .. import types as ir
-from .core import ValueOp, distinct_roots
+from .core import Value, distinct_roots
 
 
 @public
-class Reduction(ValueOp):
+class Reduction(Value):
     _reduction = True
 
     output_shape = rlz.Shape.SCALAR
 
 
-class Filterable(ValueOp):
+class Filterable(Value):
     where = rlz.optional(rlz.boolean)
 
 

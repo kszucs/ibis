@@ -86,7 +86,7 @@ def test_ops_smoke():
 
 
 def test_array_input():
-    class MyOp(ops.ValueOp):
+    class MyOp(ops.Value):
         value = rlz.value(dt.Array(dt.double))
         output_dtype = rlz.dtype_like('value')
         output_shape = rlz.shape_like('value')
@@ -115,7 +115,7 @@ def test_custom_table_expr():
 
 @pytest.fixture(scope='session')
 def dummy_op():
-    class DummyOp(ops.ValueOp):
+    class DummyOp(ops.Value):
         arg = rlz.any
 
     return DummyOp

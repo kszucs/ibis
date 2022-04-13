@@ -2,11 +2,11 @@ from public import public
 
 from .. import datatypes as dt
 from .. import rules as rlz
-from .core import ValueOp
+from .core import Value
 
 
 @public
-class BucketLike(ValueOp):
+class BucketLike(Value):
     output_shape = rlz.Shape.COLUMNAR
 
     @property
@@ -72,7 +72,7 @@ class Histogram(BucketLike):
 
 
 @public
-class CategoryLabel(ValueOp):
+class CategoryLabel(Value):
     arg = rlz.category
     labels = rlz.tuple_of(rlz.instance_of(str))
     nulls = rlz.optional(rlz.instance_of(str))

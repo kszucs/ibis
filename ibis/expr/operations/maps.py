@@ -4,17 +4,17 @@ from ...common import exceptions as com
 from ...common.validators import immutable_property
 from .. import datatypes as dt
 from .. import rules as rlz
-from .core import UnaryOp, ValueOp
+from .core import Unary, Value
 
 
 @public
-class MapLength(UnaryOp):
+class MapLength(Unary):
     arg = rlz.mapping
     output_dtype = dt.int64
 
 
 @public
-class MapValueForKey(ValueOp):
+class MapValueForKey(Value):
     arg = rlz.mapping
     key = rlz.one_of([rlz.string, rlz.integer])
 
@@ -26,7 +26,7 @@ class MapValueForKey(ValueOp):
 
 
 @public
-class MapValueOrDefaultForKey(ValueOp):
+class MapValueOrDefaultForKey(Value):
     arg = rlz.mapping
     key = rlz.one_of([rlz.string, rlz.integer])
     default = rlz.any
@@ -48,7 +48,7 @@ class MapValueOrDefaultForKey(ValueOp):
 
 
 @public
-class MapKeys(UnaryOp):
+class MapKeys(Unary):
     arg = rlz.mapping
 
     @immutable_property
@@ -57,7 +57,7 @@ class MapKeys(UnaryOp):
 
 
 @public
-class MapValues(UnaryOp):
+class MapValues(Unary):
     arg = rlz.mapping
 
     @immutable_property
@@ -66,7 +66,7 @@ class MapValues(UnaryOp):
 
 
 @public
-class MapConcat(ValueOp):
+class MapConcat(Value):
     left = rlz.mapping
     right = rlz.mapping
 
