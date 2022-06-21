@@ -65,13 +65,17 @@ class rule(validator):
     def _erase_expr(self, value):
         if isinstance(value, ir.Expr):
             return value.op()
+        elif isinstance(value, tuple):
+            return tuple(map(self._erase_expr, value))
         else:
             return value
 
     def __call__(self, *args, **kwargs):
         args = map(self._erase_expr, args)
         kwargs = toolz.valmap(self._erase_expr, kwargs)
-        return super().__call__(*args, **kwargs)
+        result = super().__call__(*args, **kwargs)
+        assert not isinstance(result, ir.Expr)
+        return result
 
 
 # ---------------------------------------------------------------------

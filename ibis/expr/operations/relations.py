@@ -619,13 +619,13 @@ class Aggregation(TableNode, sch.HasSchema):
             if isinstance(e, ir.DestructValue):
                 # If this is a destruct, then we destructure
                 # the result and assign to multiple columns
-                struct_type = e.type()
+                struct_type = e.output_dtype
                 for name in struct_type.names:
                     names.append(name)
                     types.append(struct_type[name])
             else:
                 names.append(e.resolve_name())
-                types.append(e.type())
+                types.append(e.output_dtype)
 
         return sch.Schema(names, types)
 

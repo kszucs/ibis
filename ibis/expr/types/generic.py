@@ -405,7 +405,7 @@ class Value(Expr):
         """  # noqa: E501
         import ibis.expr.builders as bl
 
-        return bl.SimpleCaseBuilder(self)
+        return bl.SimpleCaseBuilder(self.op())
 
     def cases(
         self,

@@ -7,7 +7,6 @@ from ibis.common.validators import immutable_property
 from ibis.expr import datatypes as dt
 from ibis.expr import rules as rlz
 from ibis.expr import types as ir
-from ibis.expr.datatypes.core import higher_precedence
 from ibis.expr.operations.core import Binary, Unary, Value
 
 
@@ -188,14 +187,14 @@ class MathUnary(Unary):
 
     @immutable_property
     def output_dtype(self):
-        return higher_precedence(self.arg.output_dtype, dt.double)
+        return dt.higher_precedence(self.arg.output_dtype, dt.double)
 
 
 @public
 class ExpandingMathUnary(MathUnary):
     @immutable_property
     def output_dtype(self):
-        return higher_precedence(self.arg.output_dtype.largest, dt.double)
+        return dt.higher_precedence(self.arg.output_dtype.largest, dt.double)
         # if isinstance(self.arg.type(), dt.Decimal):
         #     return self.arg.type().largest
         # else:

@@ -1214,6 +1214,7 @@ def _get_timedelta_units(
     return [field for field in unit_fields if getattr(base_object, field) > 0]
 
 
+@public
 def higher_precedence(left: DataType, right: DataType) -> DataType:
     if castable(left, right, upcast=True):
         return right
