@@ -39,14 +39,12 @@ class TableColumn(Value):
     output_shape = rlz.Shape.COLUMNAR
 
     def __init__(self, table, name):
-        schema = table.schema()
-
         if isinstance(name, int):
-            name = schema.name_at_position(name)
+            name = table.schema.name_at_position(name)
 
-        if name not in schema:
+        if name not in table.schema:
             raise com.IbisTypeError(
-                f"value {name!r} is not a field in {table.columns}"
+                f"value {name!r} is not a field in {table.schema}"
             )
 
         super().__init__(table=table, name=name)
@@ -59,8 +57,7 @@ class TableColumn(Value):
 
     @property
     def output_dtype(self):
-        schema = self.table.schema()
-        return schema[self.name]
+        return self.table.schema[self.name]
 
 
 @public

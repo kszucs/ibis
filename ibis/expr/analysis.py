@@ -589,16 +589,15 @@ class Projector:
         )
 
 
-def find_first_base_table(expr):
-    def predicate(expr):
-        op = expr.op()
-        if isinstance(op, ops.TableNode):
-            return lin.halt, op
+def find_first_base_table(node):
+    def predicate(node):
+        if isinstance(node, ops.TableNode):
+            return lin.halt, node
         else:
             return lin.proceed, None
 
     try:
-        return next(lin.traverse(predicate, expr))
+        return next(lin.traverse(predicate, node))
     except StopIteration:
         return None
 

@@ -32,12 +32,9 @@ def _compare_tuples(a, b):
 
 @public
 class Node(Annotable, Comparable):
-    @immutable_property
-    def _flat_ops(self):
-        return tuple(
-            arg.op() for arg in self.flat_args() if isinstance(arg, ir.Expr)
-        )
 
+    # TODO(kszucs): no need to call _compare_tuples, just use the default
+    # implementation
     def __equals__(self, other):
         return self._hash == other._hash and _compare_tuples(
             self.args, other.args

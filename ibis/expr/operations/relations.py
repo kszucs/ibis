@@ -23,6 +23,10 @@ def genname():
     return next(_table_names)
 
 
+# TODO(kszucs): move the HasSchema trait from schema.py to here and reorganize
+# the Table classes to extend HasSchema (which may not be necessary at all)
+
+
 @public
 class TableNode(Node):
     output_type = ir.Table

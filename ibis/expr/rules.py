@@ -365,7 +365,7 @@ def numeric_like(name, op):
     return output_dtype
 
 
-@validator
+@rule
 def table(arg, *, schema=None, **kwargs):
     """A table argument.
 
@@ -386,13 +386,15 @@ def table(arg, *, schema=None, **kwargs):
     present it must be of the specified type. The table may have extra columns
     not specified in the schema.
     """
-    if not isinstance(arg, ir.Table):
+    import ibis.expr.operations as ops
+
+    if not isinstance(arg, ops.TableNode):
         raise com.IbisTypeError(
             f'Argument is not a table; got type {type(arg).__name__}'
         )
 
     if schema is not None:
-        if arg.schema() >= sch.schema(schema):
+        if arg.schema >= sch.schema(schema):
             return arg
 
         raise com.IbisTypeError(
@@ -401,7 +403,7 @@ def table(arg, *, schema=None, **kwargs):
     return arg
 
 
-@validator
+@rule
 def column_from(name, column, *, this):
     """A column from a named table.
 
@@ -410,20 +412,27 @@ def column_from(name, column, *, this):
     checks if the column in the table is equal to the column being
     passed.
     """
+    import ibis.expr.operations as ops
+
     if name not in this:
         raise com.IbisTypeError(f"Could not get table {name} from {this}")
-    table = this[name]
+
+    # TODO(kszucs): should avoid converting to TableExpr
+    table = this[name].to_expr()
 
     if isinstance(column, (str, int)):
-        return table[column]
-    elif isinstance(column, ir.Column):
+        return table[column].op()
+    elif isinstance(column, ops.Value):  # ir.Column):
+        # TODO(kszucs): should avoid converting to a ColumnExpr
+        column = column.to_expr()
+
         if not column.has_name():
             raise com.IbisTypeError(f"Passed column {column} has no name")
 
         maybe_column = column.get_name()
         try:
             if column.equals(table[maybe_column]):
-                return column
+                return column.op()
             else:
                 raise com.IbisTypeError(
                     f"Passed column is not a column in {type(table)}"

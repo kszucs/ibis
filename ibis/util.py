@@ -452,7 +452,7 @@ def to_op_dag(expr: ir.Expr) -> Graph:
 
     while stack:
         if (node := stack.pop()) not in dag:
-            dag[node] = children = node._flat_ops
+            dag[node] = children = node.flat_args()
             stack.extend(children)
     return dag
 

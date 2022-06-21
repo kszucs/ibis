@@ -761,8 +761,8 @@ class Column(Value):
         """
         from ibis.expr.analysis import find_first_base_table
 
-        base = find_first_base_table(self).to_expr()
-        metric = base.count().name(metric_name)
+        base = find_first_base_table(self.op())
+        metric = base.to_expr().count().name(metric_name)
 
         if not self.has_name():
             expr = self.name("unnamed")
