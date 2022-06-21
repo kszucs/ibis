@@ -322,12 +322,12 @@ def shape_like(name):
 def _promote_numeric_binop(exprs, op):
     bounds, dtypes = [], []
     for arg in exprs:
-        dtypes.append(arg.type())
-        if hasattr(arg.op(), 'value'):
+        dtypes.append(arg.output_dtype)
+        if hasattr(arg, 'value'):
             # arg.op() is a literal
-            bounds.append([arg.op().value])
+            bounds.append([arg.value])
         else:
-            bounds.append(arg.type().bounds)
+            bounds.append(arg.output_dtype.bounds)
 
     # In some cases, the bounding type might be int8, even though neither
     # of the types are that small. We want to ensure the containing type is
@@ -477,20 +477,6 @@ def non_negative_integer(arg, **kwargs):
         )
     if arg < 0:
         raise ValueError("got negative value for non-negative integer rule")
-    return arg
-
-
-@validator
-def python_literal(value, arg, **kwargs):
-    if (
-        not isinstance(arg, type(value))
-        or not isinstance(value, type(arg))
-        or arg != value
-    ):
-        raise ValueError(
-            "arg must be a literal exactly equal in type and value to value "
-            f"{value} with type {type(value)}, got `arg` with type {type(arg)}"
-        )
     return arg
 
 

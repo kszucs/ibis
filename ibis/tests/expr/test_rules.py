@@ -378,36 +378,8 @@ def test_table_with_schema_invalid(table):
 
 
 @pytest.mark.parametrize(
-    ('rule', 'input'),
-    [
-        (rlz.array_of(rlz.integer), [1, 2, 3]),
-        (rlz.array_of(rlz.integer), []),
-        (rlz.array_of(rlz.double), [1, 2]),
-        (rlz.array_of(rlz.string), ['a', 'b']),
-        (rlz.array_of(rlz.array_of(rlz.string)), [['a'], [], [], ['a', 'b']]),
-    ],
-)
-def test_array_of(rule, input):
-    assert isinstance(rule(input).type(), dt.Array)
-
-
-@pytest.mark.parametrize(
-    ('rule', 'input'),
-    [
-        (rlz.array_of(rlz.array_of(rlz.string)), [1, 2]),
-        (rlz.array_of(rlz.string), [1, 2.0]),
-        (rlz.array_of(rlz.array_of(rlz.integer)), [2, 2.0]),
-    ],
-)
-def test_array_of_invalid_input(rule, input):
-    with pytest.raises(IbisTypeError):
-        rule(input)
-
-
-@pytest.mark.parametrize(
     ('validator', 'input'),
     [
-        (rlz.array_of(rlz.integer), [1, 2, 3]),
         (rlz.value_list_of(rlz.integer), (3, 2)),
         (rlz.instance_of(int), 32),
     ],
