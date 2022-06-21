@@ -139,6 +139,7 @@ def literal(dtype, value, **kwargs):
         has_explicit = False
     else:
         has_explicit = True
+        # TODO(kszucs): handle class-like dtype definitions here explicitly
         explicit_dtype = dt.dtype(dtype)
 
     if has_explicit and has_inferred:
@@ -222,14 +223,22 @@ def value(dtype, arg, **kwargs):
         raise com.IbisTypeError(f'Invalid datatype specification {dtype}')
 
 
-@validator
+@rule
 def scalar(inner, arg, **kwargs):
-    return instance_of(ir.Scalar, inner(arg, **kwargs))
+    arg = inner(arg, **kwargs)
+    if arg.output_shape is Shape.SCALAR:
+        return arg
+    else:
+        raise com.IbisTypeError(f"{arg} it not a scalar")
 
 
-@validator
+@rule
 def column(inner, arg, **kwargs):
-    return instance_of(ir.Column, inner(arg, **kwargs))
+    arg = inner(arg, **kwargs)
+    if arg.output_shape is Shape.COLUMNAR:
+        return arg
+    else:
+        raise com.IbisTypeError(f"{arg} it not a column")
 
 
 any = value(None)
@@ -265,7 +274,7 @@ multipoint = value(dt.MultiPoint)
 multipolygon = value(dt.MultiPolygon)
 
 
-@validator
+@rule
 def interval(arg, units=None, **kwargs):
     arg = value(dt.Interval, arg)
     unit = arg.output_dtype.unit

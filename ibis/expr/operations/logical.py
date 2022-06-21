@@ -62,8 +62,8 @@ class Comparison(Binary):
         """
         if not rlz.comparable(left, right):
             raise TypeError(
-                'Arguments with datatype {} and {} are '
-                'not comparable'.format(left.type(), right.type())
+                f'Arguments with datatype {left.output_dtype} and '
+                f'{right.output_dtype} are not comparable'
             )
         super().__init__(left=left, right=right)
 
