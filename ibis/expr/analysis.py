@@ -409,31 +409,31 @@ class _PushdownValidate:
         self.pred = predicate
 
     def get_result(self):
-        def validate(expr):
-            op = expr.op()
-            if isinstance(op, ops.TableColumn):
-                return lin.proceed, self._validate_projection(expr)
+        assert isinstance(self.pred, ops.Node), type(self.pred)
+
+        def validate(node):
+            if isinstance(node, ops.TableColumn):
+                return lin.proceed, self._validate_projection(node)
             return lin.proceed, None
 
-        return all(lin.traverse(validate, self.pred, type=ir.Value))
+        return all(lin.traverse(validate, self.pred))  # , type=ir.Value))
 
-    def _validate_projection(self, expr):
+    def _validate_projection(self, node):
         is_valid = False
-        node = expr.op()
 
         for val in self.parent.selections:
             if (
-                isinstance(val.op(), ops.PhysicalTable)
+                isinstance(val, ops.PhysicalTable)
                 and node.name in val.schema()
             ):
                 is_valid = True
             elif (
-                isinstance(val.op(), ops.TableColumn)
-                and node.name == val.get_name()
+                isinstance(val, ops.TableColumn)
+                and node.name == val.resolve_name()
             ):
                 # Aliased table columns are no good
-                col_table = val.op().table.op()
-                is_valid = col_table.equals(node.table.op())
+                col_table = val.table
+                is_valid = col_table.equals(node.table)
 
         return is_valid
 

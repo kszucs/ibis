@@ -97,7 +97,7 @@ def test_invalid_instance_of(klass, value, expected):
 )
 def test_valid_value(dtype, value, expected):
     result = rlz.value(dtype, value)
-    assert result.equals(expected)
+    assert result == expected.op()
 
 
 @pytest.mark.parametrize(
@@ -211,10 +211,9 @@ class Baz:
 )
 def test_valid_value_list_of(validator, values, expected):
     result = validator(values)
-    assert isinstance(result, ir.ValueList)
-    assert len(result) == len(values)
-    for a, b in zip(result, expected):
-        assert a.equals(b)
+    assert isinstance(result, ops.ValueList)
+    assert len(result.values) == len(values)
+    assert result == expected.op()
 
 
 def test_valid_list_of_extra():

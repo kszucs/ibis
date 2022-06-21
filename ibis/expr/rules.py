@@ -109,6 +109,8 @@ def datatype(arg, **kwargs):
 
 # TODO(kszucs): make type argument the first and mandatory, similarly to the
 # value rule, move out the type inference to `ir.literal()` method
+# TODO(kszucs): may not make sense to support an explicit datatype here, we
+# could do the coercion in the API function ibis.literal()
 @rule
 def literal(dtype, value, **kwargs):
     import ibis.expr.operations as ops
@@ -149,10 +151,10 @@ def literal(dtype, value, **kwargs):
             'passing it explicitly with the `type` keyword.'.format(value)
         )
 
-    # if dtype is dt.null:
-    #     return null().cast(dtype)
-    # else:
+    if dtype is dt.null:
+        return ops.NullLiteral()
 
+    value = dt._normalize(dtype, value)
     return ops.Literal(value, dtype=dtype)
 
 
@@ -176,7 +178,7 @@ def value(dtype, arg, **kwargs):
 
     if not isinstance(arg, ops.Value):
         # coerce python literal to ibis literal
-        arg = literal(dtype, arg)
+        arg = literal(None, arg)
 
     if dtype is None:
         # no datatype restriction
