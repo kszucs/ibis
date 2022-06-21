@@ -261,7 +261,7 @@ class ArrayCollect(Reduction):
 
     @immutable_property
     def output_dtype(self):
-        return dt.Array(self.arg.type())
+        return dt.Array(self.arg.output_dtype)
 
 
 @public

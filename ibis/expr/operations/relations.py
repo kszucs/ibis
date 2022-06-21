@@ -259,7 +259,7 @@ class SetOp(TableNode, sch.HasSchema):
 
     @property
     def schema(self):
-        return self.left.schema()
+        return self.left.schema
 
     def blocks(self):
         return True
@@ -291,7 +291,7 @@ class Limit(TableNode):
 
     @property
     def schema(self):
-        return self.table.schema()
+        return self.table.schema
 
 
 @public
@@ -300,7 +300,7 @@ class SelfReference(TableNode, sch.HasSchema):
 
     @property
     def schema(self):
-        return self.table.schema()
+        return self.table.schema
 
     def blocks(self):
         return True
@@ -360,6 +360,11 @@ class Selection(TableNode, sch.HasSchema):
     def __init__(self, table, selections, predicates, sort_keys, **kwargs):
         from ibis.expr.analysis import shares_all_roots, shares_some_roots
 
+        print(type(table))
+        print(len(selections))
+        for s in selections:
+            print(" - ", type(s))
+
         if not shares_all_roots(selections + sort_keys, table):
             raise com.RelationError(
                 "Selection expressions don't fully originate from "
@@ -398,6 +403,7 @@ class Selection(TableNode, sch.HasSchema):
         names = []
 
         for projection in self.selections:
+            # TODO(kszucs): use an operation for it
             if isinstance(projection, ir.DestructColumn):
                 # If this is a destruct, then we destructure
                 # the result and assign to multiple columns
@@ -405,11 +411,12 @@ class Selection(TableNode, sch.HasSchema):
                 for name in struct_type.names:
                     names.append(name)
                     types.append(struct_type[name])
-            elif isinstance(projection, ir.Value):
-                names.append(projection.get_name())
-                types.append(projection.type())
-            elif isinstance(projection, ir.Table):
-                schema = projection.schema()
+            # elif isinstance(projection, ir.Value):
+            elif isinstance(projection, Value):
+                names.append(projection.resolve_name())
+                types.append(projection.output_dtype)
+            elif isinstance(projection, TableNode):
+                schema = projection.schema
                 names.extend(schema.names)
                 types.extend(schema.types)
 
@@ -681,12 +688,12 @@ class Distinct(TableNode, sch.HasSchema):
 
     def __init__(self, table):
         # check whether schema has overlapping columns or not
-        assert table.schema()
+        assert table.schema
         super().__init__(table=table)
 
     @property
     def schema(self):
-        return self.table.schema()
+        return self.table.schema
 
     def blocks(self):
         return True
@@ -718,7 +725,7 @@ class FillNa(TableNode, sch.HasSchema):
 
     @property
     def schema(self):
-        return self.table.schema()
+        return self.table.schema
 
 
 @public
@@ -731,7 +738,7 @@ class DropNa(TableNode, sch.HasSchema):
 
     @property
     def schema(self):
-        return self.table.schema()
+        return self.table.schema
 
 
 @public
@@ -743,7 +750,7 @@ class View(PhysicalTable):
 
     @property
     def schema(self):
-        return self.child.schema()
+        return self.child.schema
 
 
 @public

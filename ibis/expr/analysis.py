@@ -8,6 +8,7 @@ from typing import Sequence
 
 import toolz
 
+import ibis.expr.datatypes as dt
 import ibis.expr.lineage as lin
 import ibis.expr.operations as ops
 import ibis.expr.types as ir
@@ -525,7 +526,7 @@ class Projector:
         fused_exprs = []
         clean_exprs = self.clean_exprs
 
-        if not isinstance(root_table.op(), ops.Join):
+        if not isinstance(root_table, ops.Join):
             try:
                 resolved = [
                     root_table._ensure_expr(expr)
@@ -557,7 +558,7 @@ class Projector:
                 # gross we share the same table root. Better way to
                 # detect?
                 or len(roots) == 1
-                and find_immediate_parent_tables(val)[0] is roots[0]
+                and find_immediate_parent_tables(val.op())[0] is roots[0]
             ):
                 have_root = False
                 for root_sel in root_selections:
@@ -763,16 +764,18 @@ _ANY_OP_MAPPING = {
 }
 
 
-def find_predicates(expr, flatten=True):
-    def predicate(expr):
-        if isinstance(expr, ir.BooleanColumn):
-            if flatten and isinstance(expr.op(), ops.And):
+def find_predicates(node, flatten=True):
+    assert isinstance(node, ops.Node), type(node)
+
+    def predicate(node):
+        if node.output_dtype is dt.bool:
+            if flatten and isinstance(node, ops.And):
                 return lin.proceed, None
             else:
-                return lin.halt, expr
+                return lin.halt, node
         return lin.proceed, None
 
-    return list(lin.traverse(predicate, expr))
+    return list(lin.traverse(predicate, node))
 
 
 def find_subqueries(expr: ir.Expr) -> Counter:
@@ -811,12 +814,15 @@ def find_subqueries(expr: ir.Expr) -> Counter:
     return counts
 
 
+# TODO(kszucs): move to types/logical.py
 def _make_any(
     expr,
     any_op_class: type[ops.Any] | type[ops.NotAny],
 ):
-    tables = find_immediate_parent_tables(expr)
-    predicates = find_predicates(expr, flatten=True)
+    assert isinstance(expr, ir.Expr)
+
+    tables = find_immediate_parent_tables(expr.op())
+    predicates = find_predicates(expr.op(), flatten=True)
 
     if len(tables) > 1:
         op = _ANY_OP_MAPPING[any_op_class](

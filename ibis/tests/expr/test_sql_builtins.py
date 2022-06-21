@@ -147,7 +147,7 @@ def test_round(functional_alltypes, lineitem):
 
     result = functional_alltypes.double_col.round(2)
     assert isinstance(result, ir.FloatingColumn)
-    assert result.op().args[1].equals(ibis.literal(2))
+    assert result.op().args[1] == ibis.literal(2).op()
 
     # Even integers are double (at least in Impala, check with other DB
     # implementations)

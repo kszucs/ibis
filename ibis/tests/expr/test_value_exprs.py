@@ -265,7 +265,7 @@ def test_mixed_arity(table):
     expr = api.sequence(what)
 
     values = expr.op().values
-    assert isinstance(values[1], ir.StringColumn)
+    assert isinstance(values[1], ops.TableColumn)
 
     # it works!
     repr(expr)
@@ -514,7 +514,7 @@ def test_arbitrary(table, column, how, condition_fn):
 def test_any_all_notany(table, column, operation):
     expr = operation(table[column])
     assert isinstance(expr, ir.BooleanScalar)
-    assert L.is_reduction(expr)
+    assert L.is_reduction(expr.op())
 
 
 @pytest.mark.parametrize(
@@ -1502,6 +1502,6 @@ def test_deferred_r_ops(op_name, expected_left, expected_right):
     op = getattr(operator, op_name)
     expr = t[op(left, right).name("b")]
 
-    op = expr.op().selections[0].op().arg.op()
-    assert op.left.equals(expected_left(t))
-    assert op.right.equals(expected_right(t))
+    op = expr.op().selections[0].arg
+    assert op.left == expected_left(t).op()
+    assert op.right == expected_right(t).op()

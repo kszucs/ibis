@@ -62,7 +62,7 @@ class MapValues(Unary):
 
     @immutable_property
     def output_dtype(self):
-        return dt.Array(self.arg.type().value_type)
+        return dt.Array(self.arg.output_dtype.value_type)
 
 
 @public

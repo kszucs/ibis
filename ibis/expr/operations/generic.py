@@ -388,7 +388,7 @@ class SimpleCase(Value):
     output_shape = rlz.shape_like("base")
 
     def __init__(self, cases, results, **kwargs):
-        assert len(cases) == len(results)
+        assert len(cases.values) == len(results.values)
         super().__init__(cases=cases, results=results, **kwargs)
 
     @immutable_property
@@ -396,7 +396,7 @@ class SimpleCase(Value):
         # TODO(kszucs): we could extend the functionality of
         # rlz.shape_like to support varargs with .flat_args()
         # to define a subset of input arguments
-        values = [*self.results, self.default]
+        values = [*self.results.values, self.default]
         return rlz.highest_precedence_dtype(values)
 
 
@@ -409,12 +409,12 @@ class SearchedCase(Value):
     output_shape = rlz.shape_like("cases")
 
     def __init__(self, cases, results, default):
-        assert len(cases) == len(results)
+        assert len(cases.values) == len(results.values)
         super().__init__(cases=cases, results=results, default=default)
 
     @immutable_property
     def output_dtype(self):
-        exprs = [*self.results, self.default]
+        exprs = [*self.results.values, self.default]
         return rlz.highest_precedence_dtype(exprs)
 
 

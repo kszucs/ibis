@@ -444,7 +444,7 @@ def base_table_of(name, *, this):
         return base.to_expr()
 
 
-@validator
+@rule
 def function_of(
     arg,
     fn,

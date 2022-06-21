@@ -78,7 +78,7 @@ def fmt_truncated(
     return sep.join([*pieces[:first_n], ellipsis, *pieces[-last_m:]])
 
 
-def selection_maxlen(expressions: Iterable[ir.Value]) -> int:
+def selection_maxlen(nodes: Iterable[ops.Node]) -> int:
     """Compute the length of the longest name of input expressions.
 
     Parameters
@@ -94,8 +94,8 @@ def selection_maxlen(expressions: Iterable[ir.Value]) -> int:
     try:
         return max(
             len(name)
-            for expr in expressions
-            if (name := expr._safe_name) is not None
+            for node in nodes
+            if (name := node.resolve_name()) is not None
         )
     except ValueError:
         return 0
@@ -381,7 +381,7 @@ def fmt_fields(
 def _fmt_table_op_selection(
     op: ops.Selection, *, aliases: Aliases, **_: Any
 ) -> str:
-    top = f"{op.__class__.__name__}[{aliases[op.table.op()]}]"
+    top = f"{op.__class__.__name__}[{aliases[op.table]}]"
     raw_parts = fmt_fields(
         op,
         dict(
