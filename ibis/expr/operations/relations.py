@@ -11,7 +11,7 @@ from ibis.common import exceptions as com
 from ibis.expr import rules as rlz
 from ibis.expr import schema as sch
 from ibis.expr import types as ir
-from ibis.expr.operations.core import Node, distinct_roots
+from ibis.expr.operations.core import Node
 from ibis.expr.operations.logical import ExistsSubquery, NotExistsSubquery
 from ibis.expr.operations.sortkeys import _maybe_convert_sort_keys
 
@@ -168,13 +168,6 @@ class Join(TableNode):
         # For joins retaining both table schemas, merge them together here
         return self.left.schema().append(self.right.schema())
 
-    def root_tables(self):
-        if util.all_of([self.left.op(), self.right.op()], (Join, Selection)):
-            # Unraveling is not possible
-            return [self.left.op(), self.right.op()]
-        else:
-            return distinct_roots(self.left, self.right)
-
 
 @public
 class InnerJoin(Join):
@@ -286,9 +279,6 @@ class Limit(TableNode):
     def schema(self):
         return self.table.schema()
 
-    def root_tables(self):
-        return [self]
-
 
 @public
 class SelfReference(TableNode, sch.HasSchema):
@@ -297,12 +287,6 @@ class SelfReference(TableNode, sch.HasSchema):
     @property
     def schema(self):
         return self.table.schema()
-
-    def root_tables(self):
-        # The dependencies of this operation are not walked, which makes the
-        # table expression holding this relationally distinct from other
-        # expressions, so things like self-joins are possible
-        return [self]
 
     def blocks(self):
         return True
@@ -418,9 +402,6 @@ class Selection(TableNode, sch.HasSchema):
 
     def blocks(self):
         return bool(self.selections)
-
-    def root_tables(self):
-        return [self]
 
     def aggregate(self, this, metrics, by=None, having=None):
         if len(self.selections) > 0:
