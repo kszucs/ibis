@@ -209,10 +209,8 @@ def traverse(
     dedup
         Whether to allow expression traversal more than once
     """
-    assert isinstance(node, ops.Node)
-
     args = node if isinstance(node, collections.abc.Iterable) else [node]
-    todo = container(args)
+    todo = container(arg for arg in args if isinstance(arg, ops.Node))
     seen = set()
 
     while todo:
@@ -240,4 +238,6 @@ def traverse(
                     'an instance of boolean or iterable'
                 )
 
-            todo.extend(todo.visitor(args))
+            todo.extend(
+                arg for arg in todo.visitor(args) if isinstance(arg, ops.Node)
+            )

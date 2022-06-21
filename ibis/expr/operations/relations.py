@@ -86,22 +86,27 @@ class SQLQueryResult(TableNode, sch.HasSchema):
 
 
 def _make_distinct_join_predicates(left, right, predicates):
+    # TODO(kszucs): predicates should be already a list of operations, need
+    # to update the validation rule for the Join classes which is a noop
+    # currently
+
     import ibis.expr.analysis as L
+    import ibis.expr.operations as ops
 
     if left.equals(right):
         # GH #667: If left and right table have a common parent expression,
         # e.g. they have different filters, we need to add a self-reference and
         # make the appropriate substitution in the join predicates
-        right = right.view()
-    elif isinstance(right.op(), Join):
+        right = ops.SelfReference(right)
+    elif isinstance(right, Join):
         # for joins with joins on the right side we turn the right side into a
         # view, otherwise the join tree is incorrectly flattened and tables on
         # the right are incorrectly scoped
         old = right
-        new = right = right.view()
+        new = right = ops.SelfReference(right)
         predicates = [
             L.sub_for(pred, [(old, new)])
-            if isinstance(pred, ir.Expr)
+            if isinstance(pred, ops.Node)
             else pred
             for pred in predicates
         ]
@@ -131,7 +136,7 @@ def _clean_join_predicates(left, right, predicates):
         if not isinstance(pred, ir.BooleanColumn):
             raise com.ExpressionError('Join predicate must be comparison')
 
-        preds = L.flatten_predicate(pred)
+        preds = L.flatten_predicate(pred.op())
         result.extend(preds)
 
     _validate_join_predicates(left, right, result)
@@ -158,6 +163,11 @@ class Join(TableNode):
     right = rlz.table
     # TODO(kszucs): convert to proper predicate rules
     predicates = rlz.optional(lambda x, this: x, default=())
+    # predicates = rlz.one_of(
+    #     rlz.pair(rlz.column_from("left"), rlz.column_from("right")),
+    #     rlz.instance_of(str), # + a lambda which retrieves the column from both sides
+    #     rlz.boolean
+    # )
 
     def __init__(self, left, right, predicates, **kwargs):
         left, right, predicates = _make_distinct_join_predicates(

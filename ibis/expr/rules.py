@@ -98,7 +98,7 @@ def member_of(obj, arg, **kwargs):
     return getattr(obj, arg)
 
 
-@validator
+@rule
 def value_list_of(inner, arg, **kwargs):
     # TODO(kszucs): would be nice to remove ops.ValueList
     # the main blocker is that some of the backends execution
@@ -107,7 +107,7 @@ def value_list_of(inner, arg, **kwargs):
     import ibis.expr.operations as ops
 
     values = tuple_of(inner, arg, **kwargs)
-    return ops.ValueList(values).to_expr()
+    return ops.ValueList(values)
 
 
 @validator

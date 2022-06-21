@@ -228,8 +228,8 @@ def fmt_join(op: ops.Join, *, aliases: Aliases) -> tuple[str, str]:
 @fmt_join.register(ops.Join)
 def _fmt_join(op: ops.Join, *, aliases: Aliases) -> tuple[str, str]:
     # format the operator and its relation inputs
-    left = aliases[op.left.op()]
-    right = aliases[op.right.op()]
+    left = aliases[op.left]
+    right = aliases[op.right]
     top = f"{op.__class__.__name__}[{left}, {right}]"
 
     # format the join predicates
@@ -602,7 +602,7 @@ def _fmt_value_alias(op: ops.Alias, *, aliases: Aliases) -> str:
 
 @fmt_value.register
 def _fmt_value_table_column(op: ops.TableColumn, *, aliases: Aliases) -> str:
-    return f"{aliases[op.table.op()]}.{op.name}"
+    return f"{aliases[op.table]}.{op.name}"
 
 
 @fmt_value.register

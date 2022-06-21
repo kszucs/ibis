@@ -20,7 +20,7 @@ from ibis.expr.window import window
 # compilation later
 
 
-def sub_for(expr, substitutions):
+def sub_for(node, substitutions):
     """Substitute subexpressions in `expr` with expression to expression
     mapping `substitutions`.
 
@@ -39,17 +39,18 @@ def sub_for(expr, substitutions):
         An Ibis expression
     """
 
-    mapping = {k.op(): v for k, v in substitutions}
+    # mapping = {k.op(): v for k, v in substitutions}
+    mapping = substitutions
 
     def fn(node):
         try:
             return mapping[node]
         except KeyError:
             if node.blocks():
-                return node.to_expr()
+                return node  # .to_expr()
             return lin.proceed
 
-    return substitute(fn, expr)
+    return substitute(fn, node)
 
 
 class ScalarAggregate:
@@ -146,38 +147,31 @@ def find_immediate_parent_tables(expr):
     return list(toolz.unique(lin.traverse(finder, expr)))
 
 
-def substitute(fn, expr):
+def substitute(fn, node):
     """Substitute expressions with other expressions."""
-    node = expr.op()
 
     result = fn(node)
     if result is lin.halt:
-        return expr
+        return node
     elif result is not lin.proceed:
-        assert isinstance(result, ir.Expr), type(result)
+        assert isinstance(result, ops.Node), type(result)
         return result
 
     new_args = []
     for arg in node.args:
         if isinstance(arg, tuple):
             arg = tuple(
-                substitute(fn, expr) if isinstance(arg, ir.Expr) else expr
-                for expr in arg
+                substitute(fn, x) if isinstance(arg, ops.Node) else x
+                for x in arg
             )
-        elif isinstance(arg, ir.Expr):
+        elif isinstance(arg, ops.Node):
             arg = substitute(fn, arg)
         new_args.append(arg)
 
     try:
-        new_node = node.__class__(*new_args)
+        return node.__class__(*new_args)
     except IbisTypeError:
-        return expr
-    else:
-        # unfortunately we can't use `.to_expr()` here because it's not backend
-        # aware, and some backends have their own ir.Table subclasses, like
-        # impala. There's probably a design flaw in the modeling of
-        # backend-specific expressions.
-        return type(expr)(new_node)
+        return node
 
 
 def substitute_parents(expr):
@@ -602,31 +596,28 @@ def find_first_base_table(node):
         return None
 
 
-def find_root_tables(expr, consider_projections_only=False):
+def find_root_tables(node):
     # more restrictive version of find_immediate_parent_tables()
+    assert isinstance(node, ops.Node), type(node)
 
-    def finder(expr):
-        op = expr.op()
-
-        if isinstance(op, ops.Selection):
-            return lin.halt, op
-        elif op.blocks():
-            return lin.halt, op
+    def finder(node):
+        if isinstance(node, ops.Selection):
+            return lin.halt, node
+        elif node.blocks():
+            return lin.halt, node
         else:
             return lin.proceed, None
 
-    return list(toolz.unique(lin.traverse(finder, expr)))
+    return list(toolz.unique(lin.traverse(finder, node)))
 
 
-def _find_projections(expr):
-    op = expr.op()
-
-    if isinstance(op, ops.Selection):
+def _find_projections(node):
+    if isinstance(node, ops.Selection):
         # remove predicates and sort_keys, so that child tables are considered
         # equivalent even if their predicates and sort_keys are not
-        return lin.proceed, op._projection
-    elif op.blocks():
-        return lin.halt, op
+        return lin.proceed, node._projection
+    elif node.blocks():
+        return lin.halt, node
     else:
         return lin.proceed, None
 
@@ -645,7 +636,7 @@ def shares_some_roots(exprs, parents):
     return bool(exprs_deps & parents_deps)
 
 
-def flatten_predicate(expr):
+def flatten_predicate(node):
     """Yield the expressions corresponding to the `And` nodes of a predicate.
 
     Parameters
@@ -676,13 +667,13 @@ def flatten_predicate(expr):
     r0.b == 'foo'
     """
 
-    def predicate(expr):
-        if isinstance(expr.op(), ops.And):
+    def predicate(node):
+        if isinstance(node, ops.And):
             return lin.proceed, None
         else:
-            return lin.halt, expr
+            return lin.halt, node
 
-    return list(lin.traverse(predicate, expr))
+    return list(lin.traverse(predicate, node))
 
 
 def _is_ancestor(parent, child):  # pragma: no cover
