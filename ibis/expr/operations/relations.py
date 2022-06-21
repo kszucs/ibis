@@ -180,7 +180,7 @@ class Join(TableNode):
     @property
     def schema(self):
         # For joins retaining both table schemas, merge them together here
-        return self.left.schema().append(self.right.schema())
+        return self.left.schema.append(self.right.schema)
 
 
 @public
@@ -217,14 +217,14 @@ class AnyLeftJoin(Join):
 class LeftSemiJoin(Join):
     @property
     def schema(self):
-        return self.left.schema()
+        return self.left.schema
 
 
 @public
 class LeftAntiJoin(Join):
     @property
     def schema(self):
-        return self.left.schema()
+        return self.left.schema
 
 
 @public
@@ -251,7 +251,7 @@ class SetOp(TableNode, sch.HasSchema):
     right = rlz.table
 
     def __init__(self, left, right, **kwargs):
-        if not left.schema().equals(right.schema()):
+        if not left.schema == right.schema:
             raise com.RelationError(
                 'Table schemas must be equal for set operations'
             )
@@ -391,7 +391,7 @@ class Selection(TableNode, sch.HasSchema):
     def schema(self):
         # Resolve schema and initialize
         if not self.selections:
-            return self.table.schema()
+            return self.table.schema
 
         types = []
         names = []

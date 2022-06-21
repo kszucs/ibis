@@ -13,6 +13,7 @@ import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import util
 from ibis.common.exceptions import ExpressionError, IbisTypeError
+from ibis.expr.rules import Shape
 from ibis.expr.window import window
 
 # ---------------------------------------------------------------------
@@ -103,7 +104,7 @@ def reduction_to_aggregation(expr):
     return agg
 
 
-def find_immediate_parent_tables(expr):
+def find_immediate_parent_tables(node):
     """Find every first occurrence of a :class:`ibis.expr.types.Table`
     object in `expr`.
 
@@ -136,15 +137,15 @@ def find_immediate_parent_tables(expr):
         r0
         foo: r0.a + 1
     """
+    assert isinstance(node, ops.Node), type(node)
 
-    def finder(expr):
-        op = expr.op()
-        if isinstance(op, ops.TableNode):
-            return lin.halt, op
+    def finder(node):
+        if isinstance(node, ops.TableNode):
+            return lin.halt, node
         else:
             return lin.proceed, None
 
-    return list(toolz.unique(lin.traverse(finder, expr)))
+    return list(toolz.unique(lin.traverse(finder, node)))
 
 
 def substitute(fn, node):
@@ -506,7 +507,7 @@ class Projector:
         self.clean_exprs = list(map(windowize_function, self.resolved_exprs))
 
     def get_result(self):
-        roots = find_immediate_parent_tables(self.parent)
+        roots = find_immediate_parent_tables(self.parent.op())
         first_root = roots[0]
 
         if len(roots) == 1 and isinstance(first_root, ops.Selection):
@@ -699,17 +700,17 @@ def _is_ancestor(parent, child):  # pragma: no cover
     return any(lin.traverse(predicate, parent.to_expr()))
 
 
-def is_analytic(expr):
-    def predicate(expr):
-        if isinstance(expr.op(), (ops.Reduction, ops.Analytic)):
+def is_analytic(node):
+    def predicate(node):
+        if isinstance(node, (ops.Reduction, ops.Analytic)):
             return lin.halt, True
         else:
             return lin.proceed, None
 
-    return any(lin.traverse(predicate, expr))
+    return any(lin.traverse(predicate, node))
 
 
-def is_reduction(expr):
+def is_reduction(node):
     """
     Check whether an expression contains a reduction or not
 
@@ -737,21 +738,23 @@ def is_reduction(expr):
     -------
     check output : bool
     """
+    assert isinstance(node, ops.Node), type(node)
 
-    def predicate(expr):
-        if isinstance(expr.op(), ops.Reduction):
+    def predicate(node):
+        if isinstance(node, ops.Reduction):
             return lin.halt, True
-        elif isinstance(expr.op(), ops.TableNode):
+        elif isinstance(node, ops.TableNode):
             # don't go below any table nodes
             return lin.halt, None
         else:
             return lin.proceed, None
 
-    return any(lin.traverse(predicate, expr))
+    return any(lin.traverse(predicate, node))
 
 
-def is_scalar_reduction(expr):
-    return isinstance(expr, ir.Scalar) and is_reduction(expr)
+def is_scalar_reduction(node):
+    assert isinstance(node, ops.Node), type(node)
+    return node.output_shape is Shape.SCALAR and is_reduction(node)
 
 
 _ANY_OP_MAPPING = {

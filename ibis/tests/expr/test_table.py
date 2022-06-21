@@ -341,11 +341,11 @@ def test_sort_by(table):
     #
     # Default is ascending for anything coercable to an expression,
     # and we'll have ascending/descending wrappers to help.
-    result = table.sort_by(['f'])
+    result = table.sort_by(['f']).op()
 
-    sort_key = result.op().sort_keys[0].op()
+    sort_key = result.sort_keys[0]
 
-    assert_equal(sort_key.expr, table.f)
+    assert_equal(sort_key.expr, table.f.op())
     assert sort_key.ascending
 
     # non-list input. per #150

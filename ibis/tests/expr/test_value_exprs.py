@@ -498,7 +498,7 @@ def test_arbitrary(table, column, how, condition_fn):
     expr = col.arbitrary(how=how, where=where)
     assert expr.type() == col.type()
     assert isinstance(expr, ir.Scalar)
-    assert L.is_reduction(expr)
+    assert L.is_reduction(expr.op())
 
 
 @pytest.mark.parametrize(
