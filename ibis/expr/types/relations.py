@@ -713,9 +713,7 @@ class Table(Expr):
         for predicate, right in top_ks:
             table = table.semi_join(right, predicate)[table]
 
-        predicates = [
-            an._rewrite_filter(pred.op(), pred) for pred in resolved_predicates
-        ]
+        predicates = [an._rewrite_filter(pred) for pred in resolved_predicates]
         return an.apply_filter(table, predicates)
 
     def count(self) -> ir.IntegerScalar:
@@ -1190,7 +1188,7 @@ def _resolve_predicates(
     from ibis.expr import types as ir
 
     predicates = [
-        ir.relations.bind_expr(table, pred)
+        ir.relations.bind_expr(table, pred).op()
         for pred in util.promote_list(predicates)
     ]
     predicates = an.flatten_predicate(predicates)
@@ -1198,16 +1196,18 @@ def _resolve_predicates(
     resolved_predicates = []
     top_ks = []
     for pred in predicates:
-        if isinstance(pred, ir.TopK):
+        if isinstance(pred, ops.TopK):
+            # TODO(kszucs): fixme
             top_ks.append(pred._semi_join_components())
-        elif isinstance(pred_op := pred.op(), ops.logical._UnresolvedSubquery):
-            resolved_predicates.append(pred_op._resolve(table))
+        elif isinstance(pred, ops.logical._UnresolvedSubquery):
+            resolved_predicates.append(pred._resolve(table))
         else:
             resolved_predicates.append(pred)
 
     return resolved_predicates, top_ks
 
 
+# TODO(kszucs): remove it
 def bind_expr(table, expr):
     if isinstance(expr, (list, tuple)):
         return [bind_expr(table, x) for x in expr]

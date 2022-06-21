@@ -93,14 +93,15 @@ def has_multiple_bases(expr):
     return len(find_immediate_parent_tables(expr)) > 1
 
 
-def reduction_to_aggregation(expr):
-    tables = find_immediate_parent_tables(expr)
+def reduction_to_aggregation(node):
+    tables = find_immediate_parent_tables(node)
 
+    # TODO(kszucs): remove to_expr() conversions
     if len(tables) == 1:
         (table,) = tables
-        agg = table.to_expr().aggregate([expr])
+        agg = table.to_expr().aggregate([node.to_expr()])
     else:
-        agg = ScalarAggregate(expr).get_result()
+        agg = ScalarAggregate(node.to_expr()).get_result()
 
     return agg
 
@@ -668,6 +669,7 @@ def flatten_predicate(node):
       b string
     r0.b == 'foo'
     """
+    assert isinstance(node, (list, ops.Node)), type(node)
 
     def predicate(node):
         if isinstance(node, ops.And):
@@ -834,21 +836,24 @@ def _make_any(
     return op.to_expr()
 
 
+# TODO(kszucs): use substitute instead
 @functools.singledispatch
-def _rewrite_filter(op, _, **kwargs):
+def _rewrite_filter(op, **kwargs):
     raise NotImplementedError(type(op))
 
 
 @_rewrite_filter.register(ops.Reduction)
-def _rewrite_filter_reduction(_, expr, name: str | None = None, **kwargs):
+def _rewrite_filter_reduction(op, name: str | None = None, **kwargs):
     """Turn a reduction inside of a filter into an aggregate."""
     # TODO: what about reductions that reference a join that isn't visible at
     # this level? Means we probably have the wrong design, but will have to
     # revisit when it becomes a problem.
-    if name is not None:
-        expr = expr.name(name)
-    aggregation = reduction_to_aggregation(expr)
-    return aggregation.to_array()
+
+    # TODO(kszucs): may need to wrap with Alias
+    # if name is not None:
+    #     expr = expr.name(name)
+    aggregation = reduction_to_aggregation(op)
+    return ops.TableArrayView(aggregation)
 
 
 @_rewrite_filter.register(ops.Any)
@@ -857,38 +862,34 @@ def _rewrite_filter_reduction(_, expr, name: str | None = None, **kwargs):
 @_rewrite_filter.register(ops.ExistsSubquery)
 @_rewrite_filter.register(ops.NotExistsSubquery)
 @_rewrite_filter.register(ops.Window)
-def _rewrite_filter_subqueries(_, expr, **kwargs):
+def _rewrite_filter_subqueries(op, **kwargs):
     """Don't rewrite any of these operations in filters."""
-    return expr
+    return op
 
 
 @_rewrite_filter.register(ops.Alias)
-def _rewrite_filter_alias(op, _, name: str | None = None, **kwargs):
+def _rewrite_filter_alias(op, name: str | None = None, **kwargs):
     """Rewrite filters on aliases."""
-    arg = op.arg
     return _rewrite_filter(
-        arg.op(),
-        arg,
+        op.arg,
         name=name if name is not None else op.name,
         **kwargs,
     )
 
 
 @_rewrite_filter.register(ops.Value)
-def _rewrite_filter_value(op, expr, **kwargs):
+def _rewrite_filter_value(op, name: str | None = None, **kwargs):
     """Recursively apply filter rewriting on operations."""
-    args = op.args
+
     visited = [
-        _rewrite_filter(arg.op(), arg, **kwargs)
-        if isinstance(arg, ir.Expr)
-        else arg
-        for arg in args
+        _rewrite_filter(arg, **kwargs) if isinstance(arg, ops.Node) else arg
+        for arg in op.args
     ]
-    if all(map(operator.is_, visited, args)):
-        return expr
+    if all(map(operator.is_, visited, op.args)):
+        return op
     else:
         return (
             op.__class__(*visited)
             .to_expr()
-            .name("tmp" if not expr.has_name() else expr.get_name())
+            .name("tmp" if not op.has_resolved_name() else op.resolve_name())
         )
