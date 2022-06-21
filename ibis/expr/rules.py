@@ -82,22 +82,6 @@ class rule(validator):
 # Input type validators / coercion functions
 
 
-# TODO(kszucs): deprecate then remove
-@validator
-def member_of(obj, arg, **kwargs):
-    if isinstance(arg, ir.EnumValue):
-        arg = arg.op().value
-    if isinstance(arg, enum.Enum):
-        enum.unique(obj)  # check that enum has unique values
-        arg = arg.name
-
-    if not hasattr(obj, arg):
-        raise com.IbisTypeError(
-            f'Value with type {type(arg)} is not a member of {obj}'
-        )
-    return getattr(obj, arg)
-
-
 @rule
 def value_list_of(inner, arg, **kwargs):
     # TODO(kszucs): would be nice to remove ops.ValueList
@@ -110,12 +94,12 @@ def value_list_of(inner, arg, **kwargs):
     return ops.ValueList(values)
 
 
-@validator
+@rule
 def sort_key(key, *, from_=None, this):
     import ibis.expr.operations as ops
 
     table = this[from_] if from_ is not None else None
-    return ops.sortkeys._to_sort_key(key, table=table)
+    return ops.sortkeys._to_sort_key(key, table=table).op()
 
 
 @rule
@@ -481,17 +465,17 @@ def function_of(
     return output_rule(fn(arg), this=this)
 
 
-@validator
-def reduction(argument, **kwargs):
+@rule
+def reduction(arg, **kwargs):
     from ibis.expr.analysis import is_reduction
 
-    if not is_reduction(argument):
+    if not is_reduction(arg):
         raise com.IbisTypeError("`argument` must be a reduction")
 
-    return argument
+    return arg
 
 
-@validator
+@rule
 def non_negative_integer(arg, **kwargs):
     if not isinstance(arg, int):
         raise com.IbisTypeError(
@@ -502,12 +486,12 @@ def non_negative_integer(arg, **kwargs):
     return arg
 
 
-@validator
+@rule
 def pair(inner_left, inner_right, a, b, **kwargs):
     return inner_left(a, **kwargs), inner_right(b, **kwargs)
 
 
-@validator
+@rule
 def analytic(arg, **kwargs):
     from ibis.expr.analysis import is_analytic
 
@@ -540,6 +524,6 @@ def window(win, *, from_base_table_of, this):
         if len(win._order_by) != 1:
             raise com.IbisInputError(error_msg)
         order_var = win._order_by[0].op().args[0]
-        if not isinstance(order_var.type(), dt.Timestamp):
+        if not isinstance(order_var.output_dtype, dt.Timestamp):
             raise com.IbisInputError(error_msg)
     return win

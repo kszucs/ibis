@@ -163,34 +163,6 @@ class Baz:
 
 
 @pytest.mark.parametrize(
-    ('obj', 'value', 'expected'),
-    [
-        (Foo, Foo.a, Foo.a),
-        (Foo, 'b', Foo.b),
-        (Bar, 'a', 'A'),
-        (Bar, 'b', 'B'),
-        (Baz(2), 'a', 2),
-        (Foo, ibis.literal(Foo.a), Foo.a),
-    ],
-)
-def test_valid_member_of(obj, value, expected):
-    assert rlz.member_of(obj, value) == expected
-
-
-@pytest.mark.parametrize(
-    ('obj', 'value', 'expected'),
-    [
-        (Foo, 'c', IbisTypeError),
-        (Bar, 'c', IbisTypeError),
-        (Baz(3), 'b', IbisTypeError),
-    ],
-)
-def test_invalid_member_of(obj, value, expected):
-    with pytest.raises(expected):
-        rlz.member_of(obj, value)
-
-
-@pytest.mark.parametrize(
     ('validator', 'values', 'expected'),
     [
         param(

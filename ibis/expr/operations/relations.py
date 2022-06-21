@@ -11,7 +11,7 @@ from ibis.common import exceptions as com
 from ibis.expr import rules as rlz
 from ibis.expr import schema as sch
 from ibis.expr import types as ir
-from ibis.expr.operations.core import Node
+from ibis.expr.operations.core import Node, Value
 from ibis.expr.operations.logical import ExistsSubquery, NotExistsSubquery
 from ibis.expr.operations.sortkeys import _maybe_convert_sort_keys
 
@@ -390,6 +390,7 @@ class Selection(TableNode, sch.HasSchema):
     @cached_property
     def schema(self):
         # Resolve schema and initialize
+
         if not self.selections:
             return self.table.schema
 
