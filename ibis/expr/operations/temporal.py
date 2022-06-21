@@ -359,6 +359,16 @@ class ToIntervalUnit(Value):
 class IntervalBinary(Binary):
     @immutable_property
     def output_dtype(self):
+        integer_args = [
+            Cast(arg, to=arg.output_dtype.value_type)
+            if isinstance(arg.output_dtype, dt.Interval)
+            else arg
+            for arg in self.args
+        ]
+        value_dtype = rlz._promote_numeric_binop(integer_args, self.op)
+
+        return self.left.output_dtype.copy(value_type=value_dtype)
+
         # integer_args = [
         #     Cast(self, to=arg.output_dtype.value_type)
         #     if isinstance(arg.output_dtype, dt.Interval)
@@ -368,9 +378,6 @@ class IntervalBinary(Binary):
         # value_dtype = rlz._promote_numeric_binop(integer_args, self.op)
 
         # return self.left.output_dtype.copy(value_type=value_dtype)
-
-        # FIXME(kszucs)
-        return self.left.output_dtype
 
 
 @public
@@ -410,7 +417,7 @@ class IntervalFromInteger(Value):
 
     @immutable_property
     def output_dtype(self):
-        return dt.Interval(self.unit, self.arg.type())
+        return dt.Interval(self.unit, value_type=self.arg.output_dtype)
 
     @property
     def resolution(self):

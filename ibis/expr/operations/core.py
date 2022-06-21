@@ -112,7 +112,6 @@ class Value(Node):
 
     @property
     def output_type(self):
-        print(type(self.output_dtype))
         if self.output_shape is Shape.COLUMNAR:
             return self.output_dtype.column
         else:
@@ -142,7 +141,7 @@ class Unary(Value):
 
     @property
     def output_shape(self):
-        return self.arg.op().output_shape
+        return self.arg.output_shape
 
 
 @public

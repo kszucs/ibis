@@ -550,7 +550,7 @@ class Table(Expr):
             elif isinstance(expr, Deferred):
                 value = expr.resolve(self)
             else:
-                value = rlz.any(expr)
+                value = rlz.any(expr).to_expr()
             exprs.append(value.name(name))
 
         mutation_exprs = an.get_mutation_exprs(exprs, self)

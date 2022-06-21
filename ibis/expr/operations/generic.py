@@ -324,7 +324,7 @@ class StructField(Value):
 
     @immutable_property
     def output_dtype(self):
-        struct_dtype = self.arg.type()
+        struct_dtype = self.arg.output_dtype
         value_dtype = struct_dtype[self.field]
         return value_dtype
 

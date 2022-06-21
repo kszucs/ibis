@@ -430,7 +430,7 @@ def test_sum_expr_basics(table, int_col):
     result = table[int_col].sum()
     assert isinstance(result, ir.IntegerScalar)
     assert isinstance(result.op(), ops.Alias)
-    assert isinstance(result.op().arg.op(), ops.Sum)
+    assert isinstance(result.op().arg, ops.Sum)
     assert result.get_name() == "sum"
 
 
@@ -439,7 +439,7 @@ def test_sum_expr_basics_floats(table, float_col):
     result = table[float_col].sum()
     assert isinstance(result, ir.FloatingScalar)
     assert isinstance(result.op(), ops.Alias)
-    assert isinstance(result.op().arg.op(), ops.Sum)
+    assert isinstance(result.op().arg, ops.Sum)
     assert result.get_name() == "sum"
 
 
@@ -447,7 +447,7 @@ def test_mean_expr_basics(table, numeric_col):
     result = table[numeric_col].mean()
     assert isinstance(result, ir.FloatingScalar)
     assert isinstance(result.op(), ops.Alias)
-    assert isinstance(result.op().arg.op(), ops.Mean)
+    assert isinstance(result.op().arg, ops.Mean)
     assert result.get_name() == "mean"
 
 

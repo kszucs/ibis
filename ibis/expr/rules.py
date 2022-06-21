@@ -53,9 +53,8 @@ def castable(source, target):
 
     Based on the underlying datatypes and the value in case of Literals
     """
-    op = source.op()
-    value = getattr(op, 'value', None)
-    return dt.castable(source.type(), target.type(), value=value)
+    value = getattr(source, 'value', None)
+    return dt.castable(source.output_dtype, target.output_dtype, value=value)
 
 
 def comparable(left, right):
@@ -233,20 +232,6 @@ def column(inner, arg, **kwargs):
     return instance_of(ir.Column, inner(arg, **kwargs))
 
 
-@validator
-def array_of(inner, arg, **kwargs):
-    val = arg if isinstance(arg, ir.Expr) else ir.literal(arg)
-    argtype = val.type()
-    if not isinstance(argtype, dt.Array):
-        raise com.IbisTypeError(
-            'Argument must be an array, '
-            f'got expression which is of type {val.type()}'
-        )
-    value_dtype = inner(val[0], **kwargs).type()
-    array_dtype = dt.Array(value_dtype)
-    return value(array_dtype, val, **kwargs)
-
-
 any = value(None)
 # TODO(kszucs): or it should rather be
 # any = value(dt.DataType)
@@ -308,7 +293,7 @@ def dtype_like(name):
         if util.is_iterable(arg):
             return highest_precedence_dtype(arg)
         else:
-            return arg.type()
+            return arg.output_dtype
 
     return output_dtype
 

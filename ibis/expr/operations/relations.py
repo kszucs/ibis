@@ -624,7 +624,7 @@ class Aggregation(TableNode, sch.HasSchema):
                     names.append(name)
                     types.append(struct_type[name])
             else:
-                names.append(e.get_name())
+                names.append(e.resolve_name())
                 types.append(e.type())
 
         return sch.Schema(names, types)

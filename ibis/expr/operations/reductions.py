@@ -94,7 +94,7 @@ class Sum(Filterable, Reduction):
         if isinstance(self.arg, ir.BooleanValue):
             return dt.int64
         else:
-            return self.arg.type().largest
+            return self.arg.output_dtype.largest
 
 
 @public
@@ -104,7 +104,7 @@ class Mean(Filterable, Reduction):
     @immutable_property
     def output_dtype(self):
         if isinstance(self.arg, ir.DecimalValue):
-            return self.arg.type()
+            return self.arg.output_dtype
         else:
             return dt.float64
 
@@ -139,7 +139,7 @@ class VarianceBase(Filterable, Reduction):
     @immutable_property
     def output_dtype(self):
         if isinstance(self.arg, ir.DecimalValue):
-            return self.arg.type().largest
+            return self.arg.output_dtype.largest
         else:
             return dt.float64
 
