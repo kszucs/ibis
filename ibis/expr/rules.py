@@ -1,5 +1,8 @@
 import enum
 from itertools import product, starmap
+from typing import Any
+
+import toolz
 
 import ibis.common.exceptions as com
 import ibis.expr.datatypes as dt
@@ -25,7 +28,7 @@ class Shape(enum.IntEnum):
     # TABULAR = 2
 
 
-def highest_precedence_dtype(exprs):
+def highest_precedence_dtype(args):
     """Return the highest precedence type from the passed expressions
 
     Also verifies that there are valid implicit casts between any of the types
@@ -42,10 +45,7 @@ def highest_precedence_dtype(exprs):
     dtype: DataType
       The highest precedence datatype
     """
-    if not exprs:
-        return dt.null
-
-    return dt.highest_precedence(expr.type() for expr in exprs)
+    return dt.highest_precedence(arg.output_dtype for arg in args)
 
 
 def castable(source, target):
@@ -60,6 +60,19 @@ def castable(source, target):
 
 def comparable(left, right):
     return castable(left, right) or castable(right, left)
+
+
+class rule(validator):
+    def _erase_expr(self, value):
+        if isinstance(value, ir.Expr):
+            return value.op()
+        else:
+            return value
+
+    def __call__(self, *args, **kwargs):
+        args = map(self._erase_expr, args)
+        kwargs = toolz.valmap(self._erase_expr, kwargs)
+        return super().__call__(*args, **kwargs)
 
 
 # ---------------------------------------------------------------------
@@ -102,12 +115,60 @@ def sort_key(key, *, from_=None, this):
     return ops.sortkeys._to_sort_key(key, table=table)
 
 
-@validator
+@rule
 def datatype(arg, **kwargs):
     return dt.dtype(arg)
 
 
-@validator
+# TODO(kszucs): make type argument the first and mandatory, similarly to the
+# value rule, move out the type inference to `ir.literal()` method
+@rule
+def literal(dtype, value, **kwargs):
+    import ibis.expr.operations as ops
+
+    if isinstance(value, ops.Literal):
+        return value
+
+    try:
+        inferred_dtype = dt.infer(value)
+    except com.InputTypeError:
+        has_inferred = False
+    else:
+        has_inferred = True
+
+    if dtype is None:
+        has_explicit = False
+    else:
+        has_explicit = True
+        explicit_dtype = dt.dtype(dtype)
+
+    if has_explicit and has_inferred:
+        try:
+            # ensure type correctness: check that the inferred dtype is
+            # implicitly castable to the explicitly given dtype and value
+            dtype = inferred_dtype.cast(explicit_dtype, value=value)
+        except com.IbisTypeError:
+            raise TypeError(
+                f'Value {value!r} cannot be safely coerced to {type}'
+            )
+    elif has_explicit:
+        dtype = explicit_dtype
+    elif has_inferred:
+        dtype = inferred_dtype
+    else:
+        raise TypeError(
+            'The datatype of value {!r} cannot be inferred, try '
+            'passing it explicitly with the `type` keyword.'.format(value)
+        )
+
+    # if dtype is dt.null:
+    #     return null().cast(dtype)
+    # else:
+
+    return ops.Literal(value, dtype=dtype)
+
+
+@rule
 def value(dtype, arg, **kwargs):
     """Validates that the given argument is a Value with a particular datatype
 
@@ -123,31 +184,43 @@ def value(dtype, arg, **kwargs):
     arg : Value
       An ibis value expression with the specified datatype
     """
-    if not isinstance(arg, ir.Expr):
+    import ibis.expr.operations as ops
+
+    if not isinstance(arg, ops.Value):
         # coerce python literal to ibis literal
-        arg = ir.literal(arg)
+        arg = literal(dtype, arg)
 
-    if not isinstance(arg, ir.Value):
-        raise com.IbisTypeError(
-            f'Given argument with type {type(arg)} is not a value '
-            'expression'
-        )
-
-    # retrieve literal values for implicit cast check
-    value = getattr(arg.op(), 'value', None)
-
-    if isinstance(dtype, type) and isinstance(arg.type(), dtype):
-        # dtype class has been specified like dt.Interval or dt.Decimal
+    if dtype is None:
+        # no datatype restriction
         return arg
-    elif dt.castable(arg.type(), dt.dtype(dtype), value=value):
+    elif isinstance(dtype, type):
+        # dtype class has been specified like dt.Interval or dt.Decimal
+        if not issubclass(dtype, dt.DataType):
+            raise com.IbisTypeError(
+                f"Datatype specification {dtype} is not a subclass dt.DataType"
+            )
+        elif isinstance(arg.output_dtype, dtype):
+            return arg
+        else:
+            raise com.IbisTypeError(
+                f'Given argument with datatype {arg.output_dtype} is not '
+                f'subtype of {dtype}'
+            )
+    elif isinstance(dtype, (dt.DataType, str)):
         # dtype instance or string has been specified and arg's dtype is
         # implicitly castable to it, like dt.int8 is castable to dt.int64
-        return arg
+        dtype = dt.dtype(dtype)
+        # retrieve literal values for implicit cast check
+        value = getattr(arg, 'value', None)
+        if dt.castable(arg.output_dtype, dtype, value=value):
+            return arg
+        else:
+            raise com.IbisTypeError(
+                f'Given argument with datatype {arg.output_dtype} is not '
+                f'implicitly castable to {dtype}'
+            )
     else:
-        raise com.IbisTypeError(
-            f'Given argument with datatype {arg.type()} is not '
-            f'subtype of {dtype} nor implicitly castable to it'
-        )
+        raise com.IbisTypeError(f'Invalid datatype specification {dtype}')
 
 
 @validator
@@ -174,7 +247,9 @@ def array_of(inner, arg, **kwargs):
     return value(array_dtype, val, **kwargs)
 
 
-any = value(dt.any)
+any = value(None)
+# TODO(kszucs): or it should rather be
+# any = value(dt.DataType)
 double = value(dt.double)
 string = value(dt.string)
 boolean = value(dt.boolean)
@@ -194,7 +269,7 @@ numeric = soft_numeric
 set_ = value(dt.Set)
 array = value(dt.Array)
 struct = value(dt.Struct)
-mapping = value(dt.Map(dt.any, dt.any))
+mapping = value(dt.Map)
 
 geospatial = value(dt.GeoSpatial)
 point = value(dt.Point)
@@ -208,7 +283,7 @@ multipolygon = value(dt.MultiPolygon)
 @validator
 def interval(arg, units=None, **kwargs):
     arg = value(dt.Interval, arg)
-    unit = arg.type().unit
+    unit = arg.output_dtype.unit
     if units is not None and unit not in units:
         msg = 'Interval unit `{}` is not among the allowed ones {}'
         raise com.IbisTypeError(msg.format(unit, units))
@@ -243,16 +318,15 @@ def shape_like(name):
     def output_shape(self):
         arg = getattr(self, name)
         if util.is_iterable(arg):
-            for expr in arg:
+            for op in arg:
                 try:
-                    op = expr.op()
+                    if op.output_shape is Shape.COLUMNAR:
+                        return Shape.COLUMNAR
                 except AttributeError:
                     continue
-                if op.output_shape is Shape.COLUMNAR:
-                    return Shape.COLUMNAR
             return Shape.SCALAR
         else:
-            return arg.op().output_shape
+            return arg.output_shape
 
     return output_shape
 

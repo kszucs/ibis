@@ -112,6 +112,7 @@ class Value(Node):
 
     @property
     def output_type(self):
+        print(type(self.output_dtype))
         if self.output_shape is Shape.COLUMNAR:
             return self.output_dtype.column
         else:
@@ -153,7 +154,7 @@ class Binary(Value):
 
     @property
     def output_shape(self):
-        return max(self.left.op().output_shape, self.right.op().output_shape)
+        return max(self.left.output_shape, self.right.output_shape)
 
 
 public(ValueOp=Value, UnaryOp=Unary, BinaryOp=Binary)

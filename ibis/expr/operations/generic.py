@@ -187,8 +187,12 @@ class CoalesceLike(Value):
 
     @immutable_property
     def output_dtype(self):
+        # TODO(kszucs): revisit
+        return rlz.highest_precedence_dtype(self.arg)
         # filter out null types
-        non_null_exprs = [arg for arg in self.arg if arg.type() != dt.null]
+        non_null_exprs = [
+            arg for arg in self.arg if arg.output_dtype != dt.null
+        ]
         if non_null_exprs:
             return rlz.highest_precedence_dtype(non_null_exprs)
         else:
