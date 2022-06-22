@@ -495,9 +495,10 @@ class AggregateSelection:
 
         subbed_exprs = []
         for expr in util.promote_list(exprs):
-            expr = self.op.table._ensure_expr(expr)
-            subbed = sub_for(expr, [(self.parent, self.op.table)])
-            subbed_exprs.append(subbed)
+            # TODO(kszucs): factor out _ensure_expr to bind_expr
+            expr = self.op.table.to_expr()._ensure_expr(expr)
+            subbed = sub_for(expr.op(), {self.op: self.op.table})
+            subbed_exprs.append(subbed.to_expr())
 
         if subbed_exprs:
             valid = shares_all_roots(subbed_exprs, self.op.table)

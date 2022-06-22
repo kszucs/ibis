@@ -222,7 +222,7 @@ def test_valid_list_of_extra():
 
     validator = rlz.list_of(rlz.list_of(rlz.string))
     result = validator([[], ['a']])
-    assert result[1][0].equals(ibis.literal('a'))
+    assert result[1][0].equals(ibis.literal('a').op())
 
 
 @pytest.mark.parametrize(
@@ -248,7 +248,7 @@ def test_invalid_list_of(validator, values):
 )
 def test_valid_interval(units, value, expected):
     result = rlz.interval(value, units=units)
-    assert result.equals(expected)
+    assert result.equals(expected.op())
 
 
 @pytest.mark.parametrize(
@@ -275,7 +275,7 @@ def test_invalid_interval(units, value, expected):
 )
 def test_valid_column_or_scalar(validator, value, expected):
     result = validator(value)
-    assert result.equals(expected)
+    assert result.equals(expected.op())
 
 
 @pytest.mark.parametrize(
@@ -300,8 +300,8 @@ def test_invalid_column_or_scalar(validator, value, expected):
 )
 def test_valid_column_from(check_table, value, expected):
     validator = rlz.column_from("table")
-    this = dict(table=table)
-    assert validator(value, this=this).equals(expected)
+    this = dict(table=table.op())
+    assert validator(value, this=this).equals(expected.op())
 
 
 @pytest.mark.parametrize(
@@ -317,7 +317,7 @@ def test_valid_column_from(check_table, value, expected):
     ],
 )
 def test_invalid_column_from(check_table, validator, value):
-    test = dict(table=check_table)
+    test = dict(table=check_table.op())
 
     with pytest.raises(IbisTypeError):
         validator(value, this=test)
@@ -334,7 +334,7 @@ def test_invalid_column_from(check_table, validator, value):
 )
 def test_table_with_schema(table):
     validator = rlz.table(schema=[('group', dt.int64), ('value', dt.double)])
-    assert validator(table) == table
+    assert validator(table) == table.op()
 
 
 @pytest.mark.parametrize(

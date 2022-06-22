@@ -37,10 +37,9 @@ def test_rewrite_join_projection_without_other_ops(con):
     ex_pred2 = table['bar_id'] == table3['bar_id']
     ex_expr = table.left_join(table2, [pred1]).inner_join(table3, [ex_pred2])
 
-    rewritten_proj = L.substitute_parents(view)
-    op = rewritten_proj.op()
+    rewritten_proj = L.substitute_parents(view.op())
 
-    assert not op.table.equals(ex_expr)
+    assert not rewritten_proj.table.equals(ex_expr.op())
 
 
 def test_multiple_join_deeper_reference():
@@ -163,7 +162,7 @@ def test_no_rewrite(con):
     table = con.table('test1')
     table4 = table[['c', (table['c'] * 2).name('foo')]]
     expr = table4['c'] == table4['foo']
-    result = L.substitute_parents(expr)
+    result = L.substitute_parents(expr.op()).to_expr()
     expected = expr
     assert result.equals(expected)
 
@@ -173,7 +172,9 @@ def test_join_table_choice():
     x = ibis.table(ibis.schema([('n', 'int64')]), 'x')
     t = x.aggregate(cnt=x.n.count())
     predicate = t.cnt > 0
-    assert L.sub_for(predicate, [(t, t.op().table)]).equals(predicate)
+
+    result = L.sub_for(predicate.op(), {t.op(): t.op().table})
+    assert result == predicate.op()
 
 
 def test_is_ancestor_analytic():
@@ -200,19 +201,20 @@ def test_mutation_fusion_no_overwrite():
     result = result.mutate(col1=t['col'] + 1)
     result = result.mutate(col2=t['col'] + 2)
     result = result.mutate(col3=t['col'] + 3)
+    result = result.op()
 
     first_selection = result
 
-    assert len(result.op().selections) == 4
-    assert (
-        first_selection.op().selections[1].equals((t['col'] + 1).name('col1'))
-    )
-    assert (
-        first_selection.op().selections[2].equals((t['col'] + 2).name('col2'))
-    )
-    assert (
-        first_selection.op().selections[3].equals((t['col'] + 3).name('col3'))
-    )
+    assert len(result.selections) == 4
+
+    col1 = (t['col'] + 1).name('col1')
+    assert first_selection.selections[1] == col1.op()
+
+    col2 = (t['col'] + 2).name('col2')
+    assert first_selection.selections[2] == col2.op()
+
+    col3 = (t['col'] + 3).name('col3')
+    assert first_selection.selections[3] == col3.op()
 
 
 # Pr 2635

@@ -153,6 +153,8 @@ def find_immediate_parent_tables(node):
 def substitute(fn, node):
     """Substitute expressions with other expressions."""
 
+    assert isinstance(node, ops.Node), type(node)
+
     result = fn(node)
     if result is lin.halt:
         return node
@@ -177,13 +179,14 @@ def substitute(fn, node):
         return node
 
 
-def substitute_parents(expr):
+def substitute_parents(node):
     """
     Rewrite the input expression by replacing any table expressions part of a
     "commutative table operation unit" (for lack of scientific term, a set of
     operations that can be written down in any order and still yield the same
     semantic result)
     """
+    assert isinstance(node, ops.Node), type(node)
 
     def fn(node):
         if isinstance(node, ops.Selection):
@@ -195,20 +198,20 @@ def substitute_parents(expr):
             # table schema or is a derived field. If we've projected out of
             # something other than a physical table, then lifting should not
             # occur
-            table = node.table.op()
+            table = node.table
 
             if isinstance(table, ops.Selection):
                 for val in table.selections:
                     if (
-                        isinstance(val.op(), ops.PhysicalTable)
+                        isinstance(val, ops.PhysicalTable)
                         and node.name in val.schema()
                     ):
-                        return ops.TableColumn(val, node.name).to_expr()
+                        return ops.TableColumn(val, node.name)
 
         # keep looking for nodes to substitute
         return lin.proceed
 
-    return substitute(fn, expr)
+    return substitute(fn, node)
 
 
 def get_mutation_exprs(

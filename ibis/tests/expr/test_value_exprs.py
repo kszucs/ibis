@@ -1060,10 +1060,10 @@ def test_empty_array_as_argument():
 
     node = FooNode([])
     value = node.value
-    expected = literal([]).cast(dt.Array(dt.int64))
+    expected = literal([]).cast(dt.Array(dt.int64)).op()
 
-    assert value.type().equals(dt.Array(dt.null))
-    assert value.cast(dt.Array(dt.int64)).equals(expected)
+    assert value.output_dtype.equals(dt.Array(dt.null))
+    assert ops.Cast(value, dt.Array(dt.int64)).equals(expected)
 
 
 def test_nullable_column_propagated():

@@ -937,8 +937,8 @@ class Table(Expr):
         }
 
         klass = _join_classes[how.lower()]
-        if isinstance(predicates, ir.Expr):
-            predicates = an.flatten_predicate(predicates)
+        # if isinstance(predicates, ir.Expr):
+        #     predicates = an.flatten_predicate(predicates)
 
         expr = klass(left, right, predicates).to_expr()
 
