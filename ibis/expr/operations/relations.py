@@ -85,38 +85,9 @@ class SQLQueryResult(TableNode, sch.HasSchema):
         return True
 
 
-def _make_distinct_join_predicates(left, right, predicates):
-    # TODO(kszucs): predicates should be already a list of operations, need
-    # to update the validation rule for the Join classes which is a noop
-    # currently
-
-    import ibis.expr.analysis as L
-    import ibis.expr.operations as ops
-
-    if left.equals(right):
-        # GH #667: If left and right table have a common parent expression,
-        # e.g. they have different filters, we need to add a self-reference and
-        # make the appropriate substitution in the join predicates
-        right = ops.SelfReference(right)
-    elif isinstance(right, Join):
-        # for joins with joins on the right side we turn the right side into a
-        # view, otherwise the join tree is incorrectly flattened and tables on
-        # the right are incorrectly scoped
-        old = right
-        new = right = ops.SelfReference(right)
-        predicates = [
-            L.sub_for(pred, [(old, new)])
-            if isinstance(pred, ops.Node)
-            else pred
-            for pred in predicates
-        ]
-
-    predicates = _clean_join_predicates(left, right, predicates)
-    return left, right, predicates
-
-
 def _clean_join_predicates(left, right, predicates):
     import ibis.expr.analysis as L
+    from ibis.expr.analysis import shares_all_roots
 
     result = []
 
@@ -139,22 +110,17 @@ def _clean_join_predicates(left, right, predicates):
         preds = L.flatten_predicate(pred.op())
         result.extend(preds)
 
-    _validate_join_predicates(left, right, result)
-    return tuple(result)
-
-
-def _validate_join_predicates(left, right, predicates):
-    from ibis.expr.analysis import shares_all_roots
-
     # Validate join predicates. Each predicate must be valid jointly when
     # considering the roots of each input table
-    for predicate in predicates:
+    for predicate in result:
         if not shares_all_roots(predicate, [left, right]):
             raise com.RelationError(
                 'The expression {!r} does not fully '
                 'originate from dependencies of the table '
                 'expression.'.format(predicate)
             )
+
+    return tuple(result)
 
 
 @public
@@ -170,9 +136,36 @@ class Join(TableNode):
     # )
 
     def __init__(self, left, right, predicates, **kwargs):
-        left, right, predicates = _make_distinct_join_predicates(
+
+        # TODO(kszucs): predicates should be already a list of operations, need
+        # to update the validation rule for the Join classes which is a noop
+        # currently
+
+        import ibis.expr.analysis as L
+        import ibis.expr.operations as ops
+
+        if left.equals(right):
+            # GH #667: If left and right table have a common parent expression,
+            # e.g. they have different filters, we need to add a self-reference and
+            # make the appropriate substitution in the join predicates
+            right = ops.SelfReference(right)
+        elif isinstance(right, Join):
+            # for joins with joins on the right side we turn the right side into a
+            # view, otherwise the join tree is incorrectly flattened and tables on
+            # the right are incorrectly scoped
+            old = right
+            new = right = ops.SelfReference(right)
+            predicates = [
+                L.sub_for(pred, [(old, new)])
+                if isinstance(pred, ops.Node)
+                else pred
+                for pred in util.promote_list(predicates)
+            ]
+
+        predicates = _clean_join_predicates(
             left, right, util.promote_list(predicates)
         )
+
         super().__init__(
             left=left, right=right, predicates=predicates, **kwargs
         )
