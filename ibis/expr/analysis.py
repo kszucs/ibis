@@ -55,6 +55,7 @@ def sub_for(node, substitutions):
 
 class ScalarAggregate:
     def __init__(self, expr):
+        assert isinstance(expr, ir.Expr)
         self.expr = expr
         self.tables = []
 

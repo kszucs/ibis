@@ -151,6 +151,7 @@ class SelectBuilder:
         self.translator_class = translator_class
 
         self.op, self.result_handler = self._adapt_operation(node)
+        assert isinstance(self.op, ops.Node), type(self.op)
 
         self.table_set = None
         self.select_set = None
@@ -193,11 +194,10 @@ class SelectBuilder:
                     table_expr = L.reduction_to_aggregation(node)
                     return table_expr.op(), _get_scalar(node.resolve_name())
                 else:
-                    return node, _get_scalar(node.get_name())
+                    return node, _get_scalar(node.resolve_name())
             elif node.output_shape is Shape.COLUMNAR:
                 if isinstance(node, ops.TableColumn):
-                    # to_expr()?
-                    table_expr = node.table[[node.name]]
+                    table_expr = node.table.to_expr()[[node.name]]
                     result_handler = _get_column(node.name)
                 else:
                     # if not node.has_resolved_name():

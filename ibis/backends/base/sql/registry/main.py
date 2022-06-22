@@ -39,8 +39,8 @@ def not_null(translator, op):
     return f'{formatted_arg} IS NOT NULL'
 
 
-def is_null(translator, expr):
-    formatted_arg = translator.translate(expr.op().args[0])
+def is_null(translator, op):
+    formatted_arg = translator.translate(op.arg)
     return f'{formatted_arg} IS NULL'
 
 
