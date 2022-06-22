@@ -735,8 +735,8 @@ def test_asof_join():
         "time_y",
         "value2",
     ]
-    pred = joined.op().table.op().predicates[0].op()
-    assert pred.left.op().name == pred.right.op().name == 'time'
+    pred = joined.op().table.predicates[0]
+    assert pred.left.name == pred.right.name == 'time'
 
 
 def test_asof_join_with_by():
@@ -785,14 +785,16 @@ def test_asof_join_with_tolerance(ibis_interval, timedelta_interval):
         [('time', 'int32'), ('key', 'int32'), ('value2', 'double')]
     )
 
-    joined = api.asof_join(left, right, 'time', tolerance=ibis_interval)
-    tolerance = joined.op().table.op().tolerance
-    assert_equal(tolerance, ibis_interval)
+    joined = api.asof_join(left, right, 'time', tolerance=ibis_interval).op()
+    tolerance = joined.table.tolerance
+    assert_equal(tolerance, ibis_interval.op())
 
-    joined = api.asof_join(left, right, 'time', tolerance=timedelta_interval)
-    tolerance = joined.op().table.op().tolerance
-    assert isinstance(tolerance, ir.IntervalScalar)
-    assert isinstance(tolerance.op(), ops.Literal)
+    joined = api.asof_join(
+        left, right, 'time', tolerance=timedelta_interval
+    ).op()
+    tolerance = joined.table.tolerance
+    assert isinstance(tolerance.to_expr(), ir.IntervalScalar)
+    assert isinstance(tolerance, ops.Literal)
 
 
 def test_equijoin_schema_merge():
@@ -1203,7 +1205,7 @@ def test_resolve_existence_predicate(
     op = expr.op()
     assert isinstance(op, ops.Selection)
 
-    pred = op.predicates[0]
+    pred = op.predicates[0].to_expr()
     assert isinstance(pred.op(), expected_type)
     assert isinstance((-pred).op(), expected_negated_type)
 
