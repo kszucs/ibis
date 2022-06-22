@@ -123,7 +123,10 @@ class Ceil(Unary):
 
     @property
     def output_dtype(self):
-        return dt.higher_precedence(self.arg.output_dtype, dt.int64)
+        if isinstance(self.arg.output_dtype, dt.Decimal):
+            return self.arg.output_dtype
+        else:
+            return dt.int64
 
 
 @public
@@ -142,7 +145,10 @@ class Floor(Unary):
 
     @property
     def output_dtype(self):
-        return dt.higher_precedence(self.arg.output_dtype, dt.int64)
+        if isinstance(self.arg.output_dtype, dt.Decimal):
+            return self.arg.output_dtype
+        else:
+            return dt.int64
 
 
 @public

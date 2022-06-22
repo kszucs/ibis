@@ -70,12 +70,12 @@ def test_group_concat(functional_alltypes):
     expr = col.group_concat()
     assert isinstance(expr.op(), ops.GroupConcat)
     op = expr.op()
-    assert op.sep.equals(ibis.literal(','))
+    assert op.sep == ibis.literal(',').op()
     assert op.where is None
 
     expr = col.group_concat('|')
     op = expr.op()
-    assert op.sep.equals(ibis.literal('|'))
+    assert op.sep == ibis.literal('|').op()
     assert op.where is None
 
 

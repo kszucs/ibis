@@ -78,12 +78,12 @@ def test_comparisons_string(alltypes):
     val = '2015-01-01 00:00:00'
     expr = alltypes.i > val
     op = expr.op()
-    assert isinstance(op.right, ir.StringScalar)
+    assert op.right.output_dtype is dt.string
 
     expr2 = val < alltypes.i
     op = expr2.op()
     assert isinstance(op, ops.Greater)
-    assert isinstance(op.right, ir.StringScalar)
+    assert op.right.output_dtype is dt.string
 
 
 def test_comparisons_pandas_timestamp(alltypes):
@@ -105,7 +105,7 @@ def test_greater_comparison_pandas_timestamp(alltypes):
 
 def test_timestamp_precedence():
     ts = ibis.literal(datetime.now())
-    highest_type = rlz.highest_precedence_dtype([ibis.NA, ts])
+    highest_type = rlz.highest_precedence_dtype([ibis.NA.op(), ts.op()])
     assert highest_type == dt.timestamp
 
 
