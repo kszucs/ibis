@@ -31,11 +31,11 @@ class TableSetFormatter:
         ops.CrossJoin: 'CROSS JOIN',
     }
 
-    def __init__(self, parent, expr, indent=2):
+    def __init__(self, parent, node, indent=2):
         # `parent` is a `Select` instance, not a `TableSetFormatter`
         self.parent = parent
         self.context = parent.context
-        self.expr = expr
+        self.node = node
         self.indent = indent
 
         self.join_tables = []
@@ -45,27 +45,25 @@ class TableSetFormatter:
     def _translate(self, expr):
         return self.parent._translate(expr)
 
+    # TODO(kszucs): could use lin.traverse here as well
     def _walk_join_tree(self, op):
-        left = op.left.op()
-        right = op.right.op()
-
-        if util.all_of([left, right], ops.Join):
+        if util.all_of([op.left, op.right], ops.Join):
             raise NotImplementedError(
                 'Do not support joins between ' 'joins yet'
             )
 
-        self._validate_join_predicates(op.predicates)
+        # self._validate_join_predicates(op.predicates)
 
         jname = self._get_join_type(op)
 
         # Read off tables and join predicates left-to-right in
         # depth-first order
-        if isinstance(left, ops.Join):
-            self._walk_join_tree(left)
+        if isinstance(op.left, ops.Join):
+            self._walk_join_tree(op.left)
             self.join_tables.append(self._format_table(op.right))
-        elif isinstance(right, ops.Join):
+        elif isinstance(op.right, ops.Join):
             self.join_tables.append(self._format_table(op.left))
-            self._walk_join_tree(right)
+            self._walk_join_tree(op.right)
         else:
             # Both tables
             self.join_tables.append(self._format_table(op.left))
@@ -74,22 +72,26 @@ class TableSetFormatter:
         self.join_types.append(jname)
         self.join_predicates.append(op.predicates)
 
-    # Placeholder; revisit when supporting other databases
-    _non_equijoin_supported = True
+    # TODO(kszucs): just remove it, individual backends can raise errors during
+    # compilation highlighting that only equijoins are supported (this applies
+    # only to clickhouse currently)
+    # it the backend's implementation is sophististicated enough, it could
+    # rewrite non-equijoins to cross joins too
 
-    def _validate_join_predicates(self, predicates):
-        for pred in predicates:
-            op = pred.op()
+    # # Placeholder; revisit when supporting other databases
+    # _non_equijoin_supported = True
 
-            if (
-                not isinstance(op, ops.Equals)
-                and not self._non_equijoin_supported
-            ):
-                raise com.TranslationError(
-                    'Non-equality join predicates, '
-                    'i.e. non-equijoins, are not '
-                    'supported'
-                )
+    # def _validate_join_predicates(self, predicates):
+    #     for pred in predicates:
+    #         if (
+    #             not isinstance(pred, ops.Equals)
+    #             and not self._non_equijoin_supported
+    #         ):
+    #             raise com.TranslationError(
+    #                 'Non-equality join predicates, '
+    #                 'i.e. non-equijoins, are not '
+    #                 'supported'
+    #             )
 
     def _get_join_type(self, op):
         return self._join_names[type(op)]
@@ -97,41 +99,45 @@ class TableSetFormatter:
     def _quote_identifier(self, name):
         return quote_identifier(name)
 
-    def _format_table(self, expr):
+    def _format_table(self, op):
         # TODO: This could probably go in a class and be significantly nicer
         ctx = self.context
 
-        ref_expr = expr
-        op = ref_op = expr.op()
+        # ref_expr = expr
+        ref_op = op
+        # op = ref_op = expr.op()
         if isinstance(op, ops.SelfReference):
-            ref_expr = op.table
-            ref_op = ref_expr.op()
+            ref_op = op.table
 
         if isinstance(ref_op, ops.PhysicalTable):
             name = ref_op.name
+            # TODO(kszucs): add a mandatory `name` field to the base
+            # PhyisicalTable instead of the child classes, this should prevent
+            # this error scenario
             if name is None:
-                raise com.RelationError(f'Table did not have a name: {expr!r}')
+                raise com.RelationError(f'Table did not have a name: {op!r}')
             result = self._quote_identifier(name)
             is_subquery = False
         else:
             # A subquery
-            if ctx.is_extracted(ref_expr):
+            if ctx.is_extracted(ref_op):
                 # Was put elsewhere, e.g. WITH block, we just need to grab its
                 # alias
-                alias = ctx.get_ref(expr)
+                # TODO(kszucs): should this be ref_op instead?
+                alias = ctx.get_ref(op)
 
                 # HACK: self-references have to be treated more carefully here
                 if isinstance(op, ops.SelfReference):
-                    return f'{ctx.get_ref(ref_expr)} {alias}'
+                    return f'{ctx.get_ref(ref_op)} {alias}'
                 else:
                     return alias
 
-            subquery = ctx.get_compiled_expr(expr)
+            subquery = ctx.get_compiled_expr(op)
             result = f'(\n{util.indent(subquery, self.indent)}\n)'
             is_subquery = True
 
-        if is_subquery or ctx.need_aliases(expr):
-            result += f' {ctx.get_ref(expr)}'
+        if is_subquery or ctx.need_aliases(op):
+            result += f' {ctx.get_ref(op)}'
 
         return result
 
@@ -139,12 +145,12 @@ class TableSetFormatter:
         # Got to unravel the join stack; the nesting order could be
         # arbitrary, so we do a depth first search and push the join tokens
         # and predicates onto a flat list, then format them
-        op = self.expr.op()
+        op = self.node
 
         if isinstance(op, ops.Join):
             self._walk_join_tree(op)
         else:
-            self.join_tables.append(self._format_table(self.expr))
+            self.join_tables.append(self._format_table(op))
 
         # TODO: Now actually format the things
         buf = StringIO()
@@ -317,14 +323,13 @@ class Select(DML, Comparable):
         # TODO:
         context = self.context
         formatted = []
-        for expr in self.select_set:
-            if isinstance(expr, ir.Value):
-                expr_str = self._translate(expr, named=True)
-            elif isinstance(expr, ir.Table):
+        for node in self.select_set:
+            if isinstance(node, ops.Value):
+                expr_str = self._translate(node, named=True)
+            elif isinstance(node, ops.TableNode):
                 # A * selection, possibly prefixed
-                if context.need_aliases(expr):
-                    alias = context.get_ref(expr)
-
+                if context.need_aliases(node):
+                    alias = context.get_ref(node)
                     expr_str = f'{alias}.*' if alias else '*'
                 else:
                     expr_str = '*'

@@ -188,8 +188,8 @@ class ExprTranslator:
     _registry = operation_registry
     _rewrites: dict[ops.Node, Callable] = {}
 
-    def __init__(self, expr, context, named=False, permit_subquery=False):
-        self.expr = expr
+    def __init__(self, node, context, named=False, permit_subquery=False):
+        self.node = node
         self.permit_subquery = permit_subquery
 
         assert context is not None, 'context is None in {}'.format(
@@ -200,16 +200,15 @@ class ExprTranslator:
         # For now, governing whether the result will have a name
         self.named = named
 
-    def _needs_name(self, expr):
+    def _needs_name(self, op):
         if not self.named:
             return False
 
-        op = expr.op()
-        if isinstance(op, ops.TableColumn):
-            # This column has been given an explicitly different name
-            return expr.get_name() != op.name
+        # if isinstance(op, ops.TableColumn):
+        #     # This column has been given an explicitly different name
+        #     return expr.get_name() != op.name
 
-        return expr.get_name() is not unnamed
+        return op.resolve_name() is not unnamed
 
     def name(self, translated, name, force=True):
         return '{} AS {}'.format(
@@ -218,10 +217,10 @@ class ExprTranslator:
 
     def get_result(self):
         """Compile SQL expression into a string."""
-        translated = self.translate(self.expr)
-        if self._needs_name(self.expr):
+        translated = self.translate(self.node)
+        if self._needs_name(self.node):
             # TODO: this could fail in various ways
-            name = self.expr.get_name()
+            name = self.node.resolve_name()
             translated = self.name(translated, name)
         return translated
 
@@ -237,31 +236,27 @@ class ExprTranslator:
         """
         cls._registry[operation] = translate_function
 
-    def translate(self, expr):
-        # The operation node type the typed expression wraps
-        op = expr.op()
-
+    def translate(self, op):
         if type(op) in self._rewrites:  # even if type(op) is in self._registry
-            expr = self._rewrites[type(op)](expr)
-            op = expr.op()
+            op = self._rewrites[type(op)](op)
 
         # TODO: use op MRO for subclasses instead of this isinstance spaghetti
         if isinstance(op, ops.ScalarParameter):
-            return self._trans_param(expr)
+            return self._trans_param(op)
         elif isinstance(op, ops.TableNode):
             # HACK/TODO: revisit for more complex cases
             return '*'
         elif type(op) in self._registry:
             formatter = self._registry[type(op)]
-            return formatter(self, expr)
+            return formatter(self, op)
         else:
             raise com.OperationNotDefinedError(
                 f'No translation rule for {type(op)}'
             )
 
-    def _trans_param(self, expr):
-        raw_value = self.context.params[expr.op()]
-        dtype = expr.type()
+    def _trans_param(self, op):
+        raw_value = self.context.params[op]
+        dtype = op.output_dtype
         if isinstance(dtype, dt.Struct):
             literal = ibis.struct(raw_value, type=dtype)
         elif isinstance(dtype, dt.Map):

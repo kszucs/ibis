@@ -156,22 +156,19 @@ def table_array_view(translator, expr):
     return f'(\n{util.indent(query, ctx.indent)}\n)'
 
 
-def table_column(translator, expr):
-    op = expr.op()
-    field_name = op.name
-    quoted_name = helpers.quote_identifier(field_name, force=True)
+def table_column(translator, op):
+    quoted_name = helpers.quote_identifier(op.name, force=True)
 
-    table = op.table
     ctx = translator.context
 
     # If the column does not originate from the table set in the current SELECT
     # context, we should format as a subquery
-    if translator.permit_subquery and ctx.is_foreign_expr(table):
-        proj_expr = table.projection([field_name]).to_array()
+    if translator.permit_subquery and ctx.is_foreign_expr(op.table):
+        proj_expr = op.table.projection([op.name]).to_array()
         return table_array_view(translator, proj_expr)
 
     if ctx.need_aliases():
-        alias = ctx.get_ref(table)
+        alias = ctx.get_ref(op.table)
         if alias is not None:
             quoted_name = f'{alias}.{quoted_name}'
 

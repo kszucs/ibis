@@ -202,7 +202,7 @@ def substitute_parents(node):
                 for val in table.selections:
                     if (
                         isinstance(val, ops.PhysicalTable)
-                        and node.name in val.schema()
+                        and node.name in val.schema
                     ):
                         return ops.TableColumn(val, node.name)
 

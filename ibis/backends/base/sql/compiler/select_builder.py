@@ -265,22 +265,23 @@ class SelectBuilder:
             if needs_alias:
                 self.context.set_always_alias()
 
-    def _make_table_aliases(self, expr):
+    # TODO(kszucs): should be rewritten using lin.traverse
+    def _make_table_aliases(self, node):
         ctx = self.context
-        node = expr.op()
+
         if isinstance(node, ops.Join):
             for arg in node.args:
-                if isinstance(arg, ir.Table):
+                if isinstance(arg, ops.TableNode):
                     self._make_table_aliases(arg)
         else:
-            if not ctx.is_extracted(expr):
-                ctx.make_alias(expr)
+            if not ctx.is_extracted(node):
+                ctx.make_alias(node)
             else:
                 # The compiler will apply a prefix only if the current context
                 # contains two or more table references. So, if we've extracted
                 # a subquery into a CTE, we need to propagate that reference
                 # down to child contexts so that they aren't missing any refs.
-                ctx.set_ref(expr, ctx.top_context.get_ref(expr))
+                ctx.set_ref(node, ctx.top_context.get_ref(node))
 
     # ---------------------------------------------------------------------
     # Expr analysis / rewrites
@@ -288,26 +289,25 @@ class SelectBuilder:
     def _analyze_select_exprs(self):
         new_select_set = []
 
-        for expr in self.select_set:
-            new_expr = self._visit_select_expr(expr)
-            new_select_set.append(new_expr)
+        for op in self.select_set:
+            new_op = self._visit_select_expr(op)
+            new_select_set.append(new_op)
 
         self.select_set = new_select_set
 
-    def _visit_select_expr(self, expr):
-        op = expr.op()
-
+    # TODO(kszucs): this should be rewritten using the substitute utility
+    def _visit_select_expr(self, op):
         method = f'_visit_select_{type(op).__name__}'
         if hasattr(self, method):
             f = getattr(self, method)
-            return f(expr)
+            return f(op)
 
         unchanged = True
 
         if isinstance(op, ops.Value):
             new_args = []
             for arg in op.args:
-                if isinstance(arg, ir.Expr):
+                if isinstance(arg, ops.Node):
                     new_arg = self._visit_select_expr(arg)
                     if arg is not new_arg:
                         unchanged = False
@@ -316,16 +316,14 @@ class SelectBuilder:
                     new_args.append(arg)
 
             if not unchanged:
-                new_op = type(op)(*new_args)
-                return new_op.to_expr()
+                return type(op)(*new_args)
             else:
-                return expr
+                return op
         else:
-            return expr
+            return op
 
-    def _visit_select_Histogram(self, expr):
-        op = expr.op()
-
+    # TODO(kszucs): revisit, partially rewritten
+    def _visit_select_Histogram(self, op):
         EPS = 1e-13
 
         if op.binwidth is None or op.base is None:
@@ -335,7 +333,10 @@ class SelectBuilder:
             max_name = 'max_%s' % aux_hash
 
             minmax = self.table_set.aggregate(
-                [op.arg.min().name(min_name), op.arg.max().name(max_name)]
+                [
+                    ops.Alias(ops.Min(op.arg), name=min_name),
+                    ops.Alias(ops.Max(op.arg), name=max_name),
+                ]
             )
             self.table_set = self.table_set.cross_join(minmax)
 
@@ -370,39 +371,36 @@ class SelectBuilder:
         source_expr = self.query_expr
 
         # hm, is this the best place for this?
-        root_op = source_expr.op()
+        op = source_expr.op()
 
-        if isinstance(root_op, ops.TableNode):
-            self._collect(source_expr, toplevel=True)
+        if isinstance(op, ops.TableNode):
+            self._collect(op, toplevel=True)
             assert self.table_set is not None
         else:
-            self.select_set = [source_expr]
+            self.select_set = [op]
 
-    def _collect(self, expr, toplevel=False):
-        op = expr.op()
+    def _collect(self, op, toplevel=False):
         method = f'_collect_{type(op).__name__}'
 
         if hasattr(self, method):
             f = getattr(self, method)
-            f(expr, toplevel=toplevel)
+            f(op, toplevel=toplevel)
         elif isinstance(op, (ops.PhysicalTable, ops.SQLQueryResult)):
-            self._collect_PhysicalTable(expr, toplevel=toplevel)
+            self._collect_PhysicalTable(op, toplevel=toplevel)
         elif isinstance(op, ops.Join):
-            self._collect_Join(expr, toplevel=toplevel)
+            self._collect_Join(op, toplevel=toplevel)
         else:
             raise NotImplementedError(type(op))
 
-    def _collect_Distinct(self, expr, toplevel=False):
+    def _collect_Distinct(self, op, toplevel=False):
         if toplevel:
             self.distinct = True
 
-        self._collect(expr.op().table, toplevel=toplevel)
+        self._collect(op.table, toplevel=toplevel)
 
-    def _collect_Limit(self, expr, toplevel=False):
+    def _collect_Limit(self, op, toplevel=False):
         if not toplevel:
             return
-
-        op = expr.op()
 
         # Ignore "inner" limits, because they've been overrided by an exterior
         # one
@@ -411,26 +409,25 @@ class SelectBuilder:
 
         self._collect(op.table, toplevel=toplevel)
 
-    def _collect_Union(self, expr, toplevel=False):
+    def _collect_Union(self, op, toplevel=False):
         if toplevel:
             raise NotImplementedError()
 
-    def _collect_Difference(self, expr, toplevel=False):
+    def _collect_Difference(self, op, toplevel=False):
         if toplevel:
             raise NotImplementedError()
 
-    def _collect_Intersection(self, expr, toplevel=False):
+    def _collect_Intersection(self, op, toplevel=False):
         if toplevel:
             raise NotImplementedError()
 
-    def _collect_Aggregation(self, expr, toplevel=False):
+    def _collect_Aggregation(self, op, toplevel=False):
         # The select set includes the grouping keys (if any), and these are
         # duplicated in the group_by set. SQL translator can decide how to
         # format these depending on the database. Most likely the
         # GROUP BY 1, 2, ... style
         if toplevel:
-            subbed_expr = self._sub(expr)
-            sub_op = subbed_expr.op()
+            sub_op = L.substitute_parents(op)
 
             self.group_by = self._convert_group_by(sub_op.by)
             self.having = sub_op.having
@@ -439,14 +436,13 @@ class SelectBuilder:
             self.filters = sub_op.predicates
             self.sort_by = sub_op.sort_keys
 
-            self._collect(expr.op().table)
+            self._collect(op.table)
 
-    def _collect_Selection(self, expr, toplevel=False):
-        op = expr.op()
+    def _collect_Selection(self, op, toplevel=False):
         table = op.table
 
         if toplevel:
-            if isinstance(table.op(), ops.Join):
+            if isinstance(table, ops.Join):
                 self._collect_Join(table)
             else:
                 self._collect(table)
@@ -464,27 +460,23 @@ class SelectBuilder:
             self.table_set = table
             self.filters = filters
 
-    def _convert_group_by(self, exprs):
-        return list(range(len(exprs)))
+    def _convert_group_by(self, nodes):
+        return list(range(len(nodes)))
 
-    def _collect_Join(self, expr, toplevel=False):
+    def _collect_Join(self, op, toplevel=False):
         if toplevel:
-            subbed = self._sub(expr)
+            subbed = L.substitute_parents(op)
             self.table_set = subbed
             self.select_set = [subbed]
 
-    def _collect_PhysicalTable(self, expr, toplevel=False):
+    def _collect_PhysicalTable(self, op, toplevel=False):
         if toplevel:
-            self.select_set = [expr]
-            self.table_set = expr
+            self.select_set = [op]
+            self.table_set = op
 
-    def _collect_SelfReference(self, expr, toplevel=False):
-        op = expr.op()
+    def _collect_SelfReference(self, op, toplevel=False):
         if toplevel:
             self._collect(op.table, toplevel=toplevel)
-
-    def _sub(self, what):
-        return L.substitute_parents(what)
 
     # --------------------------------------------------------------------
     # Subquery analysis / extraction
