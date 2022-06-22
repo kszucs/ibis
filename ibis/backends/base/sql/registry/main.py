@@ -160,7 +160,9 @@ def table_column(translator, op):
     # If the column does not originate from the table set in the current SELECT
     # context, we should format as a subquery
     if translator.permit_subquery and ctx.is_foreign_expr(op.table):
-        proj_expr = op.table.projection([op.name]).to_array()
+        # TODO(kszucs): do the projection by directly constructing nodes
+        # (without the to_expr() -> op() roundtrip)
+        proj_expr = op.table.to_expr().projection([op.name]).to_array().op()
         return table_array_view(translator, proj_expr)
 
     if ctx.need_aliases():
