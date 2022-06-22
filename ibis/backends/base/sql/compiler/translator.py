@@ -277,6 +277,7 @@ class ExprTranslator:
 rewrites = ExprTranslator.rewrites
 
 
+# TODO(kszucs): use analysis.substitute() instead of a custom rewriter
 @rewrites(ops.Bucket)
 def _bucket(expr):
     op = expr.op()
@@ -380,6 +381,5 @@ def _rewrite_cast(op):
 
 
 @rewrites(ops.StringContains)
-def _rewrite_string_contains(expr):
-    op = expr.op()
-    return op.haystack.find(op.needle) >= 0
+def _rewrite_string_contains(op):
+    return ops.GreaterEqual(ops.StringFind(op.haystack, op.needle), 0)

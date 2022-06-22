@@ -5,8 +5,7 @@ import ibis.util as util
 
 
 def extract_field(sql_attr):
-    def extract_field_formatter(translator, expr):
-        op = expr.op()
+    def extract_field_formatter(translator, op):
         arg = translator.translate(op.args[0])
 
         # This is pre-2.0 Impala-style, which did not used to support the

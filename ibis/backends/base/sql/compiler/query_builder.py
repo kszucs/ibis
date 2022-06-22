@@ -205,7 +205,7 @@ class Select(DML, Comparable):
         distinct=False,
         indent=2,
         result_handler=None,
-        parent_expr=None,
+        parent_op=None,
     ):
         self.translator_class = translator_class
         self.table_set_formatter_class = table_set_formatter_class
@@ -215,7 +215,7 @@ class Select(DML, Comparable):
         self.table_set = table_set
         self.distinct = distinct
 
-        self.parent_expr = parent_expr
+        self.parent_op = parent_op
 
         self.where = where or []
 
@@ -333,6 +333,8 @@ class Select(DML, Comparable):
                     expr_str = f'{alias}.*' if alias else '*'
                 else:
                     expr_str = '*'
+            else:
+                raise TypeError(node)
             formatted.append(expr_str)
 
         buf = StringIO()
@@ -509,29 +511,33 @@ class Compiler:
         return cls.context_class(compiler=cls, params=unaliased_params)
 
     @classmethod
-    def to_ast(cls, expr, context=None):
+    def to_ast(cls, node, context=None):
+        # TODO(kszucs): consider to support a single type only
+        if isinstance(node, ir.Expr):
+            node = node.op()
+
+        assert isinstance(node, ops.Node)
+
         if context is None:
             context = cls.make_context()
 
-        op = expr.op()
-
         # collect setup and teardown queries
-        setup_queries = cls._generate_setup_queries(expr, context)
-        teardown_queries = cls._generate_teardown_queries(expr, context)
+        setup_queries = cls._generate_setup_queries(node, context)
+        teardown_queries = cls._generate_teardown_queries(node, context)
 
         # TODO: any setup / teardown DDL statements will need to be done prior
         # to building the result set-generating statements.
-        if isinstance(op, ops.Union):
-            query = cls._make_union(expr, context)
-        elif isinstance(op, ops.Intersection):
-            query = cls._make_intersect(expr, context)
-        elif isinstance(op, ops.Difference):
-            query = cls._make_difference(expr, context)
+        if isinstance(node, ops.Union):
+            query = cls._make_union(node, context)
+        elif isinstance(node, ops.Intersection):
+            query = cls._make_intersect(node, context)
+        elif isinstance(node, ops.Difference):
+            query = cls._make_difference(node, context)
         else:
             query = cls.select_builder_class().to_select(
                 select_class=cls.select_class,
                 table_set_formatter_class=cls.table_set_formatter_class,
-                expr=expr,
+                node=node,
                 context=context,
                 translator_class=cls.translator_class,
             )
@@ -569,10 +575,16 @@ class Compiler:
         return query_ast
 
     @classmethod
-    def to_sql(cls, expr, context=None, params=None):
+    def to_sql(cls, node, context=None, params=None):
+        # TODO(kszucs): consider to support a single type only
+        if isinstance(node, ir.Expr):
+            node = node.op()
+
+        assert isinstance(node, ops.Node)
+
         if context is None:
             context = cls.make_context(params=params)
-        return cls.to_ast(expr, context).queries[0].compile()
+        return cls.to_ast(node, context).queries[0].compile()
 
     @staticmethod
     def _generate_setup_queries(expr, context):
@@ -583,25 +595,22 @@ class Compiler:
         return []
 
     @classmethod
-    def _make_union(cls, expr, context):
-        op = expr.op()
+    def _make_union(cls, op, context):
         return cls.union_class(
             [op.left.to_expr(), op.right.to_expr()],
-            expr,
+            op,
             distincts=[op.distinct],
             context=context,
         )
 
     @classmethod
-    def _make_intersect(cls, expr, context):
-        op = expr.op()
+    def _make_intersect(cls, op, context):
         return cls.intersect_class(
-            [op.left.to_expr(), op.right.to_expr()], expr, context=context
+            [op.left.to_expr(), op.right.to_expr()], op, context=context
         )
 
     @classmethod
-    def _make_difference(cls, expr, context):
-        op = expr.op()
+    def _make_difference(cls, op, context):
         return cls.difference_class(
-            [op.left.to_expr(), op.right.to_expr()], expr, context=context
+            [op.left.to_expr(), op.right.to_expr()], op, context=context
         )

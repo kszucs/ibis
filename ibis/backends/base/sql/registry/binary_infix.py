@@ -52,10 +52,8 @@ def xor(translator, op):
 
 
 def contains(op_string: Literal["IN", "NOT IN"]) -> str:
-    def translate(translator, expr):
+    def translate(translator, op):
         from ibis.backends.base.sql.registry.main import table_array_view
-
-        op = expr.op()
 
         left, right = op.args
         if isinstance(right, ir.ValueList) and not right:

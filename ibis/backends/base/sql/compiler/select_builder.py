@@ -8,6 +8,7 @@ import ibis.util as util
 from ibis.backends.base.sql.compiler.base import (
     _extract_common_table_expressions,
 )
+from ibis.expr.rules import Shape
 
 
 class _CorrelatedRefCheck:
@@ -140,17 +141,16 @@ class SelectBuilder:
         self,
         select_class,
         table_set_formatter_class,
-        expr,
+        node,
         context,
         translator_class,
     ):
         self.select_class = select_class
         self.table_set_formatter_class = table_set_formatter_class
-        self.expr = expr
         self.context = context
         self.translator_class = translator_class
 
-        self.query_expr, self.result_handler = self._adapt_expr(self.expr)
+        self.op, self.result_handler = self._adapt_operation(node)
 
         self.table_set = None
         self.select_set = None
@@ -174,7 +174,7 @@ class SelectBuilder:
         return checker.get_result()
 
     @staticmethod
-    def _adapt_expr(expr):
+    def _adapt_operation(node):
         # Non-table expressions need to be adapted to some well-formed table
         # expression, along with a way to adapt the results to the desired
         # arity (whether array-like or scalar, for example)
@@ -182,43 +182,45 @@ class SelectBuilder:
         # Canonical case is scalar values or arrays produced by some reductions
         # (simple reductions, or distinct, say)
 
-        if isinstance(expr, ir.Table):
-            return expr, toolz.identity
+        if isinstance(node, ops.TableNode):
+            return node, toolz.identity
 
-        if isinstance(expr, ir.Scalar):
-            if not expr.has_name():
-                expr = expr.name('tmp')
+        elif isinstance(node, ops.Value):
+            if not node.has_resolved_name():
+                node = ops.Alias(node, name="tmp")
+            if node.output_shape is Shape.SCALAR:
+                if L.is_scalar_reduction(node):
+                    table_expr = L.reduction_to_aggregation(node)
+                    return table_expr.op(), _get_scalar(node.resolve_name())
+                else:
+                    return node, _get_scalar(node.get_name())
+            elif node.output_shape is Shape.COLUMNAR:
+                if isinstance(node, ops.TableColumn):
+                    # to_expr()?
+                    table_expr = node.table[[node.name]]
+                    result_handler = _get_column(node.name)
+                else:
+                    # if not node.has_resolved_name():
+                    #     node = ops.Alias(node, name="tmp")
+                    table_expr = node.to_expr().to_projection()
+                    result_handler = _get_column(node.resolve_name())
 
-            if L.is_scalar_reduction(expr.op()):
-                table_expr = L.reduction_to_aggregation(expr.op())
-                return table_expr, _get_scalar(expr.get_name())
+                return table_expr.op(), result_handler
             else:
-                return expr, _get_scalar(expr.get_name())
+                raise com.TranslationError(
+                    f"Unexpected shape {node.output_shape}"
+                )
 
-        elif isinstance(expr, ir.Analytic):
-            return expr.to_aggregation(), toolz.identity
+        # elif isinstance(expr, ir.Analytic):
+        #     return expr.to_aggregation(), toolz.identity
 
-        elif isinstance(expr, ir.Column):
-            op = expr.op()
-
-            if isinstance(op, ops.TableColumn):
-                table_expr = op.table[[op.name]]
-                result_handler = _get_column(op.name)
-            else:
-                if not expr.has_name():
-                    expr = expr.name('tmp')
-                table_expr = expr.to_projection()
-                result_handler = _get_column(expr.get_name())
-
-            return table_expr, result_handler
         else:
             raise com.TranslationError(
-                f'Do not know how to execute: {type(expr)}'
+                f'Do not know how to execute: {type(node)}'
             )
 
     def _build_result_query(self):
         self._collect_elements()
-
         self._analyze_select_exprs()
         self._analyze_subqueries()
         self._populate_context()
@@ -237,7 +239,7 @@ class SelectBuilder:
             order_by=self.sort_by,
             distinct=self.distinct,
             result_handler=self.result_handler,
-            parent_expr=self.query_expr,
+            parent_op=self.op,
         )
 
     def _populate_context(self):
@@ -365,16 +367,11 @@ class SelectBuilder:
         # expression that is being translated only depends on a single table
         # expression.
 
-        source_expr = self.query_expr
-
-        # hm, is this the best place for this?
-        op = source_expr.op()
-
-        if isinstance(op, ops.TableNode):
-            self._collect(op, toplevel=True)
+        if isinstance(self.op, ops.TableNode):
+            self._collect(self.op, toplevel=True)
             assert self.table_set is not None
         else:
-            self.select_set = [op]
+            self.select_set = [self.op]
 
     def _collect(self, op, toplevel=False):
         method = f'_collect_{type(op).__name__}'

@@ -22,8 +22,7 @@ def alias(translator, op):
 
 
 def fixed_arity(func_name, arity):
-    def formatter(translator, expr):
-        op = expr.op()
+    def formatter(translator, op):
         if arity != len(op.args):
             raise com.IbisError('incorrect number of args')
         return helpers.format_call(translator, func_name, *op.args)
@@ -35,8 +34,8 @@ def unary(func_name):
     return fixed_arity(func_name, 1)
 
 
-def not_null(translator, expr):
-    formatted_arg = translator.translate(expr.op().args[0])
+def not_null(translator, op):
+    formatted_arg = translator.translate(op.arg)
     return f'{formatted_arg} IS NOT NULL'
 
 
@@ -102,20 +101,17 @@ def hashbytes(translator, expr):
         raise NotImplementedError(how)
 
 
-def log(translator, expr):
-    op = expr.op()
-    arg, base = op.args
-    arg_formatted = translator.translate(arg)
+def log(translator, op):
+    arg_formatted = translator.translate(op.arg)
 
-    if base is None:
+    if op.base is None:
         return f'ln({arg_formatted})'
 
-    base_formatted = translator.translate(base)
+    base_formatted = translator.translate(op.base)
     return f'log({base_formatted}, {arg_formatted})'
 
 
-def value_list(translator, expr):
-    op = expr.op()
+def value_list(translator, op):
     formatted = [translator.translate(x) for x in op.values]
     return helpers.parenthesize(', '.join(formatted))
 
@@ -150,10 +146,9 @@ def between(translator, op):
     return f'{comp} BETWEEN {lower} AND {upper}'
 
 
-def table_array_view(translator, expr):
+def table_array_view(translator, op):
     ctx = translator.context
-    table = expr.op().table
-    query = ctx.get_compiled_expr(table)
+    query = ctx.get_compiled_expr(op.table)
     return f'(\n{util.indent(query, ctx.indent)}\n)'
 
 
@@ -176,13 +171,14 @@ def table_column(translator, op):
     return quoted_name
 
 
-def exists_subquery(translator, expr):
-    op = expr.op()
+def exists_subquery(translator, op):
     ctx = translator.context
 
     dummy = ir.literal(1).name(ir.core.unnamed)
 
-    filtered = op.foreign_table.filter(op.predicates)
+    filtered = op.foreign_table.to_expr().filter(
+        [pred.to_expr() for pred in op.predicates]
+    )
     expr = filtered.projection([dummy])
 
     subquery = ctx.get_compiled_expr(expr)
