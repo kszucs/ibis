@@ -34,11 +34,9 @@ def variance_like(func_name):
     return formatter
 
 
-def count_distinct(translator, expr):
-    arg, where = expr.op().args
-
-    if where is not None:
-        arg_formatted = translator.translate(where.ifelse(arg, None))
+def count_distinct(translator, op):
+    if op.where is not None:
+        arg_formatted = translator.translate(op.where.ifelse(op.arg, None))
     else:
-        arg_formatted = translator.translate(arg)
+        arg_formatted = translator.translate(op.arg)
     return f'count(DISTINCT {arg_formatted})'

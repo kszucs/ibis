@@ -290,7 +290,6 @@ def apply_filter(expr, predicates):
     # This will attempt predicate pushdown in the cases where we can do it
     # easily and safely, to make both cleaner SQL and fewer referential errors
     # for users
-
     op = expr.op()
 
     if isinstance(op, ops.Selection):
@@ -874,9 +873,9 @@ def _rewrite_filter_value(op, name: str | None = None, **kwargs):
     ]
     if all(map(operator.is_, visited, op.args)):
         return op
+
+    new_op = op.__class__(*visited)
+    if op.has_resolved_name():
+        return ops.Alias(new_op, name=op.resolve_name())
     else:
-        return (
-            op.__class__(*visited)
-            .to_expr()
-            .name("tmp" if not op.has_resolved_name() else op.resolve_name())
-        )
+        return ops.Alias(new_op, name="tmp")

@@ -505,7 +505,7 @@ class Compiler:
         for expr, value in params.items():
             op = expr.op()
             if isinstance(op, ops.Alias):
-                op = op.arg.op()
+                op = op.arg
             unaliased_params[op] = value
 
         return cls.context_class(compiler=cls, params=unaliased_params)
