@@ -233,6 +233,7 @@ class NthValue(Analytic):
     output_dtype = rlz.dtype_like("arg")
 
 
+# TODO(kszucs): should inherit from analytic base
 @public
 class TopK(Node):
     arg = rlz.column(rlz.any)

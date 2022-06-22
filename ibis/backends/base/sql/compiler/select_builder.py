@@ -211,8 +211,8 @@ class SelectBuilder:
                     f"Unexpected shape {node.output_shape}"
                 )
 
-        # elif isinstance(expr, ir.Analytic):
-        #     return expr.to_aggregation(), toolz.identity
+        elif isinstance(node, (ops.Analytic, ops.TopK)):
+            return node.to_expr().to_aggregation().op(), toolz.identity
 
         else:
             raise com.TranslationError(
