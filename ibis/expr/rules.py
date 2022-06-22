@@ -146,7 +146,7 @@ def literal(dtype, value, **kwargs):
     elif has_inferred:
         dtype = inferred_dtype
     else:
-        raise TypeError(
+        raise com.IbisTypeError(
             'The datatype of value {!r} cannot be inferred, try '
             'passing it explicitly with the `type` keyword.'.format(value)
         )
