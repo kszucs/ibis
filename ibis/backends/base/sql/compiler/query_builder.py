@@ -435,8 +435,7 @@ class Select(DML, Comparable):
         buf.write('ORDER BY ')
 
         formatted = []
-        for expr in self.order_by:
-            key = expr.op()
+        for key in self.order_by:
             translated = self._translate(key.expr)
             if not key.ascending:
                 translated += ' DESC'

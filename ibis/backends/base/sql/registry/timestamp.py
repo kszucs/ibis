@@ -1,4 +1,5 @@
 import ibis.common.exceptions as com
+import ibis.expr.datatypes as dt
 import ibis.expr.types as ir
 import ibis.util as util
 
@@ -56,16 +57,14 @@ def interval_from_integer(translator, expr):
 
 
 def timestamp_op(func):
-    def _formatter(translator, expr):
-        op = expr.op()
-        left, right = op.args
-        formatted_left = translator.translate(left)
-        formatted_right = translator.translate(right)
+    def _formatter(translator, op):
+        formatted_left = translator.translate(op.left)
+        formatted_right = translator.translate(op.right)
 
-        if isinstance(left, (ir.TimestampScalar, ir.DateValue)):
+        if isinstance(op.left.output_dtype, (dt.Timestamp, dt.Date)):
             formatted_left = f'cast({formatted_left} as timestamp)'
 
-        if isinstance(right, (ir.TimestampScalar, ir.DateValue)):
+        if isinstance(op.right.output_dtype, (dt.Timestamp, dt.Date)):
             formatted_right = f'cast({formatted_right} as timestamp)'
 
         return f'{func}({formatted_left}, {formatted_right})'

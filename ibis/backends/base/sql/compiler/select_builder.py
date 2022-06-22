@@ -189,8 +189,8 @@ class SelectBuilder:
             if not expr.has_name():
                 expr = expr.name('tmp')
 
-            if L.is_scalar_reduction(expr):
-                table_expr = L.reduction_to_aggregation(expr)
+            if L.is_scalar_reduction(expr.op()):
+                table_expr = L.reduction_to_aggregation(expr.op())
                 return table_expr, _get_scalar(expr.get_name())
             else:
                 return expr, _get_scalar(expr.get_name())

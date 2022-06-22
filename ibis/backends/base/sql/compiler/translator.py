@@ -371,11 +371,12 @@ def _notall_expand(expr):
 
 
 @rewrites(ops.Cast)
-def _rewrite_cast(expr):
-    arg, to = expr.op().args
-    if isinstance(to, dt.Interval) and isinstance(arg.type(), dt.Integer):
-        return arg.to_interval(unit=to.unit)
-    return expr
+def _rewrite_cast(op):
+    if isinstance(op.to, dt.Interval) and isinstance(
+        op.arg.output_dtype, dt.Integer
+    ):
+        return op.arg.to_interval(unit=to.unit)
+    return op
 
 
 @rewrites(ops.StringContains)

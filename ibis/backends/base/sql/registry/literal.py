@@ -16,14 +16,12 @@ def _set_literal_format(translator, expr):
     return '(' + ', '.join(formatted) + ')'
 
 
-def _boolean_literal_format(translator, expr):
-    value = expr.op().value
-    return 'TRUE' if value else 'FALSE'
+def _boolean_literal_format(translator, op):
+    return 'TRUE' if op.value else 'FALSE'
 
 
-def _string_literal_format(translator, expr):
-    value = expr.op().value
-    return "'{}'".format(value.replace("'", "\\'"))
+def _string_literal_format(translator, op):
+    return "'{}'".format(op.value.replace("'", "\\'"))
 
 
 def _number_literal_format(translator, op):
@@ -42,9 +40,9 @@ def _number_literal_format(translator, op):
     return formatted
 
 
-def _interval_literal_format(translator, expr):
+def _interval_literal_format(translator, op):
     return 'INTERVAL {} {}'.format(
-        expr.op().value, expr.type().resolution.upper()
+        op.value, op.output_dtype.resolution.upper()
     )
 
 
@@ -56,8 +54,8 @@ def _date_literal_format(translator, expr):
     return repr(value)
 
 
-def _timestamp_literal_format(translator, expr):
-    value = expr.op().value
+def _timestamp_literal_format(translator, op):
+    value = op.value
     if isinstance(value, datetime.datetime):
         value = value.isoformat()
 

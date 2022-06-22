@@ -120,17 +120,18 @@ def value_list(translator, expr):
     return helpers.parenthesize(', '.join(formatted))
 
 
-def cast(translator, expr):
-    op = expr.op()
-    arg, target_type = op.args
-    arg_formatted = translator.translate(arg)
+def cast(translator, op):
+    arg_formatted = translator.translate(op.arg)
 
-    if isinstance(arg, ir.CategoryValue) and target_type == dt.int32:
+    if isinstance(op.arg.output_dtype, dt.Category) and op.to == dt.int32:
         return arg_formatted
-    if isinstance(arg, ir.TemporalValue) and target_type == dt.int64:
+    if (
+        isinstance(op.arg.output_dtype, (dt.Timestamp, dt.Date, dt.Time))
+        and op.to == dt.int64
+    ):
         return f'1000000 * unix_timestamp({arg_formatted})'
     else:
-        sql_type = helpers.type_to_sql_string(target_type)
+        sql_type = helpers.type_to_sql_string(op.to)
         return f'CAST({arg_formatted} AS {sql_type})'
 
 
