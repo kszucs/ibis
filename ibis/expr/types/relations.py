@@ -1202,7 +1202,7 @@ def _resolve_predicates(
     for pred in predicates:
         if isinstance(pred, ops.TopK):
             # TODO(kszucs): fixme
-            top_ks.append(pred._semi_join_components())
+            top_ks.append(pred.to_expr()._semi_join_components())
         elif isinstance(pred, ops.logical._UnresolvedSubquery):
             resolved_predicates.append(pred._resolve(table.op()))
         else:

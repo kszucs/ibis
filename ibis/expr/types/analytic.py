@@ -21,7 +21,7 @@ class TopK(Analytic):
 
     def _semi_join_components(self):
         predicate = self._to_filter()
-        right = predicate.op().right.op().table
+        right = predicate.op().right.table
         return predicate, right
 
     def _to_semi_join(self, left):
@@ -36,7 +36,7 @@ class TopK(Analytic):
         # GH 1393: previously because of GH667 we were substituting parents,
         # but that introduced a bug when comparing reductions to columns on the
         # same relation, so we leave this alone.
-        arg = op.arg
+        arg = op.arg.to_expr()
         return arg == getattr(rank_set, arg.get_name())
 
     def to_aggregation(
@@ -71,9 +71,9 @@ class TopK(Analytic):
             by = by.name(metric_name)
 
         if arg_table.equals(by_table):
-            agg = arg_table.aggregate(by, by=[op.arg])
+            agg = arg_table.aggregate(by.to_expr(), by=[op.arg.to_expr()])
         elif parent_table is not None:
-            agg = parent_table.aggregate(by, by=[op.arg])
+            agg = parent_table.aggregate(by.to_expr(), by=[op.arg.to_expr()])
         else:
             raise com.IbisError(
                 'Cross-table TopK; must provide a parent joined table'
