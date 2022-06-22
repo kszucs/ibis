@@ -263,7 +263,7 @@ class ExprTranslator:
             literal = ibis.map(raw_value, type=dtype)
         else:
             literal = ibis.literal(raw_value, type=dtype)
-        return self.translate(literal)
+        return self.translate(literal.op())
 
     @classmethod
     def rewrites(cls, klass):
