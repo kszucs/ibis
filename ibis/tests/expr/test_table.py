@@ -755,8 +755,8 @@ def test_asof_join_with_by():
         "key_y",
         "value2",
     ]
-    by = joined.op().table.op().by[0].op()
-    assert by.left.op().name == by.right.op().name == 'key'
+    by = joined.op().table.by[0]
+    assert by.left.name == by.right.name == 'key'
 
 
 @pytest.mark.parametrize(
@@ -1414,6 +1414,8 @@ def test_mutate_chain():
     assert isinstance(expr.arg, ops.IfNull)
 
 
+# TODO(kszucs): move this test case to ibis/tests/sql since it requires the
+# sql backend to be executed
 def test_multiple_dbcon():
     """
     Expr from multiple connections to same DB should be compatible.

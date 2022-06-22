@@ -765,33 +765,34 @@ def find_predicates(node, flatten=True):
     return list(lin.traverse(predicate, node))
 
 
-def find_subqueries(expr: ir.Expr) -> Counter:
-    def predicate(
-        counts: Counter, expr: ir.Expr
-    ) -> tuple[Sequence[ir.Table] | bool, None]:
-        op = expr.op()
+def find_subqueries(node: ops.Node) -> Counter:
+    for n in util.promote_list(node):
+        assert isinstance(n, ops.Node), type(n)
 
-        if isinstance(op, ops.Join):
-            return [op.left, op.right], None
-        elif isinstance(op, ops.PhysicalTable):
+    def finder(
+        counts: Counter, node: ops.Node
+    ) -> tuple[Sequence[ir.Table] | bool, None]:
+        if isinstance(node, ops.Join):
+            return [node.left, node.right], None
+        elif isinstance(node, ops.PhysicalTable):
             return lin.halt, None
-        elif isinstance(op, ops.SelfReference):
+        elif isinstance(node, ops.SelfReference):
             return lin.proceed, None
-        elif isinstance(op, (ops.Selection, ops.Aggregation)):
-            counts[op] += 1
-            return [op.table], None
-        elif isinstance(op, ops.TableNode):
-            counts[op] += 1
+        elif isinstance(node, (ops.Selection, ops.Aggregation)):
+            counts[node] += 1
+            return [node.table], None
+        elif isinstance(node, ops.TableNode):
+            counts[node] += 1
             return lin.proceed, None
-        elif isinstance(op, ops.TableColumn):
-            return op.table.op() not in counts, None
+        elif isinstance(node, ops.TableColumn):
+            return node.table not in counts, None
         else:
             return lin.proceed, None
 
     counts = Counter()
     iterator = lin.traverse(
-        functools.partial(predicate, counts),
-        expr,
+        functools.partial(finder, counts),
+        node,
         # keep duplicates so we can determine where an expression is used
         # more than once
         dedup=False,

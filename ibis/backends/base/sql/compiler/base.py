@@ -109,7 +109,7 @@ class SetOp(DML):
 
 
 def _extract_common_table_expressions(exprs):
-    counts = an.find_subqueries(exprs)
+    counts = an.find_subqueries([expr.op() for expr in exprs])
     duplicates = [op.to_expr() for op, count in counts.items() if count > 1]
     duplicates.reverse()
     return duplicates

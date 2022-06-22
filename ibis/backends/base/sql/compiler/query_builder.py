@@ -481,45 +481,6 @@ class Difference(SetOp):
         return [self._keyword] * (len(self.tables) - 1)
 
 
-def flatten_union(table: ir.Table):
-    """Extract all union queries from `table`.
-
-    Parameters
-    ----------
-    table : Table
-
-    Returns
-    -------
-    Iterable[Union[Table, bool]]
-    """
-    op = table.op()
-    if isinstance(op, ops.Union):
-        # For some reason mypy considers `op.left` and `op.right`
-        # of `Argument` type, and fails the validation. While in
-        # `flatten` types are the same, and it works
-        return toolz.concatv(
-            flatten_union(op.left),  # type: ignore
-            [op.distinct],
-            flatten_union(op.right),  # type: ignore
-        )
-    return [table]
-
-
-def flatten(table: ir.Table):
-    """Extract all intersection or difference queries from `table`.
-
-    Parameters
-    ----------
-    table : Table
-
-    Returns
-    -------
-    Iterable[Union[Table]]
-    """
-    op = table.op()
-    return list(toolz.concatv(flatten_union(op.left), flatten_union(op.right)))
-
-
 class Compiler:
     translator_class = ExprTranslator
     context_class = QueryContext
@@ -619,33 +580,24 @@ class Compiler:
 
     @classmethod
     def _make_union(cls, expr, context):
-        # flatten unions so that we can codegen them all at once
-        union_info = list(flatten_union(expr))
-
-        # since op is a union, we have at least 3 elements in union_info (left
-        # distinct right) and if there is more than a single union we have an
-        # additional two elements per union (distinct right) which means the
-        # total number of elements is at least 3 + (2 * number of unions - 1)
-        # and is therefore an odd number
-        npieces = len(union_info)
-        assert npieces >= 3 and npieces % 2 != 0, 'Invalid union expression'
-
-        # 1. every other object starting from 0 is a Table instance
-        # 2. every other object starting from 1 is a bool indicating the type
-        #    of union (distinct or not distinct)
-        table_exprs, distincts = union_info[::2], union_info[1::2]
+        op = expr.op()
         return cls.union_class(
-            table_exprs, expr, distincts=distincts, context=context
+            [op.left.to_expr(), op.right.to_expr()],
+            expr,
+            distincts=[op.distinct],
+            context=context,
         )
 
     @classmethod
     def _make_intersect(cls, expr, context):
-        # flatten intersections so that we can codegen them all at once
-        table_exprs = list(flatten(expr))
-        return cls.intersect_class(table_exprs, expr, context=context)
+        op = expr.op()
+        return cls.intersect_class(
+            [op.left.to_expr(), op.right.to_expr()], expr, context=context
+        )
 
     @classmethod
     def _make_difference(cls, expr, context):
-        # flatten differences so that we can codegen them all at once
-        table_exprs = list(flatten(expr))
-        return cls.difference_class(table_exprs, expr, context=context)
+        op = expr.op()
+        return cls.difference_class(
+            [op.left.to_expr(), op.right.to_expr()], expr, context=context
+        )
