@@ -1,6 +1,7 @@
 import datetime
 import math
 
+import ibis.expr.datatypes as dt
 import ibis.expr.types as ir
 
 
@@ -25,16 +26,14 @@ def _string_literal_format(translator, expr):
     return "'{}'".format(value.replace("'", "\\'"))
 
 
-def _number_literal_format(translator, expr):
-    value = expr.op().value
-
-    if math.isfinite(value):
-        formatted = repr(value)
+def _number_literal_format(translator, op):
+    if math.isfinite(op.value):
+        formatted = repr(op.value)
     else:
-        if math.isnan(value):
+        if math.isnan(op.value):
             formatted_val = 'NaN'
-        elif math.isinf(value):
-            if value > 0:
+        elif math.isinf(op.value):
+            if op.value > 0:
                 formatted_val = 'Infinity'
             else:
                 formatted_val = '-Infinity'
@@ -76,26 +75,29 @@ literal_formatters = {
 }
 
 
-def literal(translator, expr):
+def literal(translator, op):
     """Return the expression as its literal value."""
-    if isinstance(expr, ir.BooleanValue):
+
+    dtype = op.output_dtype
+
+    if dtype is dt.bool:
         typeclass = 'boolean'
-    elif isinstance(expr, ir.StringValue):
+    elif dtype is dt.string:
         typeclass = 'string'
-    elif isinstance(expr, ir.NumericValue):
-        typeclass = 'number'
-    elif isinstance(expr, ir.DateValue):
+    elif dtype is dt.date:
         typeclass = 'date'
-    elif isinstance(expr, ir.TimestampValue):
+    elif isinstance(dtype, (dt.Integer, dt.Floating, dt.Decimal)):
+        typeclass = 'number'
+    elif isinstance(dtype, dt.Timestamp):
         typeclass = 'timestamp'
-    elif isinstance(expr, ir.IntervalValue):
+    elif isinstance(dtype, dt.Interval):
         typeclass = 'interval'
-    elif isinstance(expr, ir.SetValue):
+    elif isinstance(dtype, dt.Set):
         typeclass = 'set'
     else:
         raise NotImplementedError
 
-    return literal_formatters[typeclass](translator, expr)
+    return literal_formatters[typeclass](translator, op)
 
 
 def null_literal(translator, expr):

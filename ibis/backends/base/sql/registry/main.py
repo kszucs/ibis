@@ -15,10 +15,9 @@ from ibis.backends.base.sql.registry import (
 from ibis.backends.base.sql.registry.literal import literal, null_literal
 
 
-def alias(translator, expr):
+def alias(translator, op):
     # just compile the underlying argument because the naming is handled
     # by the translator for the top level expression
-    op = expr.op()
     return translator.translate(op.arg)
 
 
@@ -143,9 +142,10 @@ def varargs(func_name):
     return varargs_formatter
 
 
-def between(translator, expr):
-    op = expr.op()
-    comp, lower, upper = (translator.translate(x) for x in op.args)
+def between(translator, op):
+    comp = translator.translate(op.arg)
+    lower = translator.translate(op.lower_bound)
+    upper = translator.translate(op.upper_bound)
     return f'{comp} BETWEEN {lower} AND {upper}'
 
 

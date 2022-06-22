@@ -66,20 +66,19 @@ class QueryContext:
     def set_always_alias(self):
         self.always_alias = True
 
-    def get_compiled_expr(self, expr):
+    def get_compiled_expr(self, op):
         this = self.top_context
 
-        key = self._get_table_key(expr)
+        key = self._get_table_key(op)
         try:
             return this.subquery_memo[key]
         except KeyError:
             pass
 
-        op = expr.op()
         if isinstance(op, (ops.SQLQueryResult, ops.SQLStringView)):
             result = op.query
         else:
-            result = self._compile_subquery(expr)
+            result = self._compile_subquery(op)
 
         this.subquery_memo[key] = result
         return result
@@ -204,9 +203,10 @@ class ExprTranslator:
         if not self.named:
             return False
 
-        # if isinstance(op, ops.TableColumn):
-        #     # This column has been given an explicitly different name
-        #     return expr.get_name() != op.name
+        if isinstance(op, ops.TableColumn):
+            # This column has been given an explicitly different name
+            # return expr.get_name() != op.name
+            return False
 
         return op.resolve_name() is not unnamed
 

@@ -14,8 +14,7 @@ def _reduction_format(translator, func_name, where, arg, *args):
 
 
 def reduction(func_name):
-    def formatter(translator, expr):
-        op = expr.op()
+    def formatter(translator, op):
         *args, where = op.args
         return _reduction_format(translator, func_name, where, *args)
 

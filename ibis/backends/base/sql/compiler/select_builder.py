@@ -25,13 +25,13 @@ class _CorrelatedRefCheck:
         self.visit(self.expr)
         return self.has_query_root and self.has_foreign_root
 
+    # TODO(kszucs): remove visit_table_cache
     def visit(
-        self, expr, in_subquery=False, visit_cache=None, visit_table_cache=None
+        self, node, in_subquery=False, visit_cache=None, visit_table_cache=None
     ):
         if visit_cache is None:
             visit_cache = set()
 
-        node = expr.op()
         key = node, in_subquery
         if key in visit_cache:
             return
@@ -41,14 +41,14 @@ class _CorrelatedRefCheck:
         in_subquery |= self.is_subquery(node)
 
         for arg in node.flat_args():
-            if isinstance(arg, ir.Table):
+            if isinstance(arg, ops.TableNode):
                 self.visit_table(
                     arg,
                     in_subquery=in_subquery,
                     visit_cache=visit_cache,
                     visit_table_cache=visit_table_cache,
                 )
-            elif isinstance(arg, ir.Expr):
+            elif isinstance(arg, ops.Node):
                 self.visit(
                     arg,
                     in_subquery=in_subquery,
@@ -65,28 +65,25 @@ class _CorrelatedRefCheck:
                 ops.NotExistsSubquery,
             ),
         ) or (
-            isinstance(node, ops.TableColumn)
-            and not self.is_root(node.table.op())
+            isinstance(node, ops.TableColumn) and not self.is_root(node.table)
         )
 
     def visit_table(
-        self, expr, in_subquery=False, visit_cache=None, visit_table_cache=None
+        self, node, in_subquery=False, visit_cache=None, visit_table_cache=None
     ):
         if visit_table_cache is None:
             visit_table_cache = set()
 
-        key = expr._key, in_subquery
+        key = node, in_subquery
         if key in visit_table_cache:
             return
         visit_table_cache.add(key)
-
-        node = expr.op()
 
         if isinstance(node, (ops.PhysicalTable, ops.SelfReference)):
             self.ref_check(node, in_subquery=in_subquery)
 
         for arg in node.flat_args():
-            if isinstance(arg, ir.Expr):
+            if isinstance(arg, ops.Node):
                 self.visit(
                     arg,
                     in_subquery=in_subquery,
