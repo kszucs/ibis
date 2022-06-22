@@ -94,11 +94,10 @@ class Sum(Filterable, Reduction):
 
     @immutable_property
     def output_dtype(self):
-        return dt.higher_precedence(self.arg.output_dtype.largest, dt.int64)
-        # if isinstance(self.arg, ir.BooleanValue):
-        #     return dt.int64
-        # else:
-        #     return self.arg.output_dtype.largest
+        if self.arg.output_dtype is dt.bool:
+            return dt.int64
+        else:
+            return self.arg.output_dtype.largest
 
 
 @public
@@ -107,7 +106,10 @@ class Mean(Filterable, Reduction):
 
     @immutable_property
     def output_dtype(self):
-        return dt.higher_precedence(self.arg.output_dtype, dt.float64)
+        if self.arg.output_dtype is dt.bool:
+            return dt.float64
+        else:
+            return dt.higher_precedence(self.arg.output_dtype, dt.float64)
 
 
 @public

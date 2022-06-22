@@ -30,7 +30,8 @@ class Multiply(NumericBinary):
 class Power(NumericBinary):
     @property
     def output_dtype(self):
-        if util.all_of(self.args, ir.IntegerValue):
+        dtypes = (arg.output_dtype for arg in self.args)
+        if util.all_of(dtypes, dt.Integer):
             return dt.float64
         else:
             return rlz.highest_precedence_dtype(self.args)

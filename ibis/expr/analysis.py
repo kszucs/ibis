@@ -40,13 +40,11 @@ def sub_for(node, substitutions):
     ibis.expr.types.Expr
         An Ibis expression
     """
-
-    # mapping = {k.op(): v for k, v in substitutions}
-    mapping = substitutions
+    assert isinstance(node, ops.Node), type(node)
 
     def fn(node):
         try:
-            return mapping[node]
+            return substitutions[node]
         except KeyError:
             if node.blocks():
                 return node  # .to_expr()
@@ -399,6 +397,8 @@ def _can_pushdown(op, predicates):
     #    the entire tables or a single column selection)
 
     for pred in predicates:
+        if isinstance(pred, ir.Expr):
+            pred = pred.op()
         validator = _PushdownValidate(op, pred)
         predicate_is_valid = validator.get_result()
         if not predicate_is_valid:
@@ -406,6 +406,7 @@ def _can_pushdown(op, predicates):
     return True
 
 
+# TODO(kszucs): rewrite to only work with operation objects
 class _PushdownValidate:
     def __init__(self, parent, predicate):
         self.parent = parent
@@ -425,10 +426,7 @@ class _PushdownValidate:
         is_valid = False
 
         for val in self.parent.selections:
-            if (
-                isinstance(val, ops.PhysicalTable)
-                and node.name in val.schema()
-            ):
+            if isinstance(val, ops.PhysicalTable) and node.name in val.schema:
                 is_valid = True
             elif (
                 isinstance(val, ops.TableColumn)
@@ -505,6 +503,7 @@ class Projector:
     """
 
     def __init__(self, parent, proj_exprs):
+        # TODO(kszucs): rewrite projector to work with operations exclusively
         proj_exprs = util.promote_list(proj_exprs)
         self.parent = parent
         self.input_exprs = proj_exprs
@@ -576,7 +575,7 @@ class Projector:
                 # This was a filter, so implicitly a select *
                 if not have_root and not root_selections:
                     fused_exprs = [root_table, *fused_exprs]
-            elif shares_all_roots(val, root_table):
+            elif shares_all_roots(val.op(), root_table):
                 fused_exprs.append(val)
             else:
                 return None
@@ -629,6 +628,9 @@ def _find_projections(node):
 
 
 def shares_all_roots(exprs, parents):
+    assert all(isinstance(arg, ops.Node) for arg in util.promote_list(exprs))
+    assert all(isinstance(arg, ops.Node) for arg in util.promote_list(parents))
+
     # unique table dependencies of exprs and parents
     exprs_deps = set(lin.traverse(_find_projections, exprs))
     parents_deps = set(lin.traverse(_find_projections, parents))
@@ -636,6 +638,9 @@ def shares_all_roots(exprs, parents):
 
 
 def shares_some_roots(exprs, parents):
+    assert all(isinstance(arg, ops.Node) for arg in util.promote_list(exprs))
+    assert all(isinstance(arg, ops.Node) for arg in util.promote_list(parents))
+
     # unique table dependencies of exprs and parents
     exprs_deps = set(lin.traverse(_find_projections, exprs))
     parents_deps = set(lin.traverse(_find_projections, parents))
@@ -681,29 +686,6 @@ def flatten_predicate(node):
             return lin.halt, node
 
     return list(lin.traverse(predicate, node))
-
-
-def _is_ancestor(parent, child):  # pragma: no cover
-    """
-    Check whether an operation is an ancestor node of another.
-
-    Parameters
-    ----------
-    parent : ops.Node
-    child : ops.Node
-
-    Returns
-    -------
-    check output : bool
-    """
-
-    def predicate(expr):
-        if expr.op() == child:
-            return lin.halt, True
-        else:
-            return lin.proceed, None
-
-    return any(lin.traverse(predicate, parent.to_expr()))
 
 
 def is_analytic(node):
@@ -853,8 +835,9 @@ def _rewrite_filter_reduction(op, name: str | None = None, **kwargs):
     # revisit when it becomes a problem.
 
     # TODO(kszucs): may need to wrap with Alias
-    # if name is not None:
-    #     expr = expr.name(name)
+    if name is not None:
+        # expr = expr.name(name)
+        op = ops.Alias(op, name=name)
     aggregation = reduction_to_aggregation(op)
     return ops.TableArrayView(aggregation)
 

@@ -352,7 +352,7 @@ class Value(Expr):
 
         # TODO(kszucs): fix this ugly hack
         if isinstance(prior_op, ops.Alias):
-            return prior_op.arg.over(window).name(prior_op.name)
+            return prior_op.arg.to_expr().over(window).name(prior_op.name)
 
         if isinstance(prior_op, ops.Window):
             op = prior_op.over(window)

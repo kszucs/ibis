@@ -342,7 +342,7 @@ def _fmt_table_op_self_reference_distinct(
 
 @fmt_table_op.register
 def _fmt_table_op_fillna(op: ops.FillNa, *, aliases: Aliases, **_: Any) -> str:
-    top = f"{op.__class__.__name__}[{aliases[op.table.op()]}]"
+    top = f"{op.__class__.__name__}[{aliases[op.table]}]"
     raw_parts = fmt_fields(op, dict(replacements=fmt_value), aliases=aliases)
     return f"{top}\n{raw_parts}"
 
@@ -401,7 +401,7 @@ def _fmt_table_op_selection(
 def _fmt_table_op_aggregation(
     op: ops.Aggregation, *, aliases: Aliases, **_: Any
 ) -> str:
-    top = f"{op.__class__.__name__}[{aliases[op.table.op()]}]"
+    top = f"{op.__class__.__name__}[{aliases[op.table]}]"
     raw_parts = fmt_fields(
         op,
         dict(
@@ -424,7 +424,7 @@ def _fmt_table_op_aggregation(
 
 @fmt_table_op.register
 def _fmt_table_op_limit(op: ops.Limit, *, aliases: Aliases, **_: Any) -> str:
-    params = [str(aliases[op.table.op()]), f"n={op.n:d}"]
+    params = [str(aliases[op.table]), f"n={op.n:d}"]
     if offset := op.offset:
         params.append(f"offset={offset:d}")
     return f"{op.__class__.__name__}[{', '.join(params)}]"

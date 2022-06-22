@@ -349,16 +349,16 @@ def test_sort_by(table):
     assert sort_key.ascending
 
     # non-list input. per #150
-    result2 = table.sort_by('f')
+    result2 = table.sort_by('f').op()
     assert_equal(result, result2)
 
     result2 = table.sort_by([('f', False)])
     result3 = table.sort_by([('f', 'descending')])
     result4 = table.sort_by([('f', 0)])
 
-    key2 = result2.op().sort_keys[0].op()
-    key3 = result3.op().sort_keys[0].op()
-    key4 = result4.op().sort_keys[0].op()
+    key2 = result2.op().sort_keys[0]
+    key3 = result3.op().sort_keys[0]
+    key4 = result4.op().sort_keys[0]
 
     assert not key2.ascending
     assert not key3.ascending
@@ -619,7 +619,7 @@ def test_group_by_kwargs(table):
 def test_compound_aggregate_expr(table):
     # See ibis #24
     compound_expr = (table['a'].sum() / table['a'].mean()).name('foo')
-    assert L.is_reduction(compound_expr)
+    assert L.is_reduction(compound_expr.op())
 
     # Validates internally
     table.aggregate([compound_expr])
@@ -1403,13 +1403,13 @@ def test_mutate_chain():
     a, b = three.op().selections
 
     # we can't fuse these correctly yet
-    assert isinstance(a.op(), ops.Alias)
-    assert isinstance(a.op().arg.op(), ops.IfNull)
-    assert isinstance(b.op(), ops.TableColumn)
+    assert isinstance(a, ops.Alias)
+    assert isinstance(a.arg, ops.IfNull)
+    assert isinstance(b, ops.TableColumn)
 
-    expr = b.op().table.op().selections[1]
-    assert isinstance(expr.op(), ops.Alias)
-    assert isinstance(expr.op().arg.op(), ops.IfNull)
+    expr = b.table.selections[1]
+    assert isinstance(expr, ops.Alias)
+    assert isinstance(expr.arg, ops.IfNull)
 
 
 def test_multiple_dbcon():

@@ -341,7 +341,8 @@ def numeric_like(name, op):
     @immutable_property
     def output_dtype(self):
         args = getattr(self, name)
-        if util.all_of(args, ir.IntegerValue):
+        dtypes = (arg.output_dtype for arg in args)
+        if util.all_of(dtypes, dt.Integer):
             result = _promote_numeric_binop(args, op)
         else:
             result = highest_precedence_dtype(args)

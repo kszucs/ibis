@@ -726,7 +726,7 @@ class Table(Expr):
         """
         from ibis.expr import operations as ops
 
-        return ops.Count(self, None).to_expr().name("count")
+        return ops.Count(self).to_expr().name("count")
 
     def dropna(
         self,

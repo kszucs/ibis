@@ -96,11 +96,11 @@ def _clean_join_predicates(left, right, predicates):
             if len(pred) != 2:
                 raise com.ExpressionError('Join key tuple must be ' 'length 2')
             lk, rk = pred
-            lk = left._ensure_expr(lk)
-            rk = right._ensure_expr(rk)
+            lk = left.to_expr()._ensure_expr(lk)
+            rk = right.to_expr()._ensure_expr(rk)
             pred = lk == rk
         elif isinstance(pred, str):
-            pred = left[pred] == right[pred]
+            pred = left.to_expr()[pred] == right.to_expr()[pred]
         elif not isinstance(pred, ir.Expr):
             raise NotImplementedError
 
@@ -353,11 +353,6 @@ class Selection(TableNode, sch.HasSchema):
     def __init__(self, table, selections, predicates, sort_keys, **kwargs):
         from ibis.expr.analysis import shares_all_roots, shares_some_roots
 
-        print(type(table))
-        print(len(selections))
-        for s in selections:
-            print(" - ", type(s))
-
         if not shares_all_roots(selections + sort_keys, table):
             raise com.RelationError(
                 "Selection expressions don't fully originate from "
@@ -494,7 +489,8 @@ class AggregateSelection:
             subbed_exprs.append(subbed.to_expr())
 
         if subbed_exprs:
-            valid = shares_all_roots(subbed_exprs, self.op.table)
+            subbed_ops = [expr.op() for expr in subbed_exprs]
+            valid = shares_all_roots(subbed_ops, self.op.table)
         else:
             valid = True
 

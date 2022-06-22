@@ -88,12 +88,11 @@ class TableArrayView(Value):
 
     @property
     def output_dtype(self):
-        schema = self.table.schema()
-        return schema[self.name]
+        return self.table.schema[self.name]
 
     @property
     def name(self):
-        return self.table.schema().names[0]
+        return self.table.schema.names[0]
 
 
 @public
