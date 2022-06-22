@@ -304,7 +304,7 @@ def apply_filter(expr, predicates):
             # after aggregations.
             #
             # See https://github.com/ibis-project/ibis/pull/3341 for details
-            sub_for(predicate, [(op.table, expr)])
+            sub_for(predicate, {op.table: op})
             if not is_reduction(predicate)
             else predicate
             for predicate in predicates

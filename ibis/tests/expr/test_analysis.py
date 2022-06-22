@@ -154,8 +154,8 @@ def test_filter_self_join():
     proj_exprs = projected.op().selections
 
     # proj exprs unaffected by analysis
-    assert_equal(proj_exprs[0], left.region)
-    assert_equal(proj_exprs[1], metric)
+    assert_equal(proj_exprs[0], left.region.op())
+    assert_equal(proj_exprs[1], metric.op())
 
 
 def test_no_rewrite(con):
@@ -230,32 +230,37 @@ def test_mutation_fusion_overwrite():
     result = result.mutate(col=t['col'] - 1)
     result = result.mutate(col4=t['col'] + 4)
 
-    second_selection = result
-    first_selection = second_selection.op().table
+    second_selection = result.op()
+    first_selection = second_selection.table
 
-    assert len(first_selection.op().selections) == 4
-    assert (
-        first_selection.op().selections[1].equals((t['col'] + 1).name('col1'))
-    )
-    assert (
-        first_selection.op().selections[2].equals((t['col'] + 2).name('col2'))
-    )
-    assert (
-        first_selection.op().selections[3].equals((t['col'] + 3).name('col3'))
-    )
+    assert len(first_selection.selections) == 4
+    col1 = (t['col'] + 1).name('col1').op()
+    assert first_selection.selections[1] == col1
+
+    col2 = (t['col'] + 2).name('col2').op()
+    assert first_selection.selections[2] == col2
+
+    col3 = (t['col'] + 3).name('col3').op()
+    assert first_selection.selections[3] == col3
 
     # Since the second selection overwrites existing columns, it will
     # not have the Table as the first selection
-    assert len(second_selection.op().selections) == 5
-    assert (
-        second_selection.op().selections[0].equals((t['col'] - 1).name('col'))
-    )
-    assert second_selection.op().selections[1].equals(first_selection['col1'])
-    assert second_selection.op().selections[2].equals(first_selection['col2'])
-    assert second_selection.op().selections[3].equals(first_selection['col3'])
-    assert (
-        second_selection.op().selections[4].equals((t['col'] + 4).name('col4'))
-    )
+    assert len(second_selection.selections) == 5
+
+    col = (t['col'] - 1).name('col').op()
+    assert second_selection.selections[0] == col
+
+    col1 = first_selection.to_expr()['col1'].op()
+    assert second_selection.selections[1] == col1
+
+    col2 = first_selection.to_expr()['col2'].op()
+    assert second_selection.selections[2] == col2
+
+    col3 = first_selection.to_expr()['col3'].op()
+    assert second_selection.selections[3] == col3
+
+    col4 = (t['col'] + 4).name('col4').op()
+    assert second_selection.selections[4] == col4
 
 
 # Pr 2635
@@ -299,9 +304,9 @@ def test_no_filter_means_no_selection():
 def test_mutate_overwrites_existing_column():
     t = ibis.table(dict(a="string"))
     mut = t.mutate(a=42).select(["a"])
-    sel = mut.op().selections[0].op().table.op().selections[0].op().arg
-    assert isinstance(sel.op(), ops.Literal)
-    assert sel.op().value == 42
+    sel = mut.op().selections[0].table.selections[0].arg
+    assert isinstance(sel, ops.Literal)
+    assert sel.value == 42
 
 
 def test_agg_selection_does_not_share_roots():
