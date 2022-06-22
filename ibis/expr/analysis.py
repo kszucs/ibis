@@ -348,7 +348,7 @@ def _filter_selection(expr, predicates):
         # rewritten in terms of the child table. This prevents the broken
         # ref issue (described in more detail in #59)
         simplified_predicates = tuple(
-            sub_for(predicate, [(expr, op.table)])
+            sub_for(predicate, {op: op.table})
             if not is_reduction(predicate)
             else predicate
             for predicate in predicates

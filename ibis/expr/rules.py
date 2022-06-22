@@ -435,7 +435,8 @@ def column_from(name, column, *, this):
     )
 
 
-@validator
+# TODO(kszucs): consider to remove since it's only used by TopK op
+@rule
 def base_table_of(name, *, this):
     from ibis.expr.analysis import find_first_base_table
 
@@ -443,8 +444,8 @@ def base_table_of(name, *, this):
     base = find_first_base_table(arg)
     if base is None:
         raise com.IbisTypeError(f"`{arg}` doesn't have a base table")
-    else:
-        return base.to_expr()
+
+    return base
 
 
 @rule

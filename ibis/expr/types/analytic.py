@@ -45,6 +45,7 @@ class TopK(Analytic):
         """
         Convert the TopK operation to a table aggregation
         """
+        import ibis.expr.operations as ops
         from ibis.expr.analysis import find_first_base_table
 
         op = self.op()
@@ -52,14 +53,19 @@ class TopK(Analytic):
         arg_table = find_first_base_table(op.arg).to_expr()
 
         by = op.by
-        if isinstance(by, Expr):
-            by_table = find_first_base_table(op.by).to_expr()
-        else:
+        if callable(by):
             by = by(arg_table)
             by_table = arg_table
+        elif isinstance(by, ops.Value):
+            by_table = find_first_base_table(op.by).to_expr()
+        else:
+            raise com.IbisTypeError(
+                f"Invalid `by` argument with type {type(by)}"
+            )
 
+        # TODO(kszucs): revisit this naming implementation
         if metric_name is None:
-            if by.get_name() == op.arg.get_name():
+            if by.resolve_name() == op.arg.resolve_name():
                 by = by.name(backup_metric_name)
         else:
             by = by.name(metric_name)
@@ -73,7 +79,7 @@ class TopK(Analytic):
                 'Cross-table TopK; must provide a parent joined table'
             )
 
-        return agg.sort_by([(by.get_name(), False)]).limit(op.k)
+        return agg.sort_by([(by.resolve_name(), False)]).limit(op.k)
 
 
 public(AnalyticExpr=Analytic, TopKExpr=TopK)
