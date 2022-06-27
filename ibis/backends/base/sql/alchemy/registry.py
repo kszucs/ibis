@@ -215,11 +215,12 @@ def _contains(func):
     return translate
 
 
-def _group_concat(t, expr):
-    op = expr.op()
+def _group_concat(t, op):
     sep = t.translate(op.sep)
     if op.where is not None:
-        arg = t.translate(op.where.ifelse(op.arg, ibis.NA))
+        # TODO(kszucs): avoid to_expr() reoundtrip by rewriting it prior
+        # actual compilation
+        arg = t.translate(op.where.to_expr().ifelse(op.arg, ibis.NA).op())
     else:
         arg = t.translate(op.arg)
     return sa.func.group_concat(arg, sep)

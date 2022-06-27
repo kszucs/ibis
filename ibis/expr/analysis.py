@@ -757,7 +757,7 @@ def find_predicates(node, flatten=True):
 
     def predicate(node):
         assert isinstance(node, ops.Node), type(node)
-        if node.output_dtype is dt.bool:
+        if isinstance(node, ops.Value) and node.output_dtype is dt.bool:
             if flatten and isinstance(node, ops.And):
                 return lin.proceed, None
             else:

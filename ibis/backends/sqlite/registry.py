@@ -240,7 +240,7 @@ def _string_join(t, op):
     sep, elements = op.args
     return functools.reduce(
         operator.add,
-        toolz.interpose(t.translate(sep), map(t.translate, elements)),
+        toolz.interpose(t.translate(sep), map(t.translate, elements.values)),
     )
 
 
