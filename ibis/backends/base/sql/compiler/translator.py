@@ -34,9 +34,9 @@ class QueryContext:
         self.query = None
         self.params = params if params is not None else {}
 
-    def _compile_subquery(self, expr):
+    def _compile_subquery(self, op):
         sub_ctx = self.subcontext()
-        return self._to_sql(expr, sub_ctx)
+        return self._to_sql(op, sub_ctx)
 
     def _to_sql(self, expr, ctx):
         return self.compiler.to_sql(expr, ctx)

@@ -14,6 +14,7 @@ import ibis.expr.window as W
 from ibis.backends.base.sql.alchemy.database import AlchemyTable
 from ibis.backends.base.sql.alchemy.datatypes import to_sqla_type
 from ibis.backends.base.sql.alchemy.geospatial import geospatial_supported
+from ibis.expr.rules import Shape
 
 
 def variance_reduction(func_name):
@@ -151,9 +152,11 @@ def _exists_subquery(t, op):
 
     ctx = t.context
 
+    # TODO(kszucs): avoid converting the predicates to expressions
+    # this should be done by the rewrite step before compilation
     filtered = (
         op.foreign_table.to_expr()
-        .filter(op.predicates)
+        .filter([pred.to_expr() for pred in op.predicates])
         .projection([ir.literal(1).name(ir.core.unnamed)])
     )
 
@@ -200,9 +203,9 @@ def _contains(func):
 
         if (
             # not a list expr
-            not isinstance(op.options, ir.ValueList)
+            not isinstance(op.options, ops.ValueList)
             # but still a column expr
-            and isinstance(op.options, ir.ColumnExpr)
+            and op.options.output_shape is Shape.COLUMNAR
             # wasn't already compiled into a select statement
             and not isinstance(right, sa.sql.Selectable)
         ):

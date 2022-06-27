@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import collections
 import functools
 import operator
 from collections import Counter
-from typing import Sequence
 
 import toolz
 
@@ -783,9 +781,9 @@ def find_subqueries(node: ops.Node) -> Counter:
     for n in util.promote_list(node):
         assert isinstance(n, ops.Node), type(n)
 
-    def finder(
-        counts: Counter, node: ops.Node
-    ) -> tuple[Sequence[ir.Table] | bool, None]:
+    counts = Counter()
+
+    def finder(node: ops.Node):
         if isinstance(node, ops.Join):
             return [node.left, node.right], None
         elif isinstance(node, ops.PhysicalTable):
@@ -803,16 +801,10 @@ def find_subqueries(node: ops.Node) -> Counter:
         else:
             return lin.proceed, None
 
-    counts = Counter()
-    iterator = lin.traverse(
-        functools.partial(finder, counts),
-        node,
-        # keep duplicates so we can determine where an expression is used
-        # more than once
-        dedup=False,
-    )
-    # consume the iterator
-    collections.deque(iterator, maxlen=0)
+    # keep duplicates so we can determine where an expression is used
+    # more than once
+    list(lin.traverse(finder, node, dedup=False))
+
     return counts
 
 

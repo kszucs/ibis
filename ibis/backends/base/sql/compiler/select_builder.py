@@ -492,9 +492,7 @@ class SelectBuilder:
 
         # Find the subqueries, and record them in the passed query context.
         subqueries = _extract_common_table_expressions(
-            # FIXME(kszucs): originally it was self.table_set
-            # [self.table_set, *self.filters]
-            [*self.select_set, *self.filters]
+            [self.table_set, *self.filters]
         )
 
         self.subqueries = []
