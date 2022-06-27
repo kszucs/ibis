@@ -128,6 +128,7 @@ def test_memoize_insert_sort_key(con):
     worst = expr[expr.dev.notnull()].sort_by(ibis.desc('dev')).limit(10)
 
     result = repr(worst)
+
     assert result.count('airlines') == 1
 
 
