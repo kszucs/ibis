@@ -451,56 +451,46 @@ class _PushdownValidate:
 
 # TODO(kszucs): rewrite to receive and return an ops.Node
 def windowize_function(expr, w=None):
-    def _windowize(x, w):
-        if not isinstance(x.op(), ops.Window):
-            walked = _walk(x, w)
+    assert isinstance(expr, ir.Expr), type(expr)
+
+    def _windowize(op, w):
+        if not isinstance(op, ops.Window):
+            walked = _walk(op, w)
         else:
-            window_arg, window_w = x.op().args
+            window_arg, window_w = op.args
             walked_child = _walk(window_arg, w)
 
             if walked_child is not window_arg:
-                op = ops.Window(walked_child, window_w)
-                walked = op.to_expr().name(x.get_name())
+                walked = ops.Window(walked_child, window_w)
             else:
-                walked = x
+                walked = op
 
-        op = walked.op()
         if isinstance(op, (ops.Analytic, ops.Reduction)):
             if w is None:
                 w = window()
-            return walked.over(w)
+            return walked.to_expr().over(w).op()
         elif isinstance(op, ops.Window):
             if w is not None:
-                return walked.over(w.combine(op.window))
+                return walked.to_expr().over(w.combine(op.window)).op()
             else:
                 return walked
         else:
             return walked
 
-    def _walk(x, w):
-        op = x.op()
-
-        unchanged = True
+    def _walk(op, w):
+        # TODO(kszucs): rewrite to use the substitute utility
         windowed_args = []
         for arg in op.args:
-            if not isinstance(arg, ir.Value):
+            if not isinstance(arg, ops.Value):
                 windowed_args.append(arg)
                 continue
 
             new_arg = _windowize(arg, w)
-            unchanged = unchanged and arg is new_arg
             windowed_args.append(new_arg)
 
-        if not unchanged:
-            new_op = type(op)(*windowed_args)
-            expr = new_op.to_expr()
-            if x.has_name():
-                expr = expr.name(x.get_name())
-            return expr
-        else:
-            return x
+        return type(op)(*windowed_args)
 
-    return _windowize(expr, w)
+    return _windowize(expr.op(), w).to_expr()
 
 
 class Projector:
