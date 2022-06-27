@@ -23,7 +23,7 @@ def variance_reduction(func_name):
     def variance_compiler(t, op):
         arg, how, where = op.args
 
-        if op.arg.output_dtype is dt.boolean:
+        if isinstance(op.arg.output_dtype, dt.Boolean):
             arg = op.arg.cast('int32')
         else:
             arg = op.arg
@@ -185,10 +185,10 @@ def _cast(t, op):
     ):
         return t.integer_to_timestamp(sa_arg)
 
-    if arg.output_dtype is dt.binary and typ.equals(dt.string):
+    if isinstance(arg.output_dtype, dt.Binary) and isinstance(typ, dt.String):
         return sa.func.encode(sa_arg, 'escape')
 
-    if typ is dt.binary:
+    if isinstance(typ, dt.Binary):
         #  decode yields a column of memoryview which is annoying to deal with
         # in pandas. CAST(expr AS BYTEA) is correct and returns byte strings.
         return sa.cast(sa_arg, sa.LargeBinary())
@@ -297,7 +297,9 @@ def _translate_case(t, cases, results, default):
 
 def _negate(t, op):
     arg = t.translate(op.arg)
-    return sa.not_(arg) if op.arg.output_dtype is dt.boolean else -arg
+    return (
+        sa.not_(arg) if isinstance(op.arg.output_dtype, dt.Boolean) else -arg
+    )
 
 
 def unary(sa_func):

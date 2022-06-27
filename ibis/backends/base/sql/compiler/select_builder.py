@@ -316,6 +316,7 @@ class SelectBuilder:
             return op
 
     # TODO(kszucs): revisit, partially rewritten
+    # TODO(kszucs): avoid roundtripping between extpressions and operations
     def _visit_select_Histogram(self, op):
         EPS = 1e-13
 
@@ -325,13 +326,13 @@ class SelectBuilder:
             min_name = 'min_%s' % aux_hash
             max_name = 'max_%s' % aux_hash
 
-            minmax = self.table_set.aggregate(
+            minmax = self.table_set.to_expr().aggregate(
                 [
                     ops.Alias(ops.Min(op.arg), name=min_name),
                     ops.Alias(ops.Max(op.arg), name=max_name),
                 ]
             )
-            self.table_set = self.table_set.cross_join(minmax)
+            self.table_set = self.table_set.to_expr().cross_join(minmax).op()
 
             if op.base is None:
                 base = minmax[min_name] - EPS

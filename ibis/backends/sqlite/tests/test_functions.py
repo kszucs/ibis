@@ -24,9 +24,10 @@ sa = pytest.importorskip("sqlalchemy")
             lambda t: t.double_col.cast(dt.int8),
             lambda at: sa.cast(at.c.double_col, sa.SMALLINT),
         ),
+        # TODO(kszucs): double check the validity of this test case
         (
             lambda t: t.string_col.cast(dt.float64),
-            lambda at: sa.cast(at.c.string_col, sa.REAL),
+            lambda at: sa.cast(at.c.string_col, sa.FLOAT),
         ),
         (
             lambda t: t.string_col.cast(dt.float32),

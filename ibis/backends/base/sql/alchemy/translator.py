@@ -60,7 +60,7 @@ class AlchemyExprTranslator(ExprTranslator):
         if (
             self._bool_aggs_need_cast_to_int32
             and isinstance(op, (ops.Sum, ops.Mean, ops.Min, ops.Max))
-            and arg.output_dtype is dt.bool
+            and isinstance(arg.output_dtype, dt.Boolean)
         ):
             arg = ops.Cast(arg, dt.Int32(nullable=arg.output_dtype.nullable))
 

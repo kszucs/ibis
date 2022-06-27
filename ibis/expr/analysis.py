@@ -753,11 +753,15 @@ _ANY_OP_MAPPING = {
 
 
 def find_predicates(node, flatten=True):
+    # TODO(kszucs): consider to remove flatten argument and compose with
+    # flatten_predicates instead
     assert isinstance(node, ops.Node), type(node)
 
     def predicate(node):
         assert isinstance(node, ops.Node), type(node)
-        if isinstance(node, ops.Value) and node.output_dtype is dt.bool:
+        if isinstance(node, ops.Value) and isinstance(
+            node.output_dtype, dt.Boolean
+        ):
             if flatten and isinstance(node, ops.And):
                 return lin.proceed, None
             else:

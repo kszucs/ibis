@@ -156,7 +156,7 @@ def literal(dtype, value, **kwargs):
             'passing it explicitly with the `type` keyword.'.format(value)
         )
 
-    if dtype is dt.null:
+    if isinstance(dtype, dt.Null):
         return ops.NullLiteral()
 
     value = dt._normalize(dtype, value)
