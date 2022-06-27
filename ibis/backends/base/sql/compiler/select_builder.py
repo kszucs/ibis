@@ -182,6 +182,8 @@ class SelectBuilder:
         # Canonical case is scalar values or arrays produced by some reductions
         # (simple reductions, or distinct, say)
 
+        assert isinstance(node, ops.Node), type(node)
+
         if isinstance(node, ops.TableNode):
             return node, toolz.identity
 

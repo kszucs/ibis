@@ -70,26 +70,38 @@ class ScalarAggregate:
         return table.projection([subbed_expr])
 
     def _visit(self, expr):
-        if is_scalar_reduction(expr) and not has_multiple_bases(expr):
+        assert isinstance(expr, ir.Expr), type(expr)
+
+        if is_scalar_reduction(expr.op()) and not has_multiple_bases(
+            expr.op()
+        ):
             # An aggregation unit
             if not expr.has_name():
                 expr = expr.name('tmp')
-            agg_expr = reduction_to_aggregation(expr)
+            agg_expr = reduction_to_aggregation(expr.op())
             self.tables.append(agg_expr)
             return agg_expr[expr.get_name()]
         elif not isinstance(expr, ir.Expr):
             return expr
 
         node = expr.op()
-        new_expr = node.__class__(*map(self._visit, node.args)).to_expr()
+        # TODO(kszucs): use the substitute() utility instead
+        new_args = (
+            self._visit(arg.to_expr()) if isinstance(arg, ops.Node) else arg
+            for arg in node.args
+        )
+        new_node = node.__class__(*new_args)
+        new_expr = new_node.to_expr()
+
         if expr.has_name():
             new_expr = new_expr.name(name=expr.get_name())
 
         return new_expr
 
 
-def has_multiple_bases(expr):
-    return len(find_immediate_parent_tables(expr)) > 1
+def has_multiple_bases(node):
+    assert isinstance(node, ops.Node), type(node)
+    return len(find_immediate_parent_tables(node)) > 1
 
 
 def reduction_to_aggregation(node):
