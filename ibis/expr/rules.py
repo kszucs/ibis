@@ -1,6 +1,5 @@
 import enum
 from itertools import product, starmap
-from typing import Any
 
 import toolz
 
@@ -90,7 +89,13 @@ def value_list_of(inner, arg, **kwargs):
     # the dispatcher in pandas requires operation objects
     import ibis.expr.operations as ops
 
-    values = tuple_of(inner, arg, **kwargs)
+    # TODO(kszucs): should jut probably make ValueList iterable
+    if isinstance(arg, ops.ValueList):
+        values = arg.values
+    else:
+        values = arg
+
+    values = tuple_of(inner, values, **kwargs)
     return ops.ValueList(values)
 
 
@@ -435,7 +440,7 @@ def column_from(name, column, *, this):
     )
 
 
-# TODO(kszucs): consider to remove since it's only used by TopK op
+# TODO(kszucs): consider to remove since it's only used by TopK
 @rule
 def base_table_of(name, *, this):
     from ibis.expr.analysis import find_first_base_table

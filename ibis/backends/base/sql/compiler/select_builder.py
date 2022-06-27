@@ -3,7 +3,6 @@ import toolz
 import ibis.common.exceptions as com
 import ibis.expr.analysis as L
 import ibis.expr.operations as ops
-import ibis.expr.types as ir
 import ibis.util as util
 from ibis.backends.base.sql.compiler.base import (
     _extract_common_table_expressions,
@@ -301,23 +300,16 @@ class SelectBuilder:
             f = getattr(self, method)
             return f(op)
 
-        unchanged = True
-
+        # TODO(kszucs): perhaps should check ops.Node instead
         if isinstance(op, ops.Value):
             new_args = []
+
             for arg in op.args:
                 if isinstance(arg, ops.Node):
-                    new_arg = self._visit_select_expr(arg)
-                    if arg is not new_arg:
-                        unchanged = False
-                    new_args.append(new_arg)
-                else:
-                    new_args.append(arg)
+                    arg = self._visit_select_expr(arg)
+                new_args.append(arg)
 
-            if not unchanged:
-                return type(op)(*new_args)
-            else:
-                return op
+            return type(op)(*new_args)
         else:
             return op
 
@@ -350,9 +342,9 @@ class SelectBuilder:
             binwidth = op.binwidth
             base = op.base
 
-        bucket = ((op.arg - base) / binwidth).floor()
-        if expr.has_name():
-            bucket = bucket.name(expr.get_name())
+        bucket = ((op.arg.to_expr() - base) / binwidth).floor()
+        if op.has_resolved_name():
+            bucket = bucket.name(op.resolve_name())
 
         return bucket
 
@@ -498,7 +490,9 @@ class SelectBuilder:
 
         # Find the subqueries, and record them in the passed query context.
         subqueries = _extract_common_table_expressions(
-            [self.table_set, *self.filters]
+            # FIXME(kszucs): originally it was self.table_set
+            # [self.table_set, *self.filters]
+            [*self.select_set, *self.filters]
         )
 
         self.subqueries = []

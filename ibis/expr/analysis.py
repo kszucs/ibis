@@ -439,6 +439,7 @@ class _PushdownValidate:
         return is_valid
 
 
+# TODO(kszucs): rewrite to receive and return an ops.Node
 def windowize_function(expr, w=None):
     def _windowize(x, w):
         if not isinstance(x.op(), ops.Window):
@@ -755,6 +756,7 @@ def find_predicates(node, flatten=True):
     assert isinstance(node, ops.Node), type(node)
 
     def predicate(node):
+        assert isinstance(node, ops.Node), type(node)
         if node.output_dtype is dt.bool:
             if flatten and isinstance(node, ops.And):
                 return lin.proceed, None
