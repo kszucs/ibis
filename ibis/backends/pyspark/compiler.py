@@ -185,7 +185,10 @@ def compile_selection(t, op, scope, timecontext, **kwargs):
         result_table = result_table.drop(filter_column)
 
     if op.sort_keys:
-        sort_cols = [t.translate(key, **kwargs) for key in op.sort_keys]
+        sort_cols = [
+            t.translate(key, scope=scope, timecontext=timecontext, **kwargs)
+            for key in op.sort_keys
+        ]
         result_table = result_table.sort(*sort_cols)
 
     return filter_by_time_context(
