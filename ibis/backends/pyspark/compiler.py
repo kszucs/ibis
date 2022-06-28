@@ -206,8 +206,7 @@ def compile_column(t, op, scope, timecontext, **kwargs):
 
 
 @compiles(ops.StructField)
-def compile_struct_field(t, expr, scope, timecontext, **kwargs):
-    op = expr.op()
+def compile_struct_field(t, op, scope, timecontext, **kwargs):
     arg = t.translate(op.arg, scope, timecontext)
     return arg[op.field]
 
@@ -1232,19 +1231,19 @@ def compile_window_op(t, op, scope, timecontext, **kwargs):
         else:
             pyspark_window = pyspark_window.rowsBetween(start, end)
 
-    res = operand
-    if isinstance(operand, (ops.NotAll, ops.NotAny)):
+    res_op = operand
+    if isinstance(res_op, (ops.NotAll, ops.NotAny)):
         # For NotAll and NotAny, negation must be applied after .over(window)
         # Here we rewrite node to be its negation, and negate it back after
         # translation and window operation
-        operand = ops.Negate(operand)
+        operand = res_op.to_expr().negate().op()
     result = t.translate(operand, scope, timecontext, context=context).over(
         pyspark_window
     )
 
-    if isinstance(res, (ops.NotAll, ops.NotAny)):
+    if isinstance(res_op, (ops.NotAll, ops.NotAny)):
         return ~result
-    elif isinstance(res, (ops.MinRank, ops.DenseRank, ops.RowNumber)):
+    elif isinstance(res_op, (ops.MinRank, ops.DenseRank, ops.RowNumber)):
         # result must be cast to long type for Rank / RowNumber
         return result.astype('long') - 1
     else:
@@ -1511,7 +1510,6 @@ def compiles_day_of_week_name(t, op, scope, timecontext, **kwargs):
 
 
 def _get_interval_col(t, op, scope, timecontext, allowed_units=None):
-    print(type(op))
     # if interval expression is a binary op, translate expression into
     # an interval column and return
     if isinstance(op, ops.IntervalBinary):
@@ -1521,7 +1519,7 @@ def _get_interval_col(t, op, scope, timecontext, allowed_units=None):
     # interval column from literal value and dtype
     if not isinstance(op, ops.Literal):
         op = t.translate(op, scope, timecontext)
-    print(type(op))
+
     dtype = op.dtype
     if not isinstance(dtype, dt.Interval):
         raise com.UnsupportedArgumentError(
