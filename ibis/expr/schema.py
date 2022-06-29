@@ -208,6 +208,21 @@ class Schema(Annotable, Comparable):
         df.columns = schema_names
         return df
 
+    def merge(self, other, left_suffix='_left', right_suffix='_right'):
+        overlap = set(self.names) & set(other.names)
+
+        self_names = [
+            f"{n}{left_suffix}" if n in overlap else n for n in self.names
+        ]
+        other_names = [
+            f"{n}{right_suffix}" if n in overlap else n for n in other.names
+        ]
+
+        names = self_names + other_names
+        types = self.types + other.types
+
+        return self.__class__(names, types)
+
 
 class HasSchema(abc.ABC):
     """Mixin representing a structured dataset with a schema."""

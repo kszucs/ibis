@@ -149,6 +149,8 @@ class NotContains(Contains):
     pass
 
 
+# TODO(kszucs): this operation name is rather misleading, should rename to
+# something more specific
 @public
 class Where(Value):
 
@@ -160,6 +162,7 @@ class Where(Value):
              .else_(false_or_null_expr)
     """
 
+    # TODO(kszucs): rename the arguments
     bool_expr = rlz.boolean
     true_expr = rlz.any
     false_null_expr = rlz.any

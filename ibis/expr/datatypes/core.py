@@ -1735,7 +1735,7 @@ if IS_SHAPELY_AVAILABLE:
         return _WellKnownText(base_geom.wkt)
 
 
-from prettyprinter import pretty_call, register_pretty
+from prettyprinter import register_pretty
 
 
 @register_pretty(DataType)

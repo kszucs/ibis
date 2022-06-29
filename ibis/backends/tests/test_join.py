@@ -95,6 +95,7 @@ def test_mutating_join(backend, con, batting, awards_players, how):
     result_order = ['playerID', 'yearID', 'lgID', 'stint']
 
     expr = left.join(right, predicate, how=how)
+
     result = (
         expr.execute()
         .fillna(np.nan)
@@ -167,9 +168,9 @@ def test_filtering_join(backend, con, batting, awards_players, how):
     backend.assert_frame_equal(result, expected, check_like=True)
 
 
-@pytest.mark.skip_backends(
-    ["dask", "pandas"], reason="insane memory explosion"
-)
+# @pytest.mark.skip_backends(
+#     ["dask", "pandas"], reason="insane memory explosion"
+# )
 @pytest.mark.notyet(
     ["pyspark"],
     reason="pyspark doesn't support joining on differing column names",

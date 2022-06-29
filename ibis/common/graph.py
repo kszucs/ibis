@@ -101,5 +101,11 @@ class Graph:
                     )
                 kwargs[name] = arg
 
-            results[node] = fn(node, **kwargs)
+            res = fn(node, **kwargs)
+            print(
+                node.__class__.__name__,
+                type(res),
+                res.shape if hasattr(res, "shape") else None,
+            )
+            results[node] = res
         return results

@@ -753,6 +753,7 @@ def _dedup_join_columns(
     right: ir.Table,
     suffixes: tuple[str, str],
 ):
+    # TODO(kszucs): use Schema.merge() method
     right_columns = frozenset(right.columns)
     overlap = frozenset(
         column for column in left.columns if column in right_columns
