@@ -70,7 +70,7 @@ def execute_pandas_projection(node, values):
 
 @en.register(PandasConcatenation)
 def execute_pandas_projection(node, tables):
-    return pd.concat(tables, axis=1).reset_index()
+    return pd.concat(tables, axis=1).reset_index(drop=True)
 
 
 @en.register(PandasFilter)
@@ -86,6 +86,11 @@ def execute_pandas_sort(node, table, fields, ascendings):
 @en.register(PandasJoin)
 def execute_pandas_join(node, left, right, how, left_on, right_on):
     return pd.merge(left, right, how=how, left_on=left_on, right_on=right_on)
+
+
+@en.register(ops.Distinct)
+def execute_distinct(node, table):
+    return table.drop_duplicates()
 
 
 @en.register(ops.Literal)
@@ -231,7 +236,7 @@ def execute_binary_op(node, left, right, **kwargs):
         op = BINARY_OPERATIONS[type(node)]
     except KeyError:
         raise NotImplementedError(
-            f'Binary operation {op_type.__name__} not implemented'
+            f'Binary operation {node.__class__.__name__} not implemented'
         )
     else:
         return op(left, right)
@@ -240,6 +245,57 @@ def execute_binary_op(node, left, right, **kwargs):
 @en.register(ops.StringLength)
 def execute_string_length(node, arg):
     return arg.str.len().astype('int32')
+
+
+@en.register(ops.ExtractTemporalField)
+def execute_extract_temporal_field(node, arg):
+    field_name = type(node).__name__.lower().replace('extract', '')
+    if isinstance(arg, pd.Series):
+        if field_name == 'weekofyear':
+            return arg.dt.isocalendar().week.astype(np.int32)
+        return getattr(arg.dt, field_name).astype(np.int32)
+    else:
+        return getattr(arg, field_name)
+
+
+def day_name(obj):
+    """Backwards compatible name of day getting function.
+
+    Parameters
+    ----------
+    obj : Union[Series, pd.Timestamp]
+
+    Returns
+    -------
+    str
+        The name of the day corresponding to `obj`
+    """
+    try:
+        return obj.day_name()
+    except AttributeError:
+        return obj.weekday_name
+
+
+@en.register(ops.DayOfWeekIndex)
+def execute_day_of_week_index(op, arg):
+    if isinstance(arg, pd.Series):
+        return arg.dt.dayofweek.astype(np.int16)
+    else:
+        # TODO(kszucs) may not need pd.Timestamp here
+        return pd.Timestamp(arg).dayofweek
+
+
+@en.register(ops.DayOfWeekName)
+def execute_day_of_week_name(op, arg):
+    if isinstance(arg, pd.Series):
+        return day_name(arg.dt)
+    else:
+        return day_name(pd.Timestamp(arg))
+
+
+# @en.register(ops.Coalesce)
+# def execute_string_length(node, arg):
+#     return arg.str.len().astype('int32')
 
 
 def execute(node, params, **kwargs):
