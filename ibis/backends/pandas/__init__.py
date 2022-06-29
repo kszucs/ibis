@@ -13,11 +13,8 @@ import ibis.expr.operations as ops
 import ibis.expr.schema as sch
 import ibis.expr.types as ir
 from ibis.backends.base import BaseBackend
-from ibis.backends.pandas.client import (
-    PandasDatabase,
-    PandasTable,
-    ibis_schema_to_pandas,
-)
+from ibis.backends.pandas.client import PandasDatabase, PandasTable
+from ibis.backends.pandas.datatypes import ibis_schema_to_pandas
 
 
 class BasePandasBackend(BaseBackend):
@@ -198,7 +195,8 @@ class Backend(BasePandasBackend):
     table_class = PandasTable
 
     def execute(self, query, params=None, limit='default', **kwargs):
-        from ibis.backends.pandas.core import execute_and_reset
+        # from ibis.backends.pandas.core import execute_and_reset
+        from ibis.backends.pandas.execution import execute
 
         if limit != 'default' and limit is not None:
             raise ValueError(
@@ -212,4 +210,6 @@ class Backend(BasePandasBackend):
                     type(query).__name__
                 )
             )
-        return execute_and_reset(query, params=params, **kwargs)
+
+        return execute(query.op(), params=params, **kwargs)
+        # return execute_and_reset(query, params=params, **kwargs)

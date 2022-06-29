@@ -10,7 +10,24 @@ from pytest import param
 
 import ibis
 import ibis.expr.datatypes as dt
-from ibis.backends.pandas.execution.temporal import day_name
+
+
+def day_name(obj):
+    """Backwards compatible name of day getting function.
+
+    Parameters
+    ----------
+    obj : Union[Series, pd.Timestamp]
+
+    Returns
+    -------
+    str
+        The name of the day corresponding to `obj`
+    """
+    try:
+        return obj.day_name()
+    except AttributeError:
+        return obj.weekday_name
 
 
 @pytest.mark.parametrize('attr', ['year', 'month', 'day'])

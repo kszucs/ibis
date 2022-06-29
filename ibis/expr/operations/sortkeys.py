@@ -65,6 +65,7 @@ def _maybe_convert_sort_keys(tables, exprs):
 
 @public
 class SortKey(Node):
+    # TODO(kszucs): rename to arg in order to avoid confusion with expressions
     expr = rlz.column(rlz.any)
     ascending = rlz.optional(
         rlz.map_to(

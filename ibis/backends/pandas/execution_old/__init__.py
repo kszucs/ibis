@@ -1,4 +1,5 @@
 from ibis.backends.pandas.execution.arrays import *  # noqa: F401,F403
+from ibis.backends.pandas.execution.core import *  # noqa: F401,F403
 from ibis.backends.pandas.execution.decimal import *  # noqa: F401,F403
 from ibis.backends.pandas.execution.generic import *  # noqa: F401,F403
 from ibis.backends.pandas.execution.join import *  # noqa: F401,F403

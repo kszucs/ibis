@@ -5,6 +5,8 @@ from abc import ABCMeta, abstractmethod
 from typing import Any, Hashable
 from weakref import WeakValueDictionary
 
+from prettyprinter import pformat, pretty_call, register_pretty
+
 from ibis.common.caching import WeakCache
 from ibis.common.validators import ImmutableProperty, Optional, Validator
 from ibis.util import frozendict
@@ -193,11 +195,13 @@ class Annotable(Base, Hashable, Immutable, metaclass=AnnotableMeta):
         return super().__eq__(other)
 
     def __repr__(self) -> str:
-        args = ", ".join(
-            f"{name}={value!r}"
-            for name, value in zip(self.argnames, self.args)
-        )
-        return f"{self.__class__.__name__}({args})"
+        return pformat(self, indent=2)
+        # from pprint import pprint
+        # args = ",\n".join(
+        #     f"{name}={value!r}"
+        #     for name, value in zip(self.argnames, self.args)
+        # )
+        # return f"{self.__class__.__name__}(\n{args}\n)"
 
     @classmethod
     def _reconstruct(cls, kwargs):
@@ -215,6 +219,12 @@ class Annotable(Base, Hashable, Immutable, metaclass=AnnotableMeta):
         kwargs = dict(zip(self.argnames, self.args))
         newargs = {**kwargs, **overrides}
         return self.__class__(**newargs)
+
+
+@register_pretty(Annotable)
+def pretty_annotable(obj, ctx):
+    kwargs = dict(zip(obj.argnames, obj.args))
+    return pretty_call(ctx, obj.__class__.__name__, **kwargs)
 
 
 class Weakrefable(Base):

@@ -188,6 +188,25 @@ def substitute(fn, node):
         return node
 
 
+def rewrite(fn, node):
+    """
+    Strict bottom-up version of substitute
+
+    TODO(kszucs): On long term substitute should go away.
+    """
+    if isinstance(node, ops.Node):
+        # first rewrite the arguments
+        new_args = {
+            name: rewrite(fn, arg)
+            for name, arg in zip(node.argnames, node.args)
+        }
+        return fn(node, **new_args)
+    elif isinstance(node, tuple):
+        return tuple(rewrite(fn, arg) for arg in node)
+    else:
+        return node
+
+
 def substitute_parents(node):
     """
     Rewrite the input expression by replacing any table expressions part of a

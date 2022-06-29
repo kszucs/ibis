@@ -240,3 +240,12 @@ def schema_from_pairs(lst):
 @schema.register(collections.abc.Iterable, collections.abc.Iterable)
 def schema_from_names_types(names, types):
     return Schema(names, types)
+
+
+from prettyprinter import pretty_call, register_pretty
+
+
+@register_pretty(Schema)
+def pretty_annotable(obj, ctx):
+    kwargs = dict(zip(obj.names, obj.types))
+    return pretty_call(ctx, obj.__class__.__name__, kwargs)

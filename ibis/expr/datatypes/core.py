@@ -1733,3 +1733,11 @@ if IS_SHAPELY_AVAILABLE:
         base_geom: geom.base.BaseGeometry,
     ) -> _WellKnownText:
         return _WellKnownText(base_geom.wkt)
+
+
+from prettyprinter import pretty_call, register_pretty
+
+
+@register_pretty(DataType)
+def pretty_annotable(obj, ctx):
+    return str(obj)
