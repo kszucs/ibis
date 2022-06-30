@@ -66,6 +66,7 @@ class PandasSelection(ops.TableNode):
 
 class PandasProjection(ops.TableNode):
     values = rlz.tuple_of(rlz.any)
+    reset_index = rlz.optional(rlz.instance_of(bool), default=False)
 
     @property
     def schema(self):
@@ -250,13 +251,14 @@ def simplify_aggregation(
         predicate = functools.reduce(ops.And, predicates)
         table = PandasFilter(table, predicate=predicate)
 
-    table = PandasGroupby(table, by)
+    if by:
+        table = PandasGroupby(table, by)
 
     if metrics:
         # TODO(kszucs): need to rewrite metrics to use the previously created
         # table as base `table`` instead the original `table`, can use
         # an.sub_for for this exact purpose
         new_metrics = [an.replace({original_table: table}, m) for m in metrics]
-        table = PandasProjection(new_metrics)
+        table = PandasProjection(new_metrics, reset_index=bool(by))
 
     return table

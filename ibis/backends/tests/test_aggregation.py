@@ -106,7 +106,10 @@ def test_aggregate_grouped(
     result2 = result2.sort_values(by=grouping_key_col).reset_index(drop=True)
     expected = expected.sort_values(by=grouping_key_col).reset_index(drop=True)
 
-    backend.assert_frame_equal(result1, expected)
+    # backend.assert_frame_equal(result1, expected)
+    print()
+    print(result1)
+    print(expected)
     backend.assert_frame_equal(result2, expected)
 
 

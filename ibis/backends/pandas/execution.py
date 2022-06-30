@@ -61,14 +61,18 @@ def execute_pandas_projection(node, table, columns):
 
 
 @en.register(PandasProjection)
-def execute_pandas_projection(node, values):
+def execute_pandas_projection(node, values, reset_index=False):
     columns = []
     for value, result in zip(node.values, values):
         if not isinstance(result, pd.Series):
             result = pd.Series([result], name=value.resolve_name())
         columns.append(result)
 
-    return pd.concat(columns, axis=1)
+    df = pd.concat(columns, axis=1)
+    if reset_index:
+        df = df.reset_index()
+
+    return df
 
 
 @en.register(PandasConcatenation)
@@ -93,12 +97,7 @@ def execute_pandas_join(node, left, right, how, left_on, right_on):
 
 @en.register(PandasGroupby)
 def execute_pandas_groupby(node, table, by):
-    # aggctx = Summarize()
-    if by:
-        return table.groupby(by)
-    else:
-        return table
-    # return functools.partial(aggctx.agg, table)
+    return table.groupby(list(by))
 
 
 REDUCTION_OPERATIONS = {
@@ -125,7 +124,9 @@ def execute_reduction(node, arg, where=None):
     data = arg[where] if where is not None else arg
 
     aggctx = Summarize()
-    return aggctx.agg(data, func)
+    result = aggctx.agg(data, func)
+
+    return result
 
 
 @en.register((ops.Variance, ops.StandardDev))
