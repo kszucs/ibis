@@ -1,26 +1,11 @@
 import functools
-from multiprocessing.sharedctypes import Value
-from select import select
-from tkinter import PROJECTING
-from tkinter.tix import Select
 
-import pandas as pd
-import toolz
-from multipledispatch import Dispatcher
-
-import ibis.common.exceptions as com
 import ibis.expr.analysis as an
-import ibis.expr.lineage as lin
 import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.schema as sch
-import ibis.expr.types as ir
-from ibis import util
 from ibis.backends.base import Database
 from ibis.util import frozendict
-
-# class PandasOp:
-#     pass
 
 
 class PandasTable(ops.DatabaseTable):
@@ -153,6 +138,16 @@ def simplify(op, **kwargs):
     return op.__class__(**kwargs)
 
 
+@simplify.register(ops.NotAny)
+def simplify_not_any(op, arg):
+    return ops.Not(ops.Any(arg))
+
+
+@simplify.register(ops.NotAll)
+def simplify_not_all(op, arg):
+    return ops.Not(ops.All(arg))
+
+
 @simplify.register(ops.Join)
 def simplify_join(op, left, right, predicates):
     on = {left: [], right: []}
@@ -241,7 +236,9 @@ def simplify_selection(op, table, selections, predicates, sort_keys):
 
 
 @simplify.register(ops.Aggregation)
-def simplify_selection(op, table, metrics, by, having, predicates, sort_keys):
+def simplify_aggregation(
+    op, table, metrics, by, having, predicates, sort_keys
+):
     original_table = table
 
     if sort_keys:
@@ -260,11 +257,6 @@ def simplify_selection(op, table, metrics, by, having, predicates, sort_keys):
         # table as base `table`` instead the original `table`, can use
         # an.sub_for for this exact purpose
         new_metrics = [an.replace({original_table: table}, m) for m in metrics]
-        assert list(new_metrics) != list(metrics)
-        print(metrics)
-        print(new_metrics)
         table = PandasProjection(new_metrics)
-
-        # table = PandasAggregate(table, metrics)
 
     return table

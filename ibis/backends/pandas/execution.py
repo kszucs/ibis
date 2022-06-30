@@ -101,11 +101,73 @@ def execute_pandas_groupby(node, table, by):
     # return functools.partial(aggctx.agg, table)
 
 
+REDUCTION_OPERATIONS = {
+    ops.BitAnd: np.bitwise_and.reduce,
+    ops.BitOr: np.bitwise_or.reduce,
+    ops.BitXor: np.bitwise_xor.reduce,
+    ops.CountDistinct: "nunique",
+    ops.ApproxCountDistinct: "nunique",
+    ops.Mean: "mean",
+    ops.Max: "max",
+    ops.Min: "min",
+    ops.Sum: "sum",
+    ops.Count: "count",
+    ops.Variance: "var",
+    ops.StandardDev: "std",
+    ops.Any: "any",
+    ops.All: "all",
+}
+
+
 @en.register(ops.Reduction)
-def execute_reduction(node, arg, where):
-    func = node.__class__.__name__.lower()
+def execute_reduction(node, arg, where=None):
+    func = REDUCTION_OPERATIONS[type(node)]
+    data = arg[where] if where is not None else arg
+
     aggctx = Summarize()
-    return aggctx.agg(arg, func)
+    return aggctx.agg(data, func)
+
+
+@en.register((ops.Variance, ops.StandardDev))
+def execute_variance(node, arg, how, where=None):
+    func = REDUCTION_OPERATIONS[type(node)]
+    data = arg[where] if where is not None else arg
+    ddof = {'pop': 0, 'sample': 1}
+
+    aggctx = Summarize()
+    return aggctx.agg(data, func, ddof=ddof[how])
+
+
+@en.register(ops.Arbitrary)
+def execute_arbitrary(node, arg, how, where):
+    if how is None:
+        how = 'first'
+
+    if how not in {'first', 'last'}:
+        raise com.OperationNotDefinedError(
+            f"Arbitrary {how!r} is not supported"
+        )
+
+    aggctx = Summarize()
+    return aggctx.agg(arg, how)
+
+
+# @en.register((ops.Any, ops.All))
+# def execute_any_all(node, arg):
+#     func = REDUCTION_OPERATIONS[type(node)]
+
+#     aggctx = Summarize()
+#     return aggctx.agg(arg, func)
+# if isinstance(aggcontext, (agg_ctx.Summarize, agg_ctx.Transform)):
+#     result = aggcontext.agg(data, type(op).__name__.lower())
+# else:
+#     result = aggcontext.agg(
+#         data, lambda data: getattr(data, type(op).__name__.lower())()
+#     )
+# try:
+#     return result.astype(bool)
+# except TypeError:
+#     return result
 
 
 @en.register(ops.Distinct)
