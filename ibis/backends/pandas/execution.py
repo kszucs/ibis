@@ -324,9 +324,97 @@ def execute_binary_op(node, left, right, **kwargs):
         return op(left, right)
 
 
+STRING_OPERATIONS = {
+    ops.Lowercase: "lower",
+    ops.Uppercase: "upper",
+    ops.Capitalize: "capitalize",
+    ops.Strip: "strip",
+    ops.LStrip: "lstrip",
+    ops.RStrip: "rstrip",
+}
+
+
+@en.register(ops.StringUnary)
+def execute_string_unary(node, arg):
+    try:
+        op = STRING_OPERATIONS[type(node)]
+    except KeyError:
+        raise NotImplementedError(
+            f'Unary string operation {node.__class__.__name__} not implemented'
+        )
+    else:
+        func = getattr(arg.str, op)
+        return func()
+
+
 @en.register(ops.StringLength)
 def execute_string_length(node, arg):
     return arg.str.len().astype('int32')
+
+
+@en.register(ops.LPad)
+def execute_lpad(node, arg, length, pad):
+    return arg.str.pad(length, side='left', fillchar=pad)
+
+
+@en.register(ops.RPad)
+def execute_rpad(node, arg, length, pad):
+    return arg.str.pad(length, side='right', fillchar=pad)
+
+
+@en.register(ops.Reverse)
+def execute_string_reverse(node, arg):
+    return arg.str[::-1]
+
+
+@en.register(ops.StringAscii)
+def execute_ascii(node, arg):
+    return arg.map(ord).astype('int32')
+
+
+@en.register(ops.StartsWith)
+def execute_startswith(node, arg, start):
+    return arg.str.startswith(start)
+
+
+@en.register(ops.EndsWith)
+def execute_endswith(node, arg, end):
+    return arg.str.endswith(end)
+
+
+@en.register(ops.StrRight)
+def execute_str_right(node, arg, nchars):
+    return arg.str[-nchars:]
+
+
+@en.register(ops.Repeat)
+def execute_string_repeat(node, arg, times):
+    return arg.str.repeat(times)
+
+
+@en.register(ops.StringJoin)
+def execute_string_join(node, sep, arg):
+    return functools.reduce(lambda x, y: x + sep + y, arg)
+
+
+@en.register(ops.StringContains)
+def execute_string_contains(node, haystack, needle):
+    return haystack.str.contains(needle)
+
+
+@en.register(ops.StringFind)
+def execute_string_find(op, arg, substr, start, end):
+    return arg.str.find(substr, start, end)
+
+
+@en.register(ops.Substring)
+def execute_substring(node, arg, start, length):
+    return arg.str[start : start + length]
+
+
+# @en.register(ops.StringSplit)
+# def execute_split(node, arg, delimiter):
+#     pass
 
 
 @en.register(ops.ExtractTemporalField)
@@ -373,6 +461,14 @@ def execute_day_of_week_name(op, arg):
         return day_name(arg.dt)
     else:
         return day_name(pd.Timestamp(arg))
+
+
+@en.register(ops.StructField)
+def execute_struct_field(node, arg, field):
+    if isinstance(arg, Mapping):
+        return arg[field]
+    else:
+        return pd.NA
 
 
 # @en.register(ops.Coalesce)
