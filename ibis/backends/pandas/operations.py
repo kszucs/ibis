@@ -102,7 +102,7 @@ class PandasConcatenation(ops.TableNode):
 
 
 class PandasFilter(ops.TableNode):
-    table = rlz.table()
+    table = rlz.table
     predicate = rlz.boolean
 
     # TODO(kszucs): make implementing schema property mandatory by adding
@@ -113,13 +113,31 @@ class PandasFilter(ops.TableNode):
 
 
 class PandasSort(ops.TableNode):
-    table = rlz.table()
+    table = rlz.table
     fields = rlz.tuple_of(rlz.instance_of(str))
     ascendings = rlz.tuple_of(rlz.instance_of(bool))
 
     @property
     def schema(self):
         return self.table.schema
+
+
+class PandasGroupby(ops.TableNode):
+    table = rlz.table
+    by = rlz.tuple_of(rlz.any)
+
+    @property
+    def schema(self):
+        return self.table.schema
+
+
+class PandasAggregate(ops.TableNode):
+    table = rlz.table  # perhaps no need for the table at all
+    metrics = rlz.tuple_of(rlz.any)
+
+
+# TODO(kszucs): rewrite aggregation so that the groupby gets executed first
+# and the metrc functions can be called on the grouped data afterwards
 
 
 _join_types = {
@@ -218,5 +236,35 @@ def simplify_selection(op, table, selections, predicates, sort_keys):
         pairs = ((key.expr.name, key.ascending) for key in sort_keys)
         fields, ascendings = zip(*pairs)
         table = PandasSort(table, fields=fields, ascendings=ascendings)
+
+    return table
+
+
+@simplify.register(ops.Aggregation)
+def simplify_selection(op, table, metrics, by, having, predicates, sort_keys):
+    original_table = table
+
+    if sort_keys:
+        raise NotImplementedError(
+            'sorting on aggregations not yet implemented'
+        )
+
+    if predicates:
+        predicate = functools.reduce(ops.And, predicates)
+        table = PandasFilter(table, predicate=predicate)
+
+    table = PandasGroupby(table, by)
+
+    if metrics:
+        # TODO(kszucs): need to rewrite metrics to use the previously created
+        # table as base `table`` instead the original `table`, can use
+        # an.sub_for for this exact purpose
+        new_metrics = [an.replace({original_table: table}, m) for m in metrics]
+        assert list(new_metrics) != list(metrics)
+        print(metrics)
+        print(new_metrics)
+        table = PandasProjection(new_metrics)
+
+        # table = PandasAggregate(table, metrics)
 
     return table

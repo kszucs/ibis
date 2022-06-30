@@ -1,3 +1,4 @@
+import functools
 import math
 import operator
 from typing import Mapping
@@ -10,10 +11,12 @@ import ibis.expr.analysis as an
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.schema as sch
+from ibis.backends.pandas.aggcontext import Summarize
 from ibis.backends.pandas.client import PandasTable
 from ibis.backends.pandas.operations import (
     PandasConcatenation,
     PandasFilter,
+    PandasGroupby,
     PandasJoin,
     PandasProjection,
     PandasSelection,
@@ -86,6 +89,23 @@ def execute_pandas_sort(node, table, fields, ascendings):
 @en.register(PandasJoin)
 def execute_pandas_join(node, left, right, how, left_on, right_on):
     return pd.merge(left, right, how=how, left_on=left_on, right_on=right_on)
+
+
+@en.register(PandasGroupby)
+def execute_pandas_groupby(node, table, by):
+    # aggctx = Summarize()
+    if by:
+        return table.groupby(by)
+    else:
+        return table
+    # return functools.partial(aggctx.agg, table)
+
+
+@en.register(ops.Reduction)
+def execute_reduction(node, arg, where):
+    func = node.__class__.__name__.lower()
+    aggctx = Summarize()
+    return aggctx.agg(arg, func)
 
 
 @en.register(ops.Distinct)

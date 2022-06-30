@@ -207,6 +207,17 @@ def rewrite(fn, node):
         return node
 
 
+def replace(mapping, node):
+    # strict version of sub_for
+    def fn(node, **kwargs):
+        try:
+            return mapping[node]
+        except KeyError:
+            return node.__class__(**kwargs)
+
+    return rewrite(fn, node)
+
+
 def substitute_parents(node):
     """
     Rewrite the input expression by replacing any table expressions part of a
