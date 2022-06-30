@@ -129,6 +129,7 @@ class Ceil(Unary):
             return dt.int64
 
 
+# could use a unary numeric base class
 @public
 class Floor(Unary):
     """

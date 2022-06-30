@@ -233,6 +233,11 @@ def execute_nullif(node, arg, null_if_expr):
         return np.nan if arg == null_if_expr else arg
 
 
+@en.register(ops.NullIfZero)
+def execute_null_if_zero(op, arg):
+    return arg.where(arg != 0, np.nan)
+
+
 @en.register(ops.IfNull)
 def execute_ifnull(node, arg, ifnull_expr):
     if isinstance(arg, pd.Series):
@@ -415,6 +420,64 @@ def execute_substring(node, arg, start, length):
 # @en.register(ops.StringSplit)
 # def execute_split(node, arg, delimiter):
 #     pass
+
+NUMERIC_FUNCTIONS = {
+    ops.Floor: math.floor,
+    ops.Ln: math.log,
+    ops.Log2: lambda x: math.log(x, 2),
+    ops.Log10: math.log10,
+    ops.Exp: math.exp,
+    ops.Sqrt: math.sqrt,
+    ops.Abs: abs,
+    ops.Ceil: math.ceil,
+    ops.Sign: lambda x: 0 if not x else -1 if x < 0 else 1,
+    ops.Acos: np.arccos,
+    ops.Asin: np.arcsin,
+    ops.Atan: np.arctan,
+    ops.Cos: np.cos,
+    ops.Sin: np.sin,
+    ops.Tan: np.tan,
+    ops.Cot: lambda x: np.cos(x) / np.sin(x),
+    ops.Radians: np.radians,
+    ops.Degrees: np.degrees,
+    ops.Ceil: np.ceil,
+    ops.Floor: np.floor,
+    ops.IsInf: np.isinf,
+    ops.Greatest: np.maximum.reduce,
+    ops.Least: np.minimum.reduce,
+}
+
+# def call_numpy_ufunc(func, op, data, **kwargs):
+#     if getattr(data, "dtype", None) == np.dtype(np.object_):
+#         return data.apply(functools.partial(execute_node, op, **kwargs))
+#     return func(data)
+
+
+@en.register(tuple(NUMERIC_FUNCTIONS.keys()))
+def execute_unary_numeric(op, arg):
+    return NUMERIC_FUNCTIONS[type(op)](arg)
+
+
+@en.register(ops.Negate)
+def execute_negate(op, arg):
+    return -arg
+    # if isinstance(arg, pd.Series):
+    #     return call_numpy_ufunc(np.negative, op, arg)
+    # else:
+    #     return -data
+
+
+@en.register(ops.Atan2)
+def execute_atan2(node, left, right):
+    return np.arctan2(left, right)
+
+
+@en.register(ops.Clip)
+def execute_clip(op, arg, lower, upper):
+    return arg.clip(lower=lower, upper=upper)
+
+
+# TEMPORAL
 
 
 @en.register(ops.ExtractTemporalField)
