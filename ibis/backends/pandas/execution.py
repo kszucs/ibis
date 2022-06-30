@@ -297,6 +297,49 @@ def execute_where(node, bool_expr, true_expr, false_null_expr):
         return true_expr if bool_expr else false_null_expr
 
 
+def wrap_case_result(raw, node):
+    """Wrap a CASE statement result in a Series and handle returning scalars.
+
+    Parameters
+    ----------
+    raw : ndarray[T]
+        The raw results of executing the ``CASE`` expression
+    expr : Value
+        The expression from the which `raw` was computed
+
+    Returns
+    -------
+    Union[scalar, Series]
+    """
+    raw_1d = np.atleast_1d(raw)
+    if np.any(pd.isnull(raw_1d)):
+        result = pd.Series(raw_1d)
+    else:
+        result = pd.Series(raw_1d, dtype=node.output_dtype.to_pandas())
+
+    if result.size == 1 and node.output_shape is Shape.SCALAR:
+        return result.iloc[0].item()
+
+    return result
+
+
+@en.register(ops.SearchedCase)
+def execute_searched_case(node, cases, results, default):
+    # TODO(kszucs): may need to add more implementations based in the cases type
+    if default is None:
+        default = np.nan
+    raw = np.select(cases, results, default)
+    return wrap_case_result(raw, node)
+
+
+@en.register(ops.SimpleCase)
+def execute_simple_case(node, base, cases, results, default):
+    if default is None:
+        default = np.nan
+    raw = np.select([base == case for case in cases], results, default)
+    return wrap_case_result(raw, node)
+
+
 BINARY_OPERATIONS = {
     ops.Greater: operator.gt,
     ops.Less: operator.lt,
