@@ -11,7 +11,7 @@ import ibis.expr.analysis as an
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.schema as sch
-from ibis.backends.pandas.aggcontext import Summarize
+from ibis.backends.pandas.aggcontext import AggregationContext, Summarize
 from ibis.backends.pandas.client import PandasTable
 from ibis.backends.pandas.operations import (
     PandasConcatenation,
@@ -97,7 +97,12 @@ def execute_pandas_join(node, left, right, how, left_on, right_on):
 
 @en.register(PandasGroupby)
 def execute_pandas_groupby(node, table, by):
-    return table.groupby(list(by))
+    # should return with Summarize aggregation context with table bound to it
+
+    if by:
+        table = table.groupby(list(by))
+
+    return Summarize(table)
 
 
 REDUCTION_OPERATIONS = {
@@ -120,27 +125,33 @@ REDUCTION_OPERATIONS = {
 
 @en.register(ops.Reduction)
 def execute_reduction(node, arg, where=None):
+    # TODO(kszucs): required for scalar reductions like t.col.sum()
+    # consider to rewrite scalar reductions to aggregations instead
+    # as the first step of execute()
+    if not isinstance(arg, AggregationContext):
+        arg = Summarize(arg)
+
     func = REDUCTION_OPERATIONS[type(node)]
     data = arg[where] if where is not None else arg
-
-    aggctx = Summarize()
-    result = aggctx.agg(data, func)
-
-    return result
+    return data.agg(func)
 
 
 @en.register((ops.Variance, ops.StandardDev))
 def execute_variance(node, arg, how, where=None):
+    if not isinstance(arg, AggregationContext):
+        arg = Summarize(arg)
+
     func = REDUCTION_OPERATIONS[type(node)]
     data = arg[where] if where is not None else arg
     ddof = {'pop': 0, 'sample': 1}
-
-    aggctx = Summarize()
-    return aggctx.agg(data, func, ddof=ddof[how])
+    return data.agg(func, ddof=ddof[how])
 
 
 @en.register(ops.Arbitrary)
 def execute_arbitrary(node, arg, how, where):
+    if not isinstance(arg, AggregationContext):
+        arg = Summarize(arg)
+
     if how is None:
         how = 'first'
 
@@ -149,8 +160,16 @@ def execute_arbitrary(node, arg, how, where):
             f"Arbitrary {how!r} is not supported"
         )
 
-    aggctx = Summarize()
-    return aggctx.agg(arg, how)
+    return arg.agg(how)
+
+
+@en.register(ops.ReductionVectorizedUDF)
+def execute_reduction_udf(node, func, func_args, input_type, return_type):
+    # print(list(map(type, func_args)))
+    # if not isinstance(arg, AggregationContext):
+    #     arg = Summarize(arg)
+    data, *args = func_args
+    return data.agg(func, *args)
 
 
 # @en.register((ops.Any, ops.All))
@@ -584,8 +603,14 @@ def execute_struct_field(node, arg, field):
 
 
 def execute(node, params, **kwargs):
+    # if an.is_scalar_reduction(node):
+    #     # to ensure that an expr like `t.col.sum()` receives a proper
+    #     # aggregation context
+    #     node = an.reduction_to_aggregation(node).op()
 
     node = an.rewrite(simplify, node)
+    print('============================')
+    print(node)
 
     g = Graph(node)
 

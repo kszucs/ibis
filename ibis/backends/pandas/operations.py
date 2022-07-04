@@ -117,6 +117,10 @@ class PandasGroupby(ops.TableNode):
         return self.table.schema
 
 
+class PandasWindow(ops.TableNode):
+    pass
+
+
 class PandasAggregate(ops.TableNode):
     table = rlz.table  # perhaps no need for the table at all
     metrics = rlz.tuple_of(rlz.any)
@@ -147,6 +151,16 @@ def simplify_not_any(op, arg):
 @simplify.register(ops.NotAll)
 def simplify_not_all(op, arg):
     return ops.Not(ops.All(arg))
+
+
+# @simplify.register(ops.Reduction)
+# def simplify_reduction(op, arg, **kwargs):
+#     return op.__class__(arg, **kwargs)
+
+
+# @simplify.register(ops.ReductionVectorizedUDF)
+# def simplify_reduction(op, **kwargs):
+#     return op.__class__(**kwargs)
 
 
 @simplify.register(ops.Join)
@@ -222,6 +236,7 @@ def simplify_selection(op, table, selections, predicates, sort_keys):
         #     raise ValueError("EEEEE")
 
         if renames:
+            # TODO(kszucs): we may need to reorder the columns too
             table = PandasRename(table, mapping=frozendict(renames))
 
     if predicates:
@@ -251,14 +266,37 @@ def simplify_aggregation(
         predicate = functools.reduce(ops.And, predicates)
         table = PandasFilter(table, predicate=predicate)
 
-    if by:
-        table = PandasGroupby(table, by)
+    if metrics:
+        names = []
+        values = []
+        reductions = []
+        for metric in metrics:
+            names.append(name := metric.resolve_name())
+            if isinstance(metric, ops.Alias):
+                reductions.append(metric := metric.arg)  # reduction
+            if not isinstance(metric, ops.ReductionVectorizedUDF):
+                values.append(ops.Alias(metric.arg, name))
+        table = PandasProjection(values)
+
+    table = PandasGroupby(table, by)
 
     if metrics:
         # TODO(kszucs): need to rewrite metrics to use the previously created
         # table as base `table`` instead the original `table`, can use
         # an.sub_for for this exact purpose
-        new_metrics = [an.replace({original_table: table}, m) for m in metrics]
+        # new_metrics = [an.replace({original_table: table}, m) for m in metrics]
+        # new_metrics = [ops.TableColumn(table, n) for n, m in zip(names, metrics)]
+        new_metrics = [
+            ops.Alias(reduction.copy(arg=ops.TableColumn(table, name)), name)
+            for name, reduction in zip(names, reductions)
+        ]
         table = PandasProjection(new_metrics, reset_index=bool(by))
 
     return table
+
+
+@simplify.register(ops.Window)
+def simplify_window(op, expr, window):
+    # window is actually an expression here
+    raise NotImplementedError()
+    print(type(expr), type(window))

@@ -236,7 +236,9 @@ from ibis.expr.timecontext import (
 
 class AggregationContext(abc.ABC):
     __slots__ = (
+        'data',
         'parent',
+        'grouped_data',
         'group_by',
         'order_by',
         'dtype',
@@ -246,13 +248,17 @@ class AggregationContext(abc.ABC):
 
     def __init__(
         self,
+        data=None,
         parent=None,
+        grouped_data=None,
         group_by=None,
         order_by=None,
         max_lookback=None,
         output_type=None,
     ):
+        self.data = data
         self.parent = parent
+        self.grouped_data = grouped_data
         self.group_by = group_by
         self.order_by = order_by
         self.dtype = None if output_type is None else output_type.to_pandas()
@@ -362,31 +368,37 @@ def wrap_for_agg(
 class Summarize(AggregationContext):
     __slots__ = ()
 
-    def agg(self, grouped_data, function, *args, **kwargs):
+    def __getitem__(self, key):
+        return self.__class__(self.data[key])
+
+    # def __add__(self, other):
+    #     return self.__class__(self.data["double_col"] + other)
+
+    def agg(self, function, *args, **kwargs):
         if isinstance(function, str):
-            return getattr(grouped_data, function)(*args, **kwargs)
+            return getattr(self.data, function)(*args, **kwargs)
 
         if not callable(function):
             raise TypeError(f'Object {function} is not callable or a string')
 
         if isinstance(
-            grouped_data, pd.core.groupby.generic.SeriesGroupBy
-        ) and len(grouped_data):
+            self.data, pd.core.groupby.generic.SeriesGroupBy
+        ) and len(self.data):
             # `SeriesGroupBy.agg` does not allow np.arrays to be returned
             # from UDFs. To avoid `SeriesGroupBy.agg`, we will call the
             # aggregation function manually on each group. (#2768)
             aggs = {}
-            for k, v in grouped_data:
+            for k, v in self.data:
                 func_args = [d.get_group(k) for d in args]
                 aggs[k] = function(v, *func_args, **kwargs)
                 grouped_col_name = v.name
             return (
                 pd.Series(aggs)
                 .rename(grouped_col_name)
-                .rename_axis(grouped_data.grouper.names)
+                .rename_axis(self.data.grouper.names)
             )
         else:
-            return grouped_data.agg(wrap_for_agg(function, args, kwargs))
+            return self.data.agg(wrap_for_agg(function, args, kwargs))
 
 
 class Transform(AggregationContext):

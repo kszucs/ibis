@@ -751,7 +751,8 @@ def is_reduction(node):
 
 def is_scalar_reduction(node):
     assert isinstance(node, ops.Node), type(node)
-    return node.output_shape is Shape.SCALAR and is_reduction(node)
+    # return node.output_shape is Shape.SCALAR and is_reduction(node)
+    return is_reduction(node) and node.output_shape is Shape.SCALAR
 
 
 _ANY_OP_MAPPING = {
