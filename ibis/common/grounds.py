@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import inspect
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping
 from typing import Any, Hashable
 from weakref import WeakValueDictionary
+
+from unification.core import _reify, _unify, construction_sentinel
 
 from ibis.common.caching import WeakCache
 from ibis.common.validators import ImmutableProperty, Optional, Validator
@@ -139,6 +142,11 @@ class AnnotableMeta(BaseMeta):
         attribs["argnames"] = tuple(signature.parameters.keys())
         return super().__new__(metacls, clsname, bases, attribs)
 
+    def __getitem__(cls, args):
+        bound = cls.__signature__.bind(*args)
+        bound.apply_defaults()
+        return Pattern(cls, bound.arguments)
+
 
 class Annotable(Base, Hashable, Immutable, metaclass=AnnotableMeta):
     """Base class for objects with custom validation rules."""
@@ -147,6 +155,8 @@ class Annotable(Base, Hashable, Immutable, metaclass=AnnotableMeta):
 
     @classmethod
     def __create__(cls, *args, **kwargs):
+        # COULD CHECK HERE if any if the args is a unification var()/Pattern()
+        # then we can bypass validation entirely
         bound = cls.__signature__.bind(*args, **kwargs)
         bound.apply_defaults()
 
@@ -161,6 +171,14 @@ class Annotable(Base, Hashable, Immutable, metaclass=AnnotableMeta):
 
         # construct the instance by passing the validated keyword arguments
         return super().__create__(**kwargs)
+
+    @classmethod
+    def pattern(cls, *args, **kwargs):
+        bound = cls.__signature__.bind(*args, **kwargs)
+        bound.apply_defaults()
+        return Pattern(cls, bound.arguments)
+
+    match = pattern
 
     def __init__(self, **kwargs):
         # set the already validated fields using object.__setattr__ since we
@@ -279,3 +297,45 @@ class Comparable(Weakrefable):
             self.__cache__[key] = result
 
         return result
+
+
+class Pattern:
+
+    __slots__ = ('_cls', '_args')
+
+    def __init__(self, cls, args):
+        self._cls = cls
+        self._args = args
+
+    def __repr__(self):
+        args = ", ".join(
+            f"{name}={value!r}"
+            for name, value in zip(self.argnames, self.args)
+        )
+        return f"{self._cls.__name__}({args})"
+
+    @property
+    def args(self):
+        return tuple(self._args.values())
+
+    @property
+    def argnames(self):
+        return tuple(self._args.keys())
+
+
+@_unify.register(Annotable, Pattern, Mapping)
+def _unify_Annotable(u, v, s):
+    return _unify(u.args, v.args, s)
+
+
+@_unify.register(Pattern, Annotable, Mapping)
+def _unify_Pattern(u, v, s):
+    return _unify(u.args, v.args, s)
+
+
+@_reify.register(Pattern, Mapping)
+def _reify_Pattern(o, s):
+    kwargs = yield _reify(o._args, s)
+    obj = o._cls(**kwargs)
+    yield construction_sentinel
+    yield obj
