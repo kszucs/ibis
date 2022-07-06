@@ -393,14 +393,9 @@ def const_fold(expanded_term, reduced_term):
             ],
             [
                 eq(expanded_term, etuple(add, x, y)),
-                term_walko(const_foldo, x, right),
-                term_walko(const_foldo, y, left),
+                term_walko(const_foldo, x, left),
+                term_walko(const_foldo, y, right),
                 applyo(add, (left, right), reduced_term),
-            ],
-            [
-                eq(expanded_term, etuple(sub, x, y)),
-                eq(x, y),
-                eq(0, reduced_term),
             ],
         ),
     )
@@ -415,8 +410,8 @@ def main():
     import ibis.expr.datatypes as dt
     import ibis.expr.operations as ops
 
-    #  identity_reduceo = partial(reduceo, reduce_identity)
-    # 0 + 0 + t.a * 1
+    identity_reduceo = partial(reduceo, reduce_identity)
+    #  0 + 0 + t.a * 1
     expanded_term = etuple(
         add,
         ops.Literal(0, dtype=dt.int64),
@@ -436,20 +431,20 @@ def main():
             ),
         ),
     )
+    expanded_term = etuple(
+        add,
+        ops.Literal(0, dtype=dt.int64),
+        etuple(
+            add,
+            ops.Literal(0, dtype=dt.int64),
+            ops.Literal(1, dtype=dt.int64),
+        ),
+    )
     #  expanded_term = etuple(
     #      add,
     #      ops.Literal(0, dtype=dt.int64),
-    #      etuple(
-    #          add,
-    #          ops.Literal(0, dtype=dt.int64),
-    #          ops.Literal(1, dtype=dt.int64),
-    #      ),
+    #      ops.Literal(1, dtype=dt.int64),
     #  )
-    #  #  expanded_term = etuple(
-    #  #      add,
-    #  #      ops.Literal(0, dtype=dt.int64),
-    #  #      ops.Literal(1, dtype=dt.int64),
-    #  #  )
     reduced_term = var()
 
     res = run(
