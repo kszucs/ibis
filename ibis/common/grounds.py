@@ -4,11 +4,10 @@ import inspect
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from functools import partial
-from operator import add, mul
+from operator import add
 from typing import Any, Hashable
 from weakref import WeakValueDictionary
 
-from etuples.core import ExpressionTuple, etuple
 from kanren import conde, eq, lall, run
 from kanren.constraints import isinstanceo
 from kanren.graph import reduceo, walko
@@ -361,13 +360,18 @@ def reduce_identity(expanded_term, reduced_term):
 
     return lall(
         isinstanceo(x, ops.Value),
-        isinstanceo(x, ExpressionTuple),
         isinstanceo(type, dt.Primitive),
-        conde(  # similar to cond from lisp
-            [eq(expanded_term, etuple(add, x, zero)), eq(reduced_term, x)],
-            [eq(expanded_term, etuple(add, zero, x)), eq(reduced_term, x)],
-            [eq(expanded_term, etuple(mul, x, one)), eq(reduced_term, x)],
-            [eq(expanded_term, etuple(mul, one, x)), eq(reduced_term, x)],
+        conde(  # conde similar to cond from lisp
+            [eq(expanded_term, ops.Add.pattern(x, zero)), eq(reduced_term, x)],
+            [eq(expanded_term, ops.Add.pattern(zero, x)), eq(reduced_term, x)],
+            [
+                eq(expanded_term, ops.Multiply.pattern(x, one)),
+                eq(reduced_term, x),
+            ],
+            [
+                eq(expanded_term, ops.Multiply.pattern(one, x)),
+                eq(reduced_term, x),
+            ],
         ),
     )
 
@@ -392,22 +396,10 @@ def const_fold(expanded_term, reduced_term):
                 applyo(lambda lit: lit.value, (expanded_term,), reduced_term),
             ],
             [
-                eq(expanded_term, etuple(add, x, y)),
+                eq(expanded_term, ops.Add.pattern(x, y)),
                 term_walko(const_foldo, x, left),
                 term_walko(const_foldo, y, right),
                 applyo(add, (left, right), reduced_term),
-            ],
-            [
-                eq(
-                    expanded_term,
-                    etuple(
-                        mul,
-                        x,
-                    ),
-                ),
-                term_walko(const_foldo, x, left),
-                term_walko(const_foldo, y, right),
-                applyo(mul, (left, right), reduced_term),
             ],
         ),
     )
@@ -442,13 +434,11 @@ def useless_selection(expanded_term, reduced_term):
 const_foldo = partial(reduceo, const_fold)
 useless_selectiono = partial(reduceo, useless_selection)
 
-term_walko = partial(walko, rator_goal=eq, null_type=ExpressionTuple)
+term_walko = partial(walko, rator_goal=eq)
 
 
 def main():
     import ibis
-    import ibis.expr.datatypes as dt
-    import ibis.expr.operations as ops
 
     reduced_term = var()
 
@@ -457,15 +447,7 @@ def main():
     t = ibis.table(dict(a="int64"), name="t")
 
     expr = 0 + (0 + t.a * 1)
-    expanded_term = etuple(
-        add,
-        ops.Literal(0, dtype=dt.int64),
-        etuple(
-            add,
-            ops.Literal(0, dtype=dt.int64),
-            etuple(mul, t.a.op(), ops.Literal(1, dtype=dt.int64)),
-        ),
-    )
+    expanded_term = expr.op()
 
     (res,) = run(
         1,
@@ -483,15 +465,7 @@ def main():
     print()
 
     expr = 0 + (ibis.literal(0, type="int64") + 1)
-    expanded_term = etuple(
-        add,
-        ops.Literal(0, dtype=dt.int64),
-        etuple(
-            add,
-            ops.Literal(0, dtype=dt.int64),
-            ops.Literal(1, dtype=dt.int64),
-        ),
-    )
+    expanded_term = expr.op()
 
     (res,) = run(
         1,
@@ -507,21 +481,21 @@ def main():
     print("------")
     print(res)
 
-    expr = t[t.a == t.a]
-    expanded_term = expr.op()
-    (res,) = run(
-        1,
-        reduced_term,
-        term_walko(useless_selectiono, expanded_term, reduced_term),
-    )
-    print("==============")
-    print("input")
-    print("-----")
-    print(expr)
-    print()
-    print("output")
-    print("------")
-    print(res)
+    #  expr = t[t.a == t.a]
+    #  expanded_term = expr.op()
+    #  (res,) = run(
+    #      1,
+    #      reduced_term,
+    #      term_walko(useless_selectiono, expanded_term, reduced_term),
+    #  )
+    #  print("==============")
+    #  print("input")
+    #  print("-----")
+    #  print(expr)
+    #  print()
+    #  print("output")
+    #  print("------")
+    #  print(res)
 
 
 if __name__ == "__main__":
