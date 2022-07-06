@@ -10,6 +10,7 @@ from weakref import WeakValueDictionary
 
 from kanren import conde, eq, lall, run
 from kanren.constraints import isinstanceo
+from kanren.goals import rembero
 from kanren.graph import reduceo, walko
 from kanren.term import applyo
 from unification import var
@@ -343,6 +344,7 @@ def _unify_Pattern(u, v, s):
 @_reify.register(Pattern, Mapping)
 def _reify_Pattern(o, s):
     kwargs = yield _reify(o._args, s)
+    breakpoint()
     obj = o._cls(**kwargs)
     yield construction_sentinel
     yield obj
@@ -405,34 +407,42 @@ def const_fold(expanded_term, reduced_term):
     )
 
 
-def useless_selection(expanded_term, reduced_term):
+def useless_predicate(expanded_term, reduced_term):
     import ibis.expr.operations as ops
 
     x = var()
     table = var()
     selections = var()
     sort_keys = var()
+    predicates = var()
 
     selection = ops.Selection.pattern(
         table=table,
         selections=selections,
-        predicates=(ops.Equals.pattern(x, x),),
+        predicates=predicates,
         sort_keys=sort_keys,
     )
+
+    preds = var()
+
     return lall(
-        eq(selections, ()),
-        eq(sort_keys, ()),
-        conde(
-            [
-                eq(expanded_term, selection),
-                eq(reduced_term, table),
-            ]
+        isinstanceo(x, ops.Value),
+        eq(expanded_term, selection),
+        rembero(ops.Equals.pattern(x, x), predicates, preds),
+        eq(
+            reduced_term,
+            ops.Selection.pattern(
+                table=table,
+                selections=selections,
+                predicates=preds,
+                sort_keys=sort_keys,
+            ),
         ),
     )
 
 
 const_foldo = partial(reduceo, const_fold)
-useless_selectiono = partial(reduceo, useless_selection)
+useless_predicateo = partial(reduceo, useless_predicate)
 
 term_walko = partial(walko, rator_goal=eq)
 
@@ -481,21 +491,21 @@ def main():
     print("------")
     print(res)
 
-    #  expr = t[t.a == t.a]
-    #  expanded_term = expr.op()
-    #  (res,) = run(
-    #      1,
-    #      reduced_term,
-    #      term_walko(useless_selectiono, expanded_term, reduced_term),
-    #  )
-    #  print("==============")
-    #  print("input")
-    #  print("-----")
-    #  print(expr)
-    #  print()
-    #  print("output")
-    #  print("------")
-    #  print(res)
+    expr = t[t.a == t.a]
+    expanded_term = expr.op()
+    (res,) = run(
+        1,
+        reduced_term,
+        term_walko(useless_predicateo, expanded_term, reduced_term),
+    )
+    print("==============")
+    print("input")
+    print("-----")
+    print(expr)
+    print()
+    print("output")
+    print("------")
+    print(res)
 
 
 if __name__ == "__main__":
