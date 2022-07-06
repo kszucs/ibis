@@ -4,14 +4,14 @@ import inspect
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 from functools import partial
-from operator import add, attrgetter, mul, sub
+from operator import add, mul
 from typing import Any, Hashable
 from weakref import WeakValueDictionary
 
 from etuples.core import ExpressionTuple, etuple
-from kanren import conde, eq, lall, lany, run
+from kanren import conde, eq, lall, run
 from kanren.constraints import isinstanceo
-from kanren.graph import mapo, reduceo, walko
+from kanren.graph import reduceo, walko
 from kanren.term import applyo
 from unification import var
 from unification.core import _reify, _unify, construction_sentinel
@@ -389,7 +389,7 @@ def const_fold(expanded_term, reduced_term):
         conde(
             [
                 isinstanceo(expanded_term, ops.Literal),
-                applyo(attrgetter("value"), (expanded_term,), reduced_term),
+                applyo(lambda lit: lit.value, (expanded_term,), reduced_term),
             ],
             [
                 eq(expanded_term, etuple(add, x, y)),
@@ -397,11 +397,51 @@ def const_fold(expanded_term, reduced_term):
                 term_walko(const_foldo, y, right),
                 applyo(add, (left, right), reduced_term),
             ],
+            [
+                eq(
+                    expanded_term,
+                    etuple(
+                        mul,
+                        x,
+                    ),
+                ),
+                term_walko(const_foldo, x, left),
+                term_walko(const_foldo, y, right),
+                applyo(mul, (left, right), reduced_term),
+            ],
+        ),
+    )
+
+
+def useless_selection(expanded_term, reduced_term):
+    import ibis.expr.operations as ops
+
+    x = var()
+    table = var()
+    selections = var()
+    sort_keys = var()
+
+    selection = ops.Selection.pattern(
+        table=table,
+        selections=selections,
+        predicates=(ops.Equals.pattern(x, x),),
+        sort_keys=sort_keys,
+    )
+    return lall(
+        eq(selections, ()),
+        eq(sort_keys, ()),
+        conde(
+            [
+                eq(expanded_term, selection),
+                eq(reduced_term, table),
+            ]
         ),
     )
 
 
 const_foldo = partial(reduceo, const_fold)
+useless_selectiono = partial(reduceo, useless_selection)
+
 term_walko = partial(walko, rator_goal=eq, null_type=ExpressionTuple)
 
 
@@ -410,27 +450,39 @@ def main():
     import ibis.expr.datatypes as dt
     import ibis.expr.operations as ops
 
+    reduced_term = var()
+
     identity_reduceo = partial(reduceo, reduce_identity)
-    #  0 + 0 + t.a * 1
+
+    t = ibis.table(dict(a="int64"), name="t")
+
+    expr = 0 + (0 + t.a * 1)
     expanded_term = etuple(
         add,
         ops.Literal(0, dtype=dt.int64),
         etuple(
             add,
             ops.Literal(0, dtype=dt.int64),
-            etuple(
-                mul,
-                ops.TableColumn(
-                    table=ops.UnboundTable(
-                        schema=ibis.schema({"a": "int64"}),
-                        name="t",
-                    ),
-                    name="a",
-                ),
-                ops.Literal(1, dtype=dt.int64),
-            ),
+            etuple(mul, t.a.op(), ops.Literal(1, dtype=dt.int64)),
         ),
     )
+
+    (res,) = run(
+        1,
+        reduced_term,
+        term_walko(identity_reduceo, expanded_term, reduced_term),
+    )
+    print("==============")
+    print("input")
+    print("-----")
+    print(expr)
+    print()
+    print("output")
+    print("------")
+    print(res.to_expr())
+    print()
+
+    expr = 0 + (ibis.literal(0, type="int64") + 1)
     expanded_term = etuple(
         add,
         ops.Literal(0, dtype=dt.int64),
@@ -440,20 +492,37 @@ def main():
             ops.Literal(1, dtype=dt.int64),
         ),
     )
-    #  expanded_term = etuple(
-    #      add,
-    #      ops.Literal(0, dtype=dt.int64),
-    #      ops.Literal(1, dtype=dt.int64),
-    #  )
-    reduced_term = var()
 
-    res = run(
+    (res,) = run(
         1,
         reduced_term,
         term_walko(const_foldo, expanded_term, reduced_term),
     )
-    return res
+    print("==============")
+    print("input")
+    print("-----")
+    print(expr)
+    print()
+    print("output")
+    print("------")
+    print(res)
+
+    expr = t[t.a == t.a]
+    expanded_term = expr.op()
+    (res,) = run(
+        1,
+        reduced_term,
+        term_walko(useless_selectiono, expanded_term, reduced_term),
+    )
+    print("==============")
+    print("input")
+    print("-----")
+    print(expr)
+    print()
+    print("output")
+    print("------")
+    print(res)
 
 
 if __name__ == "__main__":
-    print(main())
+    main()
