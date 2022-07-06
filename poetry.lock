@@ -323,6 +323,17 @@ python-versions = "*"
 test = ["flake8 (==3.7.8)", "hypothesis (==3.55.3)"]
 
 [[package]]
+name = "cons"
+version = "0.4.5"
+description = "An implementation of Lisp/Scheme-like cons in Python."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+logical-unification = ">=0.4.0"
+
+[[package]]
 name = "coverage"
 version = "6.4.1"
 description = "Code coverage measurement for Python"
@@ -457,6 +468,18 @@ description = "Discover and load entry points from installed packages."
 category = "dev"
 optional = false
 python-versions = ">=3.6"
+
+[[package]]
+name = "etuples"
+version = "0.3.5"
+description = "Python S-expression emulation using tuple-like objects."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+cons = "*"
+multipledispatch = "*"
 
 [[package]]
 name = "execnet"
@@ -939,6 +962,18 @@ optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
+name = "logical-unification"
+version = "0.4.5"
+description = "Logical unification in Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+multipledispatch = "*"
+toolz = "*"
+
+[[package]]
 name = "lz4"
 version = "4.0.1"
 description = "LZ4 Bindings for Python"
@@ -1062,6 +1097,21 @@ verspec = "*"
 [package.extras]
 dev = ["coverage", "flake8 (>=3.0)", "shtab"]
 test = ["coverage", "flake8 (>=3.0)", "shtab"]
+
+[[package]]
+name = "minikanren"
+version = "1.0.3"
+description = "Relational programming in Python"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+cons = ">=0.4.0"
+etuples = ">=0.3.1"
+logical-unification = ">=0.4.1"
+multipledispatch = "*"
+toolz = "*"
 
 [[package]]
 name = "mistune"
@@ -2376,7 +2426,7 @@ dask = ["dask", "pyarrow"]
 datafusion = ["datafusion"]
 duckdb = ["duckdb", "duckdb-engine", "sqlalchemy"]
 geospatial = ["GeoAlchemy2", "geopandas", "Shapely"]
-impala = ["fsspec", "impyla", "requests"]
+impala = ["fsspec", "impyla", "requests", "sqlalchemy"]
 mysql = ["sqlalchemy", "pymysql"]
 pandas = []
 postgres = ["psycopg2", "sqlalchemy"]
@@ -2387,7 +2437,7 @@ visualization = ["graphviz"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "92dc9de85386675d004acf018a9965a7b72fefa535c5b5ed963ab8a330490615"
+content-hash = "26aa4b1e6a69ad3e3cb127619a002583af21866b0d2ee6f54a52a602c8bd03dd"
 
 [metadata.files]
 absolufy-imports = [
@@ -2821,6 +2871,9 @@ commonmark = [
     {file = "commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9"},
     {file = "commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60"},
 ]
+cons = [
+    {file = "cons-0.4.5.tar.gz", hash = "sha256:b46b48adb5a5af7f44375da346d926e55a325d4dc12b9add9f20280d3b3742cb"},
+]
 coverage = [
     {file = "coverage-6.4.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:f1d5aa2703e1dab4ae6cf416eb0095304f49d004c39e9db1d86f57924f43006b"},
     {file = "coverage-6.4.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4ce1b258493cbf8aec43e9b50d89982346b98e9ffdfaae8ae5793bc112fb0068"},
@@ -2961,6 +3014,9 @@ dunamai = [
 entrypoints = [
     {file = "entrypoints-0.4-py3-none-any.whl", hash = "sha256:f174b5ff827504fd3cd97cc3f8649f3693f51538c7e4bdf3ef002c8429d42f9f"},
     {file = "entrypoints-0.4.tar.gz", hash = "sha256:b706eddaa9218a19ebcd67b56818f05bb27589b1ca9e8d797b74affad4ccacd4"},
+]
+etuples = [
+    {file = "etuples-0.3.5.tar.gz", hash = "sha256:c54845145507c879f37f7c4ad9fe269711503653f2b75ec2266c8c4b75255989"},
 ]
 execnet = [
     {file = "execnet-1.9.0-py2.py3-none-any.whl", hash = "sha256:a295f7cc774947aac58dde7fdc85f4aa00c42adf5d8f5468fc630c1acf30a142"},
@@ -3156,6 +3212,9 @@ locket = [
     {file = "locket-1.0.0-py2.py3-none-any.whl", hash = "sha256:b6c819a722f7b6bd955b80781788e4a66a55628b858d347536b7e81325a3a5e3"},
     {file = "locket-1.0.0.tar.gz", hash = "sha256:5c0d4c052a8bbbf750e056a8e65ccd309086f4f0f18a2eac306a8dfa4112a632"},
 ]
+logical-unification = [
+    {file = "logical-unification-0.4.5.tar.gz", hash = "sha256:7c6a6c1b7c6baa0f5b9af93f06cfc8d2419b6b793346b678ed1367c05ce74558"},
+]
 lz4 = [
     {file = "lz4-4.0.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5621c9ba9ef10c2a70429ff4950ce599d333feb9a0dcb13331b2707ee7a27d8f"},
     {file = "lz4-4.0.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:be3ffd413fa3fe8bc84075d94104aadeb430fbd33976828537345691b954e8c9"},
@@ -3252,6 +3311,9 @@ mergedeep = [
 mike = [
     {file = "mike-1.1.2-py3-none-any.whl", hash = "sha256:4c307c28769834d78df10f834f57f810f04ca27d248f80a75f49c6fa2d1527ca"},
     {file = "mike-1.1.2.tar.gz", hash = "sha256:56c3f1794c2d0b5fdccfa9b9487beb013ca813de2e3ad0744724e9d34d40b77b"},
+]
+minikanren = [
+    {file = "miniKanren-1.0.3.tar.gz", hash = "sha256:1ec8bdb01144ad5e8752c7c297fb8a122db920f859276d25a72d164e998d7f6e"},
 ]
 mistune = [
     {file = "mistune-0.8.4-py2.py3-none-any.whl", hash = "sha256:88a1051873018da288eee8538d476dffe1262495144b33ecb586c4ab266bb8d4"},

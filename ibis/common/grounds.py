@@ -3,9 +3,17 @@ from __future__ import annotations
 import inspect
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
+from functools import partial
+from operator import add, attrgetter, mul, sub
 from typing import Any, Hashable
 from weakref import WeakValueDictionary
 
+from etuples.core import ExpressionTuple, etuple
+from kanren import conde, eq, lall, lany, run
+from kanren.constraints import isinstanceo
+from kanren.graph import mapo, reduceo, walko
+from kanren.term import applyo
+from unification import var
 from unification.core import _reify, _unify, construction_sentinel
 
 from ibis.common.caching import WeakCache
@@ -339,3 +347,118 @@ def _reify_Pattern(o, s):
     obj = o._cls(**kwargs)
     yield construction_sentinel
     yield obj
+
+
+def reduce_identity(expanded_term, reduced_term):
+    import ibis.expr.datatypes as dt
+    import ibis.expr.operations as ops
+
+    x = var()  # any operation, but see below
+    type = var()
+
+    zero = ops.Literal.pattern(0, dtype=type)
+    one = ops.Literal.pattern(1, dtype=type)
+
+    return lall(
+        isinstanceo(x, ops.Value),
+        isinstanceo(x, ExpressionTuple),
+        isinstanceo(type, dt.Primitive),
+        conde(  # similar to cond from lisp
+            [eq(expanded_term, etuple(add, x, zero)), eq(reduced_term, x)],
+            [eq(expanded_term, etuple(add, zero, x)), eq(reduced_term, x)],
+            [eq(expanded_term, etuple(mul, x, one)), eq(reduced_term, x)],
+            [eq(expanded_term, etuple(mul, one, x)), eq(reduced_term, x)],
+        ),
+    )
+
+
+def const_fold(expanded_term, reduced_term):
+    import ibis.expr.operations as ops
+
+    x = var(prefix="x")
+    y = var(prefix="y")
+
+    x_type = var(prefix="x_type")
+    y_type = var(prefix="y_type")
+
+    left = var(prefix="left")
+    right = var(prefix="right")
+
+    return lall(
+        eq(x_type, y_type),
+        conde(
+            [
+                isinstanceo(expanded_term, ops.Literal),
+                applyo(attrgetter("value"), (expanded_term,), reduced_term),
+            ],
+            [
+                eq(expanded_term, etuple(add, x, y)),
+                term_walko(const_foldo, x, right),
+                term_walko(const_foldo, y, left),
+                applyo(add, (left, right), reduced_term),
+            ],
+            [
+                eq(expanded_term, etuple(sub, x, y)),
+                eq(x, y),
+                eq(0, reduced_term),
+            ],
+        ),
+    )
+
+
+const_foldo = partial(reduceo, const_fold)
+term_walko = partial(walko, rator_goal=eq, null_type=ExpressionTuple)
+
+
+def main():
+    import ibis
+    import ibis.expr.datatypes as dt
+    import ibis.expr.operations as ops
+
+    #  identity_reduceo = partial(reduceo, reduce_identity)
+    # 0 + 0 + t.a * 1
+    expanded_term = etuple(
+        add,
+        ops.Literal(0, dtype=dt.int64),
+        etuple(
+            add,
+            ops.Literal(0, dtype=dt.int64),
+            etuple(
+                mul,
+                ops.TableColumn(
+                    table=ops.UnboundTable(
+                        schema=ibis.schema({"a": "int64"}),
+                        name="t",
+                    ),
+                    name="a",
+                ),
+                ops.Literal(1, dtype=dt.int64),
+            ),
+        ),
+    )
+    #  expanded_term = etuple(
+    #      add,
+    #      ops.Literal(0, dtype=dt.int64),
+    #      etuple(
+    #          add,
+    #          ops.Literal(0, dtype=dt.int64),
+    #          ops.Literal(1, dtype=dt.int64),
+    #      ),
+    #  )
+    #  #  expanded_term = etuple(
+    #  #      add,
+    #  #      ops.Literal(0, dtype=dt.int64),
+    #  #      ops.Literal(1, dtype=dt.int64),
+    #  #  )
+    reduced_term = var()
+
+    res = run(
+        1,
+        reduced_term,
+        term_walko(const_foldo, expanded_term, reduced_term),
+    )
+    return res
+
+
+if __name__ == "__main__":
+    print(main())
