@@ -352,7 +352,7 @@ class Value(Expr):
 
         # TODO(kszucs): fix this ugly hack
         if isinstance(prior_op, ops.Alias):
-            return prior_op.arg.over(window).name(prior_op.name)
+            return prior_op.arg.to_expr().over(window).name(prior_op.name)
 
         if isinstance(prior_op, ops.Window):
             op = prior_op.over(window)
@@ -405,7 +405,7 @@ class Value(Expr):
         """  # noqa: E501
         import ibis.expr.builders as bl
 
-        return bl.SimpleCaseBuilder(self)
+        return bl.SimpleCaseBuilder(self.op())
 
     def cases(
         self,
@@ -530,7 +530,7 @@ class Scalar(Value):
         from ibis.expr.analysis import find_immediate_parent_tables
         from ibis.expr.types.relations import Table
 
-        roots = find_immediate_parent_tables(self)
+        roots = find_immediate_parent_tables(self.op())
         if len(roots) > 1:
             raise com.RelationError(
                 'Cannot convert scalar expression '
@@ -552,7 +552,7 @@ class Column(Value):
         from ibis.expr.analysis import find_immediate_parent_tables
         from ibis.expr.types.relations import Table
 
-        roots = find_immediate_parent_tables(self)
+        roots = find_immediate_parent_tables(self.op())
         if len(roots) > 1:
             raise com.RelationError(
                 'Cannot convert array expression involving multiple base '
@@ -761,7 +761,7 @@ class Column(Value):
         """
         from ibis.expr.analysis import find_first_base_table
 
-        base = find_first_base_table(self).to_expr()
+        base = find_first_base_table(self.op()).to_expr()
         metric = base.count().name(metric_name)
 
         if not self.has_name():
@@ -991,7 +991,7 @@ def literal(value: Any, type: dt.DataType | str | None = None) -> Scalar:
             'passing it explicitly with the `type` keyword.'.format(value)
         )
 
-    if dtype is dt.null:
+    if isinstance(dtype, dt.Null):
         return null().cast(dtype)
     else:
         value = dt._normalize(dtype, value)

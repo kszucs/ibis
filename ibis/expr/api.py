@@ -587,7 +587,7 @@ def interval(
     value_type = literal(value).type()
     type = dt.Interval(unit, value_type=value_type)
 
-    return literal(value, type=type).op().to_expr()
+    return literal(value, type=type)  # .op().to_expr()
 
 
 def case() -> bl.SearchedCaseBuilder:
