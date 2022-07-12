@@ -163,13 +163,12 @@ def _arbitrary(t, op):
     return t._reduction(getattr(sa.func, how), op)
 
 
-def _string_agg(t, expr):
-    op = expr.op()
-    if not isinstance(lit := op.sep.op(), ops.Literal):
+def _string_agg(t, op):
+    if not isinstance(op.sep, ops.Literal):
         raise TypeError(
             "Separator argument to group_concat operation must be a constant"
         )
-    agg = sa.func.string_agg(t.translate(op.arg), sa.text(repr(lit.value)))
+    agg = sa.func.string_agg(t.translate(op.arg), sa.text(repr(op.sep.value)))
     if (where := op.where) is not None:
         return agg.filter(t.translate(where))
     return agg
