@@ -13,13 +13,14 @@ from public import public
 
 import ibis
 import ibis.common.exceptions as com
+import ibis.expr.operations as ops
 from ibis import util
 from ibis.expr.deferred import Deferred
 from ibis.expr.types.core import Expr
 
 if TYPE_CHECKING:
-    from ibis.expr import schema as sch
-    from ibis.expr import types as ir
+    import ibis.expr.schema as sch
+    import ibis.expr.types as ir
     from ibis.expr.types.generic import Column
     from ibis.expr.types.groupby import GroupedTable
 
@@ -194,10 +195,7 @@ class Table(Expr):
         Column
             A column named `name`.
         """
-        import ibis.expr.operations as ops
-
-        ref = ops.TableColumn(self, name)
-        return ref.to_expr()
+        return ops.TableColumn(self, name).to_expr()
 
     @cached_property
     def columns(self):
@@ -273,8 +271,6 @@ class Table(Expr):
         2|pandas
         3|Dask
         """  # noqa: E501
-        from ibis.expr import operations as ops
-
         return ops.RowID().to_expr()
 
     def view(self) -> Table:
@@ -287,8 +283,6 @@ class Table(Expr):
         Table
             Table expression
         """
-        from ibis.expr import operations as ops
-
         return ops.SelfReference(self).to_expr()
 
     def difference(self, right: Table) -> Table:
@@ -306,8 +300,6 @@ class Table(Expr):
         Table
             The rows present in `left` that are not present in `right`.
         """
-        from ibis.expr import operations as ops
-
         return ops.Difference(self, right).to_expr()
 
     def aggregate(
@@ -350,8 +342,6 @@ class Table(Expr):
 
     def distinct(self) -> Table:
         """Compute the set of unique rows in the table."""
-        from ibis.expr import operations as ops
-
         return ops.Distinct(self).to_expr()
 
     def limit(self, n: int, offset: int = 0) -> Table:
@@ -369,10 +359,7 @@ class Table(Expr):
         Table
             The first `n` rows of `table` starting at `offset`
         """
-        from ibis.expr import operations as ops
-
-        op = ops.Limit(self, n, offset=offset)
-        return op.to_expr()
+        return ops.Limit(self, n, offset=offset).to_expr()
 
     def head(self, n: int = 5) -> Table:
         """Select the first `n` rows of a table.
@@ -447,8 +434,6 @@ class Table(Expr):
         Table
             Union of table and `right`
         """
-        from ibis.expr import operations as ops
-
         return ops.Union(self, right, distinct=distinct).to_expr()
 
     def intersect(self, right: Table) -> Table:
@@ -466,8 +451,6 @@ class Table(Expr):
         Table
             The rows common amongst `left` and `right`.
         """
-        from ibis.expr import operations as ops
-
         return ops.Intersection(self, right).to_expr()
 
     def to_array(self) -> ir.Column:
@@ -478,8 +461,6 @@ class Table(Expr):
         Value
             A single column view of a table
         """
-        from ibis.expr import operations as ops
-
         schema = self.schema()
         if len(schema) != 1:
             raise com.ExpressionError(
@@ -537,8 +518,8 @@ class Table(Expr):
         True
 
         """
-        from ibis.expr import analysis as an
-        from ibis.expr import rules as rlz
+        import ibis.expr.analysis as an
+        import ibis.expr.rules as rlz
 
         exprs = [] if exprs is None else util.promote_list(exprs)
         for name, expr in sorted(
@@ -705,7 +686,7 @@ class Table(Expr):
         Table
             Filtered table expression
         """
-        from ibis.expr import analysis as an
+        import ibis.expr.analysis as an
 
         resolved_predicates, top_ks = _resolve_predicates(self, predicates)
         table = self
@@ -727,8 +708,6 @@ class Table(Expr):
         IntegerScalar
             Number of rows in the table
         """
-        from ibis.expr import operations as ops
-
         return ops.Count(self).to_expr().name("count")
 
     def dropna(
@@ -761,8 +740,6 @@ class Table(Expr):
         Table
             Table expression
         """
-        from ibis.expr import operations as ops
-
         if subset is None:
             subset = []
         subset = util.promote_list(subset)
@@ -809,8 +786,6 @@ class Table(Expr):
         Table
             Table expression
         """  # noqa: E501
-        from ibis.expr import operations as ops
-
         if isinstance(replacements, collections.abc.Mapping):
             columns = replacements.keys()
             table_columns = self.schema().names
@@ -923,8 +898,6 @@ class Table(Expr):
             columns.
         """
 
-        from ibis.expr import operations as ops
-
         _join_classes = {
             'inner': ops.InnerJoin,
             'left': ops.LeftJoin,
@@ -995,8 +968,6 @@ class Table(Expr):
         Table
             Table expression
         """
-        from ibis.expr import operations as ops
-
         op = ops.AsOfJoin(
             left=left,
             right=right,
@@ -1060,8 +1031,6 @@ class Table(Expr):
         r7 := CrossJoin[r6, r0]
         CrossJoin[r4, r7]
         """
-        from ibis.expr import operations as ops
-
         expr = ops.CrossJoin(
             left,
             functools.reduce(Table.cross_join, rest, right),
@@ -1127,8 +1096,6 @@ class Table(Expr):
           schema:
             sum(double_col) float64
         """
-        import ibis.expr.operations as ops
-
         expr = ops.View(child=self, name=alias).to_expr()
 
         # NB: calling compile is necessary so that any temporary views are
@@ -1173,21 +1140,19 @@ class Table(Expr):
           schema:
             sum(double_col) float64
         """
-        import ibis.expr.operations as ops
-
-        return ops.SQLStringView(
+        op = ops.SQLStringView(
             child=self,
             name=next(_ALIASES),
             query=query,
-        ).to_expr()
+        )
+        return op.to_expr()
 
 
 def _resolve_predicates(
     table: Table, predicates
 ) -> tuple[list[ir.BooleanValue], list[tuple[ir.BooleanValue, ir.Table]]]:
-    from ibis.expr import analysis as an
-    from ibis.expr import operations as ops
-    from ibis.expr import types as ir
+    import ibis.expr.analysis as an
+    import ibis.expr.types as ir
 
     predicates = [
         ir.relations.bind_expr(table, pred).op()

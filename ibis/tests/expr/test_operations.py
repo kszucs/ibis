@@ -10,13 +10,21 @@ from ibis.common.exceptions import IbisTypeError
 
 
 def test_operation():
+    class Logarithm(ir.Expr):
+        pass
+
     class Log(ops.Node):
         arg = rlz.double()
         base = rlz.optional(rlz.double())
 
+        def to_expr(self):
+            return Logarithm(self)
+
     Log(1, base=2)
     Log(1, base=2)
     Log(arg=10)
+
+    assert isinstance(Log(arg=100).to_expr(), Logarithm)
 
 
 def test_ops_smoke():
@@ -80,6 +88,9 @@ def test_instance_of_operation():
     class MyOperation(ops.Node):
         arg = rlz.instance_of(ir.IntegerValue)
 
+        def to_expr(self):
+            return ir.IntegerScalar(self)
+
     MyOperation(ir.literal(5))
 
     with pytest.raises(IbisTypeError):
@@ -104,9 +115,8 @@ def test_custom_table_expr():
         pass
 
     class SpecialTable(ops.DatabaseTable):
-        @property
-        def output_type(self):
-            return MyTable
+        def to_expr(self):
+            return MyTable(self)
 
     con = ibis.pandas.connect({})
     node = SpecialTable('foo', ibis.schema([('a', 'int64')]), con)
