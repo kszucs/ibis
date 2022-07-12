@@ -266,7 +266,8 @@ def test_show_types(show_types):
 
 @pytest.mark.parametrize("cls", ops.TableNode.__subclasses__())
 def test_tables_have_format_rules(cls):
-    assert cls in ibis.expr.format.fmt_table_op.registry
+    if cls is not ops.Projection:
+        assert cls in ibis.expr.format.fmt_table_op.registry
 
 
 @pytest.mark.parametrize("cls", [ops.PhysicalTable, ops.TableNode])

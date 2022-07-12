@@ -572,14 +572,12 @@ def find_first_base_table(node):
 def _find_projections(node):
     assert isinstance(node, ops.Node), type(node)
 
+    # if type(node) is ops.Projection:
+    #     return lin.proceed, node
     if isinstance(node, ops.Selection):
         # remove predicates and sort_keys, so that child tables are considered
         # equivalent even if their predicates and sort_keys are not
-
-        # FIXME(kszucs): may not need to restrict the selection
-        # return lin.proceed, node
-        return lin.proceed, node._projection
-
+        return lin.proceed, ops.Projection(node.table, node.selections)
     elif isinstance(node, ops.SelfReference):
         return lin.proceed, node
     elif node.blocks():
