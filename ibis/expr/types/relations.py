@@ -333,7 +333,6 @@ class Table(Expr):
         )
 
         op = self.op().aggregate(
-            self,
             metrics,
             by=util.promote_list(by if by is not None else []),
             having=util.promote_list(having if having is not None else []),
@@ -698,7 +697,7 @@ class Table(Expr):
             an._rewrite_filter(pred.op() if isinstance(pred, Expr) else pred)
             for pred in resolved_predicates
         ]
-        return an.apply_filter(table, predicates)
+        return an.apply_filter(table.op(), predicates).to_expr()
 
     def count(self) -> ir.IntegerScalar:
         """Compute the number of rows in the table.
