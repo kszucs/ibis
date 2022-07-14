@@ -19,6 +19,7 @@ from ibis.common.validators import (  # noqa: F401
     tuple_of,
     validator,
 )
+from ibis.expr.deferred import Deferred
 
 
 # TODO(kszucs): consider to rename to datashape
@@ -461,19 +462,23 @@ def function_of(
     output_rule=any,
     this,
 ):
-    if not util.is_function(fn):
+    if isinstance(arg, str):
+        arg = this[arg].to_expr()
+    elif callable(arg):
+        arg = arg(this=this).to_expr()
+
+    if util.is_function(fn):
+        arg = fn(arg)
+    elif isinstance(fn, Deferred):
+        arg = fn.resolve(arg)
+    else:
         raise com.IbisTypeError(
             'argument `fn` must be a function, lambda or deferred operation'
         )
 
-    if isinstance(arg, str):
-        arg = this[arg]
-    elif callable(arg):
-        arg = arg(this=this)
-
     # TODO(kszucs): revisit this since the lambda usually must receive a table
     # expression
-    return output_rule(fn(arg.to_expr()), this=this)
+    return output_rule(arg, this=this)
 
 
 @rule
