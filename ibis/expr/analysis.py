@@ -12,6 +12,7 @@ import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import util
 from ibis.common.exceptions import IbisTypeError
+from ibis.expr.operations.relations import Projection
 from ibis.expr.rules import Shape
 from ibis.expr.window import window
 
@@ -577,7 +578,7 @@ def _find_projections(node):
     if isinstance(node, ops.Selection):
         # remove predicates and sort_keys, so that child tables are considered
         # equivalent even if their predicates and sort_keys are not
-        return lin.proceed, ops.Projection(node.table, node.selections)
+        return lin.proceed, Projection(node.table, node.selections)
     elif isinstance(node, ops.SelfReference):
         return lin.proceed, node
     elif node.blocks():

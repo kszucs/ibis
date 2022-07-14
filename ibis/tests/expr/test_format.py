@@ -7,6 +7,7 @@ import ibis.expr.datatypes as dt
 import ibis.expr.format
 import ibis.expr.operations as ops
 import ibis.udf.vectorized as udf
+from ibis.expr.operations.relations import Projection
 
 
 def test_format_table_column(table):
@@ -266,7 +267,7 @@ def test_show_types(show_types):
 
 @pytest.mark.parametrize("cls", ops.TableNode.__subclasses__())
 def test_tables_have_format_rules(cls):
-    if cls is not ops.Projection:
+    if cls is not Projection:
         assert cls in ibis.expr.format.fmt_table_op.registry
 
 

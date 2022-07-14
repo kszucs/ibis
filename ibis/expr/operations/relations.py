@@ -320,8 +320,6 @@ class SelfReference(TableNode):
         return True
 
 
-# TODO(kszucs): perhaps it shouldn't be exposed yet
-@public
 class Projection(TableNode):
     table = rlz.table
     selections = rlz.tuple_of(
@@ -334,17 +332,6 @@ class Projection(TableNode):
             )
         )
     )
-
-    # def __init__(self, table, selections, **kwargs):
-    #     from ibis.expr.analysis import shares_all_roots
-
-    #     if not shares_all_roots(selections, table):
-    #         raise com.RelationError(
-    #             "Selection expressions don't fully originate from "
-    #             "dependencies of the table expression."
-    #         )
-
-    #     super().__init__(table=table, selections=selections, **kwargs)
 
     @immutable_property
     def schema(self):
