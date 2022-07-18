@@ -52,7 +52,7 @@ class AnnotableMeta(BaseMeta):
 
     __slots__ = ()
 
-    def __new__(metacls, clsname, bases, dct):
+    def __new__(metacls, clsname, bases, dct, **kwargs):
         # inherit from parent signatures
         params = {}
         properties = {}
@@ -109,7 +109,7 @@ class AnnotableMeta(BaseMeta):
         attribs["__properties__"] = properties
         # TODO(kszucs): rename to __argnames__
         attribs["argnames"] = tuple(signature.parameters.keys())
-        return super().__new__(metacls, clsname, bases, attribs)
+        return super().__new__(metacls, clsname, bases, attribs, **kwargs)
 
 
 class Annotable(Base, Hashable, Immutable, metaclass=AnnotableMeta):

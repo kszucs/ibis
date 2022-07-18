@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 
+from matchpy import Arity, Operation
 from public import public
 
 import ibis.expr.rules as rlz
@@ -14,6 +15,38 @@ from ibis.util import UnnamedMarker, is_iterable
 
 @public
 class Node(Annotable, Comparable):
+    def __init_subclass__(
+        cls,
+        /,
+        name=None,
+        arity=False,
+        associative=False,
+        commutative=False,
+        one_identity=False,
+        infix=False,
+        **kwargs,
+    ):
+        cls.__pattern__ = Operation.new(
+            head=cls,
+            name=name or cls.__name__,
+            arity=arity or Arity(len(cls.argnames), True),
+            associative=associative,
+            commutative=commutative,
+            one_identity=one_identity,
+            infix=infix,
+        )
+
+    @classmethod
+    def pattern(cls, *args, **kwargs):
+        params = tuple(v for _, v in cls.__signature__.apply(*args, **kwargs))
+        return cls.__pattern__(*params)
+
+    def __len__(self):
+        return len(self.args)
+
+    def __iter__(self):
+        return iter(self.args)
+
     def __equals__(self, other):
         return self.args == other.args
 
@@ -49,6 +82,9 @@ class Node(Annotable, Comparable):
                 yield from arg
             else:
                 yield arg
+
+
+Operation.register(Node)
 
 
 @public

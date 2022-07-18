@@ -94,15 +94,17 @@ class Parameter(inspect.Parameter):
 
 
 class Signature(inspect.Signature):
-    def validate(self, *args, **kwargs):
+    def apply(self, *args, **kwargs):
         bound = self.bind(*args, **kwargs)
         bound.apply_defaults()
+        return bound.arguments.items()
 
+    def validate(self, *args, **kwargs):
         # bound the signature to the passed arguments and apply the validators
         # before passing the arguments, so self.__init__() receives already
         # validated arguments as keywords
         this = {}
-        for name, value in bound.arguments.items():
+        for name, value in self.apply(*args, **kwargs):
             param = self.parameters[name]
             # TODO(kszucs): provide more error context on failure
             this[name] = param.validate(this, value)
