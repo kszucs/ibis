@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import os
 import webbrowser
-from functools import cached_property
 from typing import TYPE_CHECKING, Any, Hashable, Mapping
 
 import toolz
-from cached_property import cached_property
 from public import public
 
 import ibis.expr.lineage as lin
@@ -90,7 +88,6 @@ class Expr(Immutable, Hashable):
         return self.op().resolve_name()
 
     # TODO(kszucs): remove it entirely
-    @cached_property
     def _safe_name(self) -> str | None:
         """Get the name of an expression `expr` if one exists
 
