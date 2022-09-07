@@ -1271,6 +1271,21 @@ class Table(Expr):
         )
         return op.to_expr()
 
+    def to_csv(self, path):
+        return ops.FileTableResult(self, path, ops.CsvFormat()).to_expr()
+
+    def to_parquet(self, path):
+        return ops.FileTableResult(self, path, ops.ParquetFormat()).to_expr()
+
+    def to_pylist(self):
+        return ops.TableResult(self).to_expr()
+
+    def to_pandas(self):
+        return ops.PandasTableResult(self).to_expr()
+
+    def to_pyarrow(self):
+        return ops.PyArrowTableResult(self).to_expr()
+
 
 def _resolve_predicates(
     table: Table, predicates

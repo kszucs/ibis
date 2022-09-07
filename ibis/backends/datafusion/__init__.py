@@ -7,8 +7,8 @@ from typing import Any, Mapping
 
 import pyarrow as pa
 
-import ibis.common.exceptions as com
-import ibis.expr.analysis as an
+# import ibis.common.exceptions as com
+# import ibis.expr.analysis as an
 import ibis.expr.operations as ops
 import ibis.expr.schema as sch
 import ibis.expr.types as ir
@@ -19,6 +19,8 @@ try:
     from datafusion import ExecutionContext as SessionContext
 except ImportError:
     from datafusion import SessionContext
+
+from ibis.backends.datafusion.executor import execute
 
 
 def _to_pyarrow_table(frame):
@@ -162,34 +164,45 @@ class Backend(BaseBackend):
         limit: str = 'default',
         **kwargs: Any,
     ):
-        if isinstance(expr, ir.Table):
-            frame = self.compile(expr, params, **kwargs)
-            table = _to_pyarrow_table(frame)
-            return table.to_pandas()
-        elif isinstance(expr, ir.Column):
-            # expression must be named for the projection
-            expr = expr.name('tmp').to_projection()
-            frame = self.compile(expr, params, **kwargs)
-            table = _to_pyarrow_table(frame)
-            return table['tmp'].to_pandas()
-        elif isinstance(expr, ir.Scalar):
-            if an.find_immediate_parent_tables(expr.op()):
-                # there are associated datafusion tables so convert the expr
-                # to a selection which we can directly convert to a datafusion
-                # plan
-                expr = expr.name('tmp').to_projection()
-                frame = self.compile(expr, params, **kwargs)
-            else:
-                # doesn't have any tables associated so create a plan from a
-                # dummy datafusion table
-                compiled = self.compile(expr, params, **kwargs)
-                frame = self._context.empty_table().select(compiled)
-            table = _to_pyarrow_table(frame)
-            return table[0][0].as_py()
-        else:
-            raise com.IbisError(
-                f"Cannot execute expression of type: {type(expr)}"
-            )
+        if not isinstance(expr, ir.Result):
+            expr = expr.to_pandas()
+
+        return execute(
+            expr.op(),
+            context=self._context,
+            params=params,
+            limit=limit,
+            **kwargs,
+        )
+
+        # if isinstance(expr, ir.Table):
+        #     frame = self.compile(expr, params, **kwargs)
+        #     table = _to_pyarrow_table(frame)
+        #     return table.to_pandas()
+        # elif isinstance(expr, ir.Column):
+        #     # expression must be named for the projection
+        #     expr = expr.name('tmp').to_projection()
+        #     frame = self.compile(expr, params, **kwargs)
+        #     table = _to_pyarrow_table(frame)
+        #     return table['tmp'].to_pandas()
+        # elif isinstance(expr, ir.Scalar):
+        #     if an.find_immediate_parent_tables(expr.op()):
+        #         # there are associated datafusion tables so convert the expr
+        #         # to a selection which we can directly convert to a
+        #         # datafusion plan
+        #         expr = expr.name('tmp').to_projection()
+        #         frame = self.compile(expr, params, **kwargs)
+        #     else:
+        #         # doesn't have any tables associated so create a plan from a
+        #         # dummy datafusion table
+        #         compiled = self.compile(expr, params, **kwargs)
+        #         frame = self._context.empty_table().select(compiled)
+        #     table = _to_pyarrow_table(frame)
+        #     return table[0][0].as_py()
+        # else:
+        #     raise com.IbisError(
+        #         f"Cannot execute expression of type: {type(expr)}"
+        #     )
 
     def compile(
         self,
