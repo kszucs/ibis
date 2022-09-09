@@ -9,6 +9,7 @@ from ibis.expr.operations.maps import *  # noqa: F401,F403
 from ibis.expr.operations.numeric import *  # noqa: F401,F403
 from ibis.expr.operations.reductions import *  # noqa: F401,F403
 from ibis.expr.operations.relations import *  # noqa: F401,F403
+from ibis.expr.operations.result import *  # noqa: F401,F403
 from ibis.expr.operations.sortkeys import *  # noqa: F401,F403
 from ibis.expr.operations.strings import *  # noqa: F401,F403
 from ibis.expr.operations.structs import *  # noqa: F401,F403

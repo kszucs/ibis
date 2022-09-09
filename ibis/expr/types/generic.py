@@ -497,6 +497,12 @@ class Scalar(Value):
     def _repr_html_(self) -> str | None:
         return None
 
+    def to_pandas(self):
+        return ops.PandasScalarResult(self).to_expr()
+
+    def to_pyarrow(self):
+        return ops.PyArrowScalarResult(self).to_expr()
+
 
 @public
 class Column(Value):
@@ -774,6 +780,12 @@ class Column(Value):
             The nth value over a window
         """
         return ops.NthValue(self, n).to_expr()
+
+    def to_pandas(self):
+        return ops.PandasColumnResult(self).to_expr()
+
+    def to_pyarrow(self):
+        return ops.PyArrowColumnResult(self).to_expr()
 
 
 @public

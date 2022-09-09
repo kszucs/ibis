@@ -57,6 +57,10 @@ class DatabaseTable(PhysicalTable):
     schema = rlz.instance_of(sch.Schema)
     source = rlz.client
 
+    def __reduce__(self):
+        kwargs = dict(name=self.name, schema=self.schema)
+        return (UnboundTable._reconstruct, (kwargs,))
+
     def change_name(self, new_name):
         return type(self)(new_name, self.args[1], self.source)
 
