@@ -40,15 +40,12 @@ def test_substitute_syntax_sugar():
 
 
 def test_match_list():
-    assert (
-        ops.NodeList.pattern(one, two, _) << ops.NodeList(one, two, three)
-        == {}
-    )
+    assert ops.NodeList.pattern(one, two, _) << ops.NodeList(one, two, three) == {}
     assert (one, two, _) << ops.NodeList(one, two, three) == {}
 
-    assert ops.NodeList.pattern(x, two, _) << ops.NodeList(
-        one, two, three
-    ) == {'x': one}
+    assert ops.NodeList.pattern(x, two, _) << ops.NodeList(one, two, three) == {
+        'x': one
+    }
     assert (x, two, _) << ops.NodeList(one, two, three) == {'x': one}
     assert (x, two, y) << ops.NodeList(one, two, three) == {
         'x': one,
@@ -67,9 +64,7 @@ def test_match_list():
 
 
 def test_substitute_list():
-    assert {} >> ops.NodeList.pattern(one, two, x) == ops.NodeList.pattern(
-        one, two, x
-    )
+    assert {} >> ops.NodeList.pattern(one, two, x) == ops.NodeList.pattern(one, two, x)
     assert {'x': three} >> ops.NodeList.pattern(one, two, x) == ops.NodeList(
         one, two, three
     )

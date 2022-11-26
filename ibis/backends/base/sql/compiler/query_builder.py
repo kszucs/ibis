@@ -459,11 +459,7 @@ def flatten_set_op(op):
         # `flatten` types are the same, and it works
         return toolz.concatv(
             flatten_set_op(op.left),  # type: ignore
-            [
-                isinstance(
-                    op, (ops.UnionAll, ops.IntersectionAll, ops.DifferenceAll)
-                )
-            ],
+            [isinstance(op, (ops.UnionAll, ops.IntersectionAll, ops.DifferenceAll))],
             flatten_set_op(op.right),  # type: ignore
         )
     return [op]

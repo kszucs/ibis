@@ -119,8 +119,8 @@ def reduction_to_aggregation(node):
 
 
 def find_immediate_parent_tables(node: ops.Node) -> Iterator[ops.TableNode]:
-    """Find every first occurrence of a :class:`ibis.expr.types.Table`
-    object in `expr`.
+    """Find every first occurrence of a :class:`ibis.expr.types.Table` object
+    in `expr`.
 
     Parameters
     ----------

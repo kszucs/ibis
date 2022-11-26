@@ -724,8 +724,8 @@ def _fmt_value_table_node(op: ops.TableNode, *, aliases: Aliases, **_: Any) -> s
 def _fmt_value_join_node(op: ops.Join, *, aliases: Aliases, **_: Any) -> str:
     """Format a join as value.
 
-    This function is called when a table is used in a value expression. An
-    example is `table.count()`.
+    This function is called when a table is used in a value expression.
+    An example is `table.count()`.
     """
     return f"{aliases[op.left]} {type(op).__name__} {aliases[op.right]}"
 
