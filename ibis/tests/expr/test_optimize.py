@@ -364,3 +364,32 @@ def test_collapse_limit(t):
         .limit(10)
     )
     assert result.equals(expected)
+
+
+def test_aggregate_selection(t):
+    expr = t.a.topk(3)
+    breakpoint()
+    result = opt(expr)
+    expected = ops.Limit(
+        ops.AggregateSelection(
+            table=t.op(),
+            by=[t.a.op()],
+            metrics=[t.a.count().op()],
+            sort_keys=[ops.SortDesc(t.a.count().op())],
+        ),
+        n=3,
+        offset=0,
+    )
+    assert result.op() == expected
+
+
+def test_collapse_project_sort(t):
+    expr = t[["a", "b"]].mutate(c=_.a).order_by("a")
+    result = opt(expr)
+    expected = ops.Selection(
+        table=t.op(),
+        selections=(t.a.op(), t.b.op(), t.a.name("c").op()),
+        predicates=(),
+        sort_keys=[ops.SortAsc(t.a.op())],
+    )
+    assert result.op() == expected

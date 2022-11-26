@@ -393,9 +393,7 @@ def _fmt_table_op_selection(op: ops.Selection, *, aliases: Aliases, **_: Any) ->
 
 
 @fmt_table_op.register
-def _fmt_table_op_projection(
-    op: ops.Projection, *, aliases: Aliases, **_: Any
-) -> str:
+def _fmt_table_op_projection(op: ops.Projection, *, aliases: Aliases, **_: Any) -> str:
     top = f"{op.__class__.__name__}[{aliases[op.table]}]"
     fmt = functools.partial(
         fmt_selection_column,
@@ -417,9 +415,7 @@ def _fmt_table_op_filter(op: ops.Filter, *, aliases: Aliases, **_: Any) -> str:
 
 
 @fmt_table_op.register
-def _fmt_table_op_sort_by(
-    op: ops.SortBy, *, aliases: Aliases, **_: Any
-) -> str:
+def _fmt_table_op_sort_by(op: ops.SortBy, *, aliases: Aliases, **_: Any) -> str:
     top = f"{op.__class__.__name__}[{aliases[op.table]}]"
     raw_parts = util.indent(
         "\n".join(fmt_value(op, aliases=aliases) for op in op.sort_keys),
@@ -445,6 +441,31 @@ def _fmt_table_op_aggregation(
                 maxlen=selection_maxlen(op.by),
             ),
             having=fmt_value,
+        ),
+        aliases=aliases,
+    )
+    return f"{top}\n{raw_parts}"
+
+
+@fmt_table_op.register
+def _fmt_table_op_aggregate_selection(
+    op: ops.AggregateSelection, *, aliases: Aliases, **_: Any
+) -> str:
+    top = f"{op.__class__.__name__}[{aliases[op.table]}]"
+    raw_parts = fmt_fields(
+        op,
+        dict(
+            metrics=functools.partial(
+                fmt_selection_column,
+                maxlen=selection_maxlen(op.metrics),
+            ),
+            by=functools.partial(
+                fmt_selection_column,
+                maxlen=selection_maxlen(op.by),
+            ),
+            having=fmt_value,
+            predicates=fmt_value,
+            sort_keys=fmt_value,
         ),
         aliases=aliases,
     )
@@ -588,9 +609,7 @@ def _fmt_value_binary_op(op: ops.Binary, *, aliases: Aliases) -> str:
     if left_needs_parens:
         left = f"({left})"
 
-    right_needs_parens = not isinstance(
-        op.right, (ops.Literal, ops.TableColumn)
-    )
+    right_needs_parens = not isinstance(op.right, (ops.Literal, ops.TableColumn))
     right = fmt_value(op.right, aliases=aliases)
     if right_needs_parens:
         right = f"({right})"
@@ -673,13 +692,12 @@ def _fmt_value_scalar_parameter(op: ops.ScalarParameter, **_: Any) -> str:
 @fmt_value.register
 def _fmt_value_sort_asc(op: ops.SortAsc, *, aliases: Aliases) -> str:
     expr = fmt_value(op.expr, aliases=aliases)
-    return f"asc {expr}"
+    return f"asc({expr})"
 
 
 @fmt_value.register
 def _fmt_value_sort_desc(op: ops.SortDesc, *, aliases: Aliases) -> str:
-    expr = fmt_value(op.expr, aliases=aliases)
-    return f"desc {expr}"
+    return f"desc({fmt_value(op.expr, aliases=aliases)})"
 
 
 @fmt_value.register
@@ -713,9 +731,7 @@ def _fmt_value_join_node(op: ops.Join, *, aliases: Aliases, **_: Any) -> str:
 
 
 @fmt_value.register
-def _fmt_value_string_sql_like(
-    op: ops.StringSQLLike, *, aliases: Aliases
-) -> str:
+def _fmt_value_string_sql_like(op: ops.StringSQLLike, *, aliases: Aliases) -> str:
     expr = fmt_value(op.arg, aliases=aliases)
     pattern = fmt_value(op.pattern, aliases=aliases)
     prefix = "I" * isinstance(op, ops.StringSQLILike)

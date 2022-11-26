@@ -418,6 +418,47 @@ def _no_scalar_subqueries(table, selections, predicates):
     return not any(g.traverse(fn, predicates))
 
 
+@generic(
+    ops.SortBy.pattern(
+        ops.Aggregation.pattern(
+            table,
+            ops.NodeList.pattern(by),
+            ops.NodeList.pattern(metrics),
+            ops.NodeList.pattern(having),
+        ),
+        ops.NodeList.pattern(sort_keys),
+    )
+)
+def collapse_sort_agg(table, by, metrics, having, sort_keys):
+    sort_keys2 = _replace_child(sort_keys, table)
+    res = ops.AggregateSelection(
+        table=table, by=by, metrics=metrics, having=having, sort_keys=sort_keys2
+    )
+    breakpoint()
+    return res
+
+
+@generic(
+    ops.Filter.pattern(
+        ops.Aggregation.pattern(
+            table,
+            ops.NodeList.pattern(by),
+            ops.NodeList.pattern(metrics),
+            ops.NodeList.pattern(having),
+        ),
+        ops.NodeList.pattern(predicates),
+    )
+)
+def filter_agg(table, by, metrics, having, predicates):
+    return ops.AggregateSelection(
+        table=table,
+        by=by,
+        metrics=metrics,
+        having=having,
+        predicates=_replace_child(predicates, table),
+    )
+
+
 @collapse(
     ops.Filter.pattern(
         ops.Projection.pattern(table, ops.NodeList.pattern(selections)),
@@ -448,9 +489,19 @@ def _collapse_proj_filt(table, predicates, selections):
 )
 def _collapse_proj_sort(table, selections, sort_keys):
     return ops.Selection(
-        table,
-        selections=_replace_child(selections, table),
-        sort_keys=sort_keys,
+        table, selections=_replace_child(selections, table), sort_keys=sort_keys
+    )
+
+
+@collapse(
+    ops.SortBy.pattern(
+        ops.Projection.pattern(table, ops.NodeList.pattern(selections)),
+        ops.NodeList.pattern(sort_keys),
+    )
+)
+def _collapse_sort_proj(table, selections, sort_keys):
+    return ops.Selection(
+        table, selections=selections, sort_keys=_replace_child(sort_keys, table)
     )
 
 
@@ -467,13 +518,12 @@ def _collapse_selection_sort(table, sort_keys1, selections, predicates, sort_key
         *sort_keys1,
         *_replace_child(sort_keys2, table),
     )
-    res = ops.Selection(
+    return ops.Selection(
         table=table,
         selections=_replace_child(selections, table),
         predicates=_replace_child(predicates, table),
         sort_keys=sort_keys,
     )
-    return res
 
 
 @collapse(

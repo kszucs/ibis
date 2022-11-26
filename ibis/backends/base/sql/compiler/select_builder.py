@@ -379,6 +379,19 @@ class SelectBuilder:
 
             self._collect(op.table)
 
+    def _collect_AggregateSelection(self, op, toplevel=False):
+        if toplevel:
+            sub_op = L.substitute_parents(op)
+
+            self.group_by = self._convert_group_by(sub_op.by)
+            self.having = sub_op.having
+            self.filters = sub_op.predicates
+            self.order_by = sub_op.sort_keys
+            self.select_set = sub_op.by + sub_op.metrics
+            self.table_set = sub_op.table
+
+            self._collect(op.table)
+
     def _collect_Projection(self, op, toplevel=False):
         table = op.table
 
@@ -419,9 +432,7 @@ class SelectBuilder:
             else:
                 self._collect(table)
 
-            sort_keys = op.sort_keys
-
-            self.sort_by = sort_keys
+            self.order_by = op.sort_keys
             self.select_set = [table]
             self.table_set = table
 

@@ -592,11 +592,7 @@ class Column(Value, JupyterMixin):
     def nunique(self, where: ir.BooleanValue | None = None) -> ir.IntegerScalar:
         return ops.CountDistinct(self, where).to_expr().name("nunique")
 
-    def topk(
-        self,
-        k: int,
-        by: ir.Value | None = None,
-    ) -> ir.TopK:
+    def topk(self, k: int, by: ir.Value | None = None) -> ir.TopK:
         """Return a "top k" expression.
 
         Parameters

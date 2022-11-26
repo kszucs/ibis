@@ -228,7 +228,7 @@ class Matchable(Base):
         one_identity=False,
         infix=False,
         unpacked_args_to_init=False,
-        **kwargs,
+        **_,
     ):
         # support python 3.10 pattern matching
         cls.__match_args__ = cls.__argnames__
@@ -251,7 +251,7 @@ class Matchable(Base):
     def pattern(cls, *args, **kwargs):
         bound = cls.__signature__.bind(*args, **kwargs)
         bound.apply_defaults()
-        return cls.__pattern__(*bound.args)
+        return cls.__pattern__(*bound.args, **bound.kwargs)
 
     def __len__(self):
         return len(self.__args__)

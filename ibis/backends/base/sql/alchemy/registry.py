@@ -636,6 +636,8 @@ sqlalchemy_operation_registry: Dict[Any, Any] = {
     ops.BitwiseRightShift: _bitwise_op(">>"),
     ops.BitwiseNot: _bitwise_not,
     ops.JSONGetItem: fixed_arity(lambda x, y: x.op("->")(y), 2),
+    ops.SortAsc: unary(sa.asc),
+    ops.SortDesc: unary(sa.desc),
 }
 
 

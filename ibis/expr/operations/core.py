@@ -164,15 +164,13 @@ class NodeList(
 
     @classmethod
     def __create__(self, *args, **kwargs):
-        # kwargs.pop("variable_name", None)
-        return super().__create__(*args)
+        return super().__create__(*args, **kwargs)
 
     @classmethod
     def pattern(cls, *args, **kwargs):
-        values = args + tuple(kwargs.pop("values", ()))
-        bound = cls.__signature__.bind(*values)
+        bound = cls.__signature__.bind(*args, **kwargs)
         bound.apply_defaults()
-        return cls.__pattern__(bound.arguments["values"])
+        return cls.__pattern__(bound.args, **bound.kwargs)
 
     @property
     def args(self):

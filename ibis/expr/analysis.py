@@ -119,8 +119,8 @@ def reduction_to_aggregation(node):
 
 
 def find_immediate_parent_tables(node: ops.Node) -> Iterator[ops.TableNode]:
-    """Find every first occurrence of a :class:`ibis.expr.types.Table` object
-    in `expr`.
+    """Find every first occurrence of a :class:`ibis.expr.types.Table`
+    object in `expr`.
 
     Parameters
     ----------
@@ -328,45 +328,6 @@ def windowize_function(expr, w=None):
         return type(op)(*windowed_args)
 
     return _windowize(expr.op(), w).to_expr()
-
-
-def simplify_aggregation(agg):
-    def _pushdown(nodes):
-        subbed = []
-        for node in nodes:
-            subbed.append(sub_for(node, {agg.table: agg.table.table}))
-
-        # TODO(kszucs): perhaps this validation could be omitted
-        if subbed:
-            valid = shares_all_roots(subbed, agg.table.table)
-        else:
-            valid = True
-
-        return valid, subbed
-
-    if isinstance(agg.table, ops.Selection) and not agg.table.selections:
-        metrics_valid, lowered_metrics = _pushdown(agg.metrics)
-        by_valid, lowered_by = _pushdown(agg.by)
-        having_valid, lowered_having = _pushdown(agg.having)
-
-        if metrics_valid and by_valid and having_valid:
-            valid_lowered_sort_keys = frozenset(lowered_metrics).union(lowered_by)
-            return ops.Aggregation(
-                agg.table.table,
-                lowered_metrics,
-                by=lowered_by,
-                having=lowered_having,
-                predicates=agg.table.predicates,
-                # only the sort keys that exist as grouping keys or metrics can
-                # be included
-                sort_keys=[
-                    key
-                    for key in agg.table.sort_keys
-                    if key.expr in valid_lowered_sort_keys
-                ],
-            )
-
-    return agg
 
 
 def find_first_base_table(node: ops.Node) -> ops.Node | None:

@@ -303,31 +303,11 @@ class AlchemySelect(Select):
         return fragment.where(clause)
 
     def _add_order_by(self, fragment):
-        if not len(self.order_by):
+        if not (order_by := self.order_by):
             return fragment
 
-        clauses = []
-        for key in self.order_by:
-            sort_expr = key.expr
-
-            # here we have to determine if key.expr is in the select set (as it
-            # will be in the case of order_by fused with an aggregation
-            if _can_lower_sort_column(self.table_set, sort_expr):
-                arg = sort_expr.name
-            else:
-                arg = self._translate(sort_expr)
-
-            fn = sa.asc if key.ascending else sa.desc
-
-            clauses.append(fn(arg))
-
+        clauses = [self._translate(key) for key in order_by]
         return fragment.order_by(*clauses)
-
-    def _among_select_set(self, expr):
-        for other in self.select_set:
-            if expr.equals(other):
-                return True
-        return False
 
     def _add_limit(self, fragment):
         if self.limit is None:

@@ -405,8 +405,6 @@ class Table(Expr, JupyterMixin):
         Table
             An aggregate table expression
         """
-        import ibis.expr.analysis as an
-
         metrics = util.promote_list(metrics)
         metrics.extend(
             self._ensure_expr(expr).name(name) for name, expr in kwargs.items()
@@ -418,8 +416,6 @@ class Table(Expr, JupyterMixin):
             by=util.promote_list(by),
             having=util.promote_list(having),
         )
-        agg = an.simplify_aggregation(agg)
-
         return agg.to_expr()
 
     agg = aggregate
