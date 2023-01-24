@@ -492,7 +492,7 @@ class Backend(BaseSQLBackend):
 
         names, types = zip(*pairs)
         ibis_types = [udf.parse_type(type.lower()) for type in types]
-        return sch.Schema(names, ibis_types)
+        return sch.schema(names, ibis_types)
 
     @property
     def client_options(self):
@@ -1006,7 +1006,7 @@ class Backend(BaseSQLBackend):
         names, ibis_types = self._adapt_types(cur.description)
         cur.release()
 
-        return sch.Schema(names, ibis_types)
+        return sch.schema(names, ibis_types)
 
     def create_function(self, func, name=None, database=None):
         """Create a function within Impala.
