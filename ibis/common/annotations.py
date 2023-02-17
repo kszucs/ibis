@@ -4,7 +4,7 @@ import functools
 import inspect
 from typing import Any
 
-from ibis.common.validators import Validator, any_, option, tuple_of
+from ibis.common.validators import Validator, any_, dict_of, option, tuple_of
 from ibis.util import DotDict
 
 EMPTY = inspect.Parameter.empty  # marker for missing argument
@@ -97,12 +97,15 @@ class Argument(Annotation):
         return cls(validator, default=None)
 
     @classmethod
-    def variadic(cls, validator=None):
+    def varargs(cls, validator=None):
         """Annotation to mark a variable length positional argument."""
         validator = None if validator is None else tuple_of(validator)
         return cls(validator, kind=VAR_POSITIONAL)
 
-    # TODO: add support for variadic keywords
+    @classmethod
+    def varkwds(cls, validator=None):
+        validator = None if validator is None else dict_of(any_, validator)
+        return cls(validator, kind=VAR_KEYWORD)
 
 
 class Parameter(inspect.Parameter):
@@ -165,22 +168,34 @@ class Signature(inspect.Signature):
 
         # mandatory fields without default values must preceed the optional
         # ones in the function signature, the partial ordering will be kept
+        var_args, var_kwargs = [], []
         new_args, new_kwargs = [], []
-        inherited_args, inherited_kwargs = [], []
+        old_args, old_kwargs = [], []
 
         for name, param in params.items():
-            if name in inherited:
+            if param.kind == VAR_POSITIONAL:
+                var_args.append(param)
+            elif param.kind == VAR_KEYWORD:
+                var_kwargs.append(param)
+            elif name in inherited:
                 if param.default is EMPTY:
-                    inherited_args.append(param)
+                    old_args.append(param)
                 else:
-                    inherited_kwargs.append(param)
+                    old_kwargs.append(param)
             else:
                 if param.default is EMPTY:
                     new_args.append(param)
                 else:
                     new_kwargs.append(param)
 
-        return cls(inherited_args + new_args + new_kwargs + inherited_kwargs)
+        if len(var_args) > 1:
+            raise TypeError('only one variadic positional *args parameter is allowed')
+        if len(var_kwargs) > 1:
+            raise TypeError('only one variadic keywords **kwargs parameter is allowed')
+
+        return cls(
+            old_args + new_args + var_args + new_kwargs + old_kwargs + var_kwargs
+        )
 
     @classmethod
     def from_callable(cls, fn, validators=None, return_validator=None):
@@ -227,9 +242,9 @@ class Signature(inspect.Signature):
                 validator = None
 
             if param.kind is VAR_POSITIONAL:
-                annot = Argument.variadic(validator)
-            # elif param.kind is VAR_KEYWORD:
-            #     annot = Argument.varkwds(validator)
+                annot = Argument.varargs(validator)
+            elif param.kind is VAR_KEYWORD:
+                annot = Argument.varkwds(validator)
             elif param.default is EMPTY:
                 annot = Argument.required(validator)
             else:
@@ -303,7 +318,16 @@ class Signature(inspect.Signature):
             param = self.parameters[name]
             # TODO(kszucs): provide more error context on failure
             this[name] = param.validate(value, this=this)
+        return this
 
+    def validate_nobind(self, **kwargs):
+        """Validate the arguments against the signature without binding."""
+        this = DotDict()
+        for name, param in self.parameters.items():
+            value = kwargs.get(name, param.default)
+            if value is EMPTY:
+                raise TypeError(f"missing required argument `{name!r}`")
+            this[name] = param.validate(value, this=kwargs)
         return this
 
     def validate_return(self, value):
@@ -330,7 +354,8 @@ attribute = Attribute
 argument = Argument
 required = Argument.required
 optional = Argument.optional
-variadic = Argument.variadic
+varargs = Argument.varargs
+varkwds = Argument.varkwds
 default = Argument.default
 
 

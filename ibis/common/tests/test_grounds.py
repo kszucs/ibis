@@ -11,8 +11,10 @@ from ibis.common.annotations import (
     attribute,
     optional,
     required,
-    variadic,
 )
+
+# variadic,
+from ibis.common.annotations import varargs as variadic
 from ibis.common.caching import WeakCache
 from ibis.common.grounds import (
     Annotable,
@@ -67,6 +69,10 @@ class BetweenWithCalculated(Concrete):
     @attribute.default
     def calculated(self):
         return self.value + self.lower
+
+
+class VariadicSum(Concrete):
+    args = variadic(is_int)
 
 
 def test_annotable():
@@ -304,6 +310,38 @@ def test_keyword_argument_reordering():
     assert obj.e == 4
 
 
+def test_variadic_argument_reordering():
+    class Test(Annotable):
+        a = is_int
+        b = is_int
+        args = variadic(is_int)
+
+    class Test2(Test):
+        c = is_int
+        args = variadic(is_int)
+
+    with pytest.raises(TypeError, match="missing a required argument: 'c'"):
+        Test2(1, 2)
+
+    a = Test2(1, 2, 3)
+    assert a.a == 1
+    assert a.b == 2
+    assert a.c == 3
+    assert a.args == ()
+
+    b = Test2(*range(5))
+    assert b.a == 0
+    assert b.b == 1
+    assert b.c == 2
+    assert b.args == (3, 4)
+
+    msg = "only one variadic positional \\*args parameter is allowed"
+    with pytest.raises(TypeError, match=msg):
+
+        class Test3(Test):
+            another_args = variadic(is_int)
+
+
 def test_variadic_argument():
     class Test(Annotable):
         a = is_int
@@ -313,6 +351,28 @@ def test_variadic_argument():
     assert Test(1, 2).args == ()
     assert Test(1, 2, 3).args == (3,)
     assert Test(1, 2, 3, 4, 5).args == (3, 4, 5)
+
+
+def test_concrete_copy_with_variadic_argument():
+    class Test(Annotable):
+        a = is_int
+        b = is_int
+        args = variadic(is_int)
+
+    t = Test(1, 2, 3, 4, 5)
+    assert t.a == 1
+    assert t.b == 2
+    assert t.args == (3, 4, 5)
+
+    u = t.copy(a=6, args=(8, 9, 10))
+    assert u.a == 6
+    assert u.b == 2
+    assert u.args == (8, 9, 10)
+
+
+def test_concrete_pickling_with_variadic_argument():
+    v = VariadicSum(1, 2, 3, 4, 5)
+    assert_pickle_roundtrip(v)
 
 
 def test_dont_copy_default_argument():
@@ -571,7 +631,7 @@ def test_initialized_attribute_mixed_with_classvar():
     class Reduction(Value):
         output_shape = "scalar"
 
-    class variadic(Value):
+    class Variadic(Value):
         @attribute.default
         def output_shape(self):
             if self.arg > 10:
@@ -583,11 +643,11 @@ def test_initialized_attribute_mixed_with_classvar():
     assert r.output_shape == "scalar"
     assert "output_shape" not in r.__slots__
 
-    v = variadic(1)
+    v = Variadic(1)
     assert v.output_shape == "scalar"
     assert "output_shape" in v.__slots__
 
-    v = variadic(100)
+    v = Variadic(100)
     assert v.output_shape == "columnar"
     assert "output_shape" in v.__slots__
 
