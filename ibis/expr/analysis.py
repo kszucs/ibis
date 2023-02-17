@@ -88,7 +88,7 @@ class ScalarAggregate:
             self._visit(arg.to_expr()) if isinstance(arg, ops.Node) else arg
             for arg in node.args
         )
-        new_node = node.new(*new_args)
+        new_node = node.__class__(*new_args)
         new_expr = new_node.to_expr()
 
         if expr.has_name():
