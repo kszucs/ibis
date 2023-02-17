@@ -54,14 +54,14 @@ class AnnotableMeta(BaseMeta):
             if name in dct:
                 dct[name] = Argument.default(dct[name], validator)
             else:
-                dct[name] = Argument.mandatory(validator)
+                dct[name] = Argument.required(validator)
 
         # collect the newly defined annotations
         slots = list(dct.pop('__slots__', []))
         namespace, arguments = {}, {}
         for name, attrib in dct.items():
             if isinstance(attrib, Validator):
-                attrib = Argument.mandatory(attrib)
+                attrib = Argument.required(attrib)
 
             if isinstance(attrib, Argument):
                 arguments[name] = attrib
@@ -94,6 +94,16 @@ class Annotable(Base, metaclass=AnnotableMeta):
     def __create__(cls, *args, **kwargs) -> Annotable:
         # construct the instance by passing the validated keyword arguments
         kwargs = cls.__signature__.validate(*args, **kwargs)
+        return super().__create__(**kwargs)
+
+    @classmethod
+    def __recreate__(cls, **kwargs) -> Annotable:
+        # bypass signature binding by requiring keyword arguments only
+        for name, param in cls.__signature__.parameters.items():
+            value = kwargs.get(name, param.default)
+            if value is EMPTY:
+                raise TypeError(f"missing required argument {name!r}")
+            kwargs[name] = param.validator(value, this=kwargs)
         return super().__create__(**kwargs)
 
     def __init__(self, **kwargs) -> None:

@@ -9,8 +9,9 @@ from ibis.common.annotations import (
     Signature,
     argument,
     attribute,
-    mandatory,
     optional,
+    required,
+    variadic,
 )
 from ibis.common.caching import WeakCache
 from ibis.common.grounds import (
@@ -223,22 +224,22 @@ def test_signature_inheritance():
 
     assert IntBinop.__signature__ == Signature(
         [
-            Parameter('left', annotation=mandatory(is_int)),
-            Parameter('right', annotation=mandatory(is_int)),
+            Parameter('left', annotation=required(is_int)),
+            Parameter('right', annotation=required(is_int)),
         ]
     )
 
     assert FloatAddRhs.__signature__ == Signature(
         [
-            Parameter('left', annotation=mandatory(is_int)),
-            Parameter('right', annotation=mandatory(is_float)),
+            Parameter('left', annotation=required(is_int)),
+            Parameter('right', annotation=required(is_float)),
         ]
     )
 
     assert FloatAddClip.__signature__ == Signature(
         [
-            Parameter('left', annotation=mandatory(is_float)),
-            Parameter('right', annotation=mandatory(is_float)),
+            Parameter('left', annotation=required(is_float)),
+            Parameter('right', annotation=required(is_float)),
             Parameter('clip_lower', annotation=optional(is_int, default=0)),
             Parameter('clip_upper', annotation=optional(is_int, default=10)),
         ]
@@ -246,8 +247,8 @@ def test_signature_inheritance():
 
     assert IntAddClip.__signature__ == Signature(
         [
-            Parameter('left', annotation=mandatory(is_int)),
-            Parameter('right', annotation=mandatory(is_int)),
+            Parameter('left', annotation=required(is_int)),
+            Parameter('right', annotation=required(is_int)),
             Parameter('clip_lower', annotation=optional(is_int, default=0)),
             Parameter('clip_upper', annotation=optional(is_int, default=10)),
         ]
@@ -301,6 +302,17 @@ def test_keyword_argument_reordering():
     obj = Beta(1, 2, 3, 4, 5)
     assert obj.d == 5
     assert obj.e == 4
+
+
+def test_variadic_argument():
+    class Test(Annotable):
+        a = is_int
+        b = is_int
+        args = variadic(is_int)
+
+    assert Test(1, 2).args == ()
+    assert Test(1, 2, 3).args == (3,)
+    assert Test(1, 2, 3, 4, 5).args == (3, 4, 5)
 
 
 def test_dont_copy_default_argument():
