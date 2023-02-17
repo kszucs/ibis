@@ -78,23 +78,23 @@ class Argument(Annotation):
         self._validator = validator
 
     @classmethod
-    def required(cls, validator=None):
+    def required(cls, validator=None, kind=POSITIONAL_OR_KEYWORD):
         """Annotation to mark a mandatory argument."""
-        return cls(validator)
+        return cls(validator=validator, kind=kind)
 
     @classmethod
-    def default(cls, default, validator=None):
+    def default(cls, default, validator=None, kind=POSITIONAL_OR_KEYWORD):
         """Annotation to allow missing arguments with a default value."""
-        return cls(validator, default=default)
+        return cls(validator=validator, default=default, kind=kind)
 
     @classmethod
-    def optional(cls, validator=None, default=None):
+    def optional(cls, validator=None, default=None, kind=POSITIONAL_OR_KEYWORD):
         """Annotation to allow and treat `None` values as missing arguments."""
         if validator is None:
             validator = option(any_, default=default)
         else:
             validator = option(validator, default=default)
-        return cls(validator, default=None)
+        return cls(validator=validator, default=None, kind=kind)
 
     @classmethod
     def varargs(cls, validator=None):
@@ -103,7 +103,7 @@ class Argument(Annotation):
         return cls(validator, kind=VAR_POSITIONAL)
 
     @classmethod
-    def varkwds(cls, validator=None):
+    def varkwargs(cls, validator=None):
         validator = None if validator is None else frozendict_of(any_, validator)
         return cls(validator, kind=VAR_KEYWORD)
 
@@ -174,8 +174,12 @@ class Signature(inspect.Signature):
 
         for name, param in params.items():
             if param.kind == VAR_POSITIONAL:
+                if var_args:
+                    raise TypeError('only one variadic *args parameter is allowed')
                 var_args.append(param)
             elif param.kind == VAR_KEYWORD:
+                if var_kwargs:
+                    raise TypeError('only one variadic **kwargs parameter is allowed')
                 var_kwargs.append(param)
             elif name in inherited:
                 if param.default is EMPTY:
@@ -187,11 +191,6 @@ class Signature(inspect.Signature):
                     new_args.append(param)
                 else:
                     new_kwargs.append(param)
-
-        if len(var_args) > 1:
-            raise TypeError('only one variadic positional *args parameter is allowed')
-        if len(var_kwargs) > 1:
-            raise TypeError('only one variadic keywords **kwargs parameter is allowed')
 
         return cls(
             old_args + new_args + var_args + new_kwargs + old_kwargs + var_kwargs
@@ -229,9 +228,6 @@ class Signature(inspect.Signature):
 
         parameters = []
         for param in sig.parameters.values():
-            if param.kind in {POSITIONAL_ONLY, KEYWORD_ONLY}:
-                raise TypeError(f"unsupported parameter kind {param.kind} in {fn}")
-
             if param.name in validators:
                 validator = validators[param.name]
             elif param.annotation is not EMPTY:
@@ -244,11 +240,11 @@ class Signature(inspect.Signature):
             if param.kind is VAR_POSITIONAL:
                 annot = Argument.varargs(validator)
             elif param.kind is VAR_KEYWORD:
-                annot = Argument.varkwds(validator)
+                annot = Argument.varkwargs(validator)
             elif param.default is EMPTY:
-                annot = Argument.required(validator)
+                annot = Argument.required(validator, kind=param.kind)
             else:
-                annot = Argument.default(param.default, validator)
+                annot = Argument.default(param.default, validator, kind=param.kind)
 
             parameters.append(Parameter(param.name, annot))
 
@@ -288,6 +284,10 @@ class Signature(inspect.Signature):
                 args.extend(value)
             elif param.kind is VAR_KEYWORD:
                 kwargs.update(value)
+            elif param.kind is KEYWORD_ONLY:
+                kwargs[name] = value
+            elif param.kind is POSITIONAL_ONLY:
+                args.append(value)
             else:
                 raise TypeError(f"unsupported parameter kind {param.kind}")
         return tuple(args), kwargs
@@ -350,13 +350,13 @@ class Signature(inspect.Signature):
 
 
 # aliases for convenience
-attribute = Attribute
 argument = Argument
-required = Argument.required
-optional = Argument.optional
-varargs = Argument.varargs
-varkwds = Argument.varkwds
+attribute = Attribute
 default = Argument.default
+optional = Argument.optional
+required = Argument.required
+varargs = Argument.varargs
+varkwargs = Argument.varkwargs
 
 
 # TODO(kszucs): try to cache validator objects
@@ -435,9 +435,13 @@ def annotated(_1=None, _2=None, _3=None, **kwargs):
 
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
+        # 1. Validate the passed arguments
         values = sig.validate(*args, **kwargs)
+        # 2. Reconstruction of the original arguments
         args, kwargs = sig.unbind(values)
+        # 3. Call the function with the validated arguments
         result = func(*args, **kwargs)
+        # 4. Validate the return value
         return sig.validate_return(result)
 
     wrapped.__signature__ = sig

@@ -91,15 +91,15 @@ class Annotable(Base, metaclass=AnnotableMeta):
     """Base class for objects with custom validation rules."""
 
     @classmethod
-    def __create__(cls, *args, **kwargs) -> Annotable:
-        # construct the instance by passing the validated keyword arguments
-        kwargs = cls.__signature__.validate(*args, **kwargs)
+    def from_dict(cls, dct):
+        # bypass signature binding
+        kwargs = cls.__signature__.validate_nobind(dct)
         return super().__create__(**kwargs)
 
     @classmethod
-    def __recreate__(cls, kwargs) -> Annotable:
-        # bypass signature binding by requiring keyword arguments only
-        kwargs = cls.__signature__.validate_nobind(**kwargs)
+    def __create__(cls, *args, **kwargs) -> Annotable:
+        # construct the instance by passing the validated keyword arguments
+        kwargs = cls.__signature__.validate(*args, **kwargs)
         return super().__create__(**kwargs)
 
     def __init__(self, **kwargs) -> None:
@@ -110,7 +110,8 @@ class Annotable(Base, metaclass=AnnotableMeta):
         # post-initialize the remaining attributes
         for name, field in self.__attributes__.items():
             if isinstance(field, Attribute):
-                if (value := field.initialize(self)) is not EMPTY:
+                value = field.initialize(self)
+                if value is not EMPTY:
                     object.__setattr__(self, name, value)
 
     def __setattr__(self, name, value) -> None:
@@ -228,7 +229,7 @@ class Concrete(Immutable, Comparable, Annotable):
         # assuming immutability and idempotency of the __init__ method, we can
         # reconstruct the instance from the arguments without additional attributes
         state = dict(zip(self.__argnames__, self.__args__))
-        return (self.__recreate__, (state,))
+        return (self.from_dict, (state,))
 
     def __hash__(self):
         return self.__precomputed_hash__
@@ -247,4 +248,4 @@ class Concrete(Immutable, Comparable, Annotable):
     def copy(self, **overrides):
         kwargs = dict(zip(self.__argnames__, self.__args__))
         kwargs.update(overrides)
-        return self.__recreate__(kwargs)
+        return self.from_dict(kwargs)
