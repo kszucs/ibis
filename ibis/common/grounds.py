@@ -91,19 +91,19 @@ class Annotable(Base, metaclass=AnnotableMeta):
     """Base class for objects with custom validation rules."""
 
     @classmethod
-    def __create__(cls, *args, **kwargs) -> Annotable:
-        # construct the instance by passing the validated keyword arguments
-        kwargs = cls.__signature__.validate(*args, **kwargs)
-        return super().__create__(**kwargs)
-
-    @classmethod
     def __recreate__(cls, **kwargs) -> Annotable:
         # bypass signature binding by requiring keyword arguments only
         for name, param in cls.__signature__.parameters.items():
             value = kwargs.get(name, param.default)
             if value is EMPTY:
-                raise TypeError(f"missing required argument {name!r}")
-            kwargs[name] = param.validator(value, this=kwargs)
+                raise TypeError(f"missing required argument `{name!r}`")
+            kwargs[name] = param.validate(value, this=kwargs)
+        return super().__create__(**kwargs)
+
+    @classmethod
+    def __create__(cls, *args, **kwargs) -> Annotable:
+        # construct the instance by passing the validated keyword arguments
+        kwargs = cls.__signature__.validate(*args, **kwargs)
         return super().__create__(**kwargs)
 
     def __init__(self, **kwargs) -> None:
@@ -250,4 +250,4 @@ class Concrete(Immutable, Comparable, Annotable):
     def copy(self, **overrides):
         kwargs = dict(zip(self.__argnames__, self.__args__))
         kwargs.update(overrides)
-        return self.__class__(**kwargs)
+        return self.__recreate__(**kwargs)
