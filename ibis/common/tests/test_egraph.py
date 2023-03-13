@@ -21,15 +21,15 @@ a, b, c = Variable('a'), Variable('b'), Variable('c')
 
 def test_simple():
     print()
-    pprint(seven.op())
+    pprint(seven_.op())
 
     eg = EGraph()
-    eg.add(seven.op())
+    eg.add(seven_.op())
     print(eg)
 
     p = ops.Add[a, ops.Multiply[b, ops.Literal[c, dt.int8]]]
     print(eg.match(p))
 
-    p = ops.Multiply[a, 2]
+    p = ops.Multiply[a, 1]
     result = eg.match(p)
     print(result)

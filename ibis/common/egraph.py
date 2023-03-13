@@ -10,50 +10,75 @@ from ibis.common.graph import Node
 
 # consider to use an EClass(id, nodes) dataclass
 
+class ENode:
+    __slots__ = ("head", "args")
+
+    def __init__(self, head, args):
+        self.head = head
+        self.args = args
+
 
 class EGraph:
-    __slots__ = ("_tables", "_counter", "_nodes", "_parents", "_classes")
+    __slots__ = ("_nodes", "_counter", "_enodes", "_eparents", "_eclasses", "_etables")
 
     def __init__(self):
+        # store the nodes before converting them to enodes, so we can spare the initial
+        # node traversal and omit the creation of enodes
         self._nodes = {}
-        self._tables = collections.defaultdict(dict)
+        # counter for generating new eclass ids
         self._counter = itertools.count()
-        self._parents = {}
-        self._classes = {}
+        # map enodes to eclass ids so we can check if an enode is already in the egraph
+        self._enodes = {}
+        # map eclass ids to their parent eclass id, this is required for the union-find
+        self._eparents = {}
+        # map eclass ids to their eclass
+        self._eclasses = {}
+        # map enode heads to their eclass ids and their arguments, this is required for
+        # the relational e-matching
+        self._etables = collections.defaultdict(dict)
 
     def __repr__(self):
-        return f"EGraph({self._classes})"
+        return f"EGraph({self._eclasses})"
 
-    def add(self, node):
-        if id := self._nodes.get(node):
-            return id
-
+    def _create_enode(self, node):
         head = type(node)
         args = tuple(
             self.add(arg) if isinstance(arg, Node) else Atom(arg)
             for arg in node.__args__
         )
+        return ENode(head, args)
+
+    def add(self, node):
+        if isinstance(node, Node):
+            enode = self._nodes.get(node) or self._create_enode(node)
+            self._nodes[node] = enode
+        elif isinstance(node, ENode):
+            enode = node
+        else:
+            raise TypeError("`node` must be an instance of ibis.common.graph.Node")
+
+        if id := self._enodes.get(enode):
+            return id
 
         id = next(self._counter)
-        self._nodes[node] = id
-        self._parents[id] = id
-        self._classes[id] = {id}
-        self._tables[head][id] = args
-
+        self._enodes[enode] = id
+        self._eparents[id] = id
+        self._eclasses[id] = {id}
+        self._etables[enode.head][id] = enode.args
         return id
 
     def find(self, id):
-        return self._parents[id]
+        return self._eparents[id]
 
     def union(self, id1, id2):
-        id1 = self._parents[id1]
-        id2 = self._parents[id2]
+        id1 = self._eparents[id1]
+        id2 = self._eparents[id2]
         if id1 == id2:
             return id1
 
         # Merge the smaller eclass into the larger one
-        class1 = self._classes[id1]
-        class2 = self._classes[id2]
+        class1 = self._eclasses[id1]
+        class2 = self._eclasses[id2]
         if len(class1) > len(class2):
             id1, id2 = id2, id1
             class1, class2 = class2, class1
@@ -63,7 +88,7 @@ class EGraph:
         class1.clear()
 
         # Update the parent pointer
-        self._parents[id1] = id2
+        self._eparents[id1] = id2
 
         return id2
 
@@ -73,24 +98,23 @@ class EGraph:
 
         subst = {}
         for arg, patarg in zip(args, patargs):
-            print(arg, patarg)
             if isinstance(patarg, Variable):
                 if isinstance(arg, Atom):
                     subst[patarg.name] = arg
                 else:
-                    subst[patarg.name] = self._parents[arg]
+                    subst[patarg.name] = self._eparents[arg]
             elif isinstance(arg, Atom):
                 if patarg != arg.value:
                     return None
             else:
-                if self._parents[arg] != self._parents[patarg]:
+                if self._eparents[arg] != self._eparents[patarg]:
                     return None
 
         return subst
 
     def match(self, pattern):
         print()
-        pprint(self._tables)
+        pprint(self._etables)
         patterns = dict(reversed(list(pattern.flatten())))
         print()
         print("PATTERNS:")
@@ -100,7 +124,7 @@ class EGraph:
         for auxvar, pattern in patterns.items():
             print()
             print(auxvar, "<~", pattern)
-            table = self._tables[pattern.head]
+            table = self._etables[pattern.head]
 
             if auxvar is None:
                 for id, args in table.items():
@@ -120,6 +144,12 @@ class EGraph:
 
         print('----------')
         return matches
+
+    def apply(self, rewrite):
+        for id, subst in self.match(rewrite.lhs).items():
+            new = rewrite.rhs.substitute(subst)
+            newid = self._add(new.head, new.args)
+            self.union(id, newid)
 
 
 class Atom:
@@ -169,17 +199,29 @@ class Pattern:
                 args.append(aux)
             else:
                 args.append(arg)
-
         yield (var, Pattern(self.head, args))
+
+    def substitute(self, subst):
+        args = []
+        for arg in self.args:
+            if isinstance(arg, Variable):
+                args.append(subst[arg.name])
+            elif isinstance(arg, Pattern):
+                args.append(arg.substitute(subst))
+            else:
+                args.append(arg)
+        return ENode(self.head, args)
 
 
 class Rewrite:
-    __slots__ = ("pattern", "rewrite")
+    __slots__ = ("lhs", "rhs")
 
-    def __init__(self, pattern, rewrite):
-        self.pattern = pattern
-        self.rewrite = rewrite
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
 
 
+
+# ops.Multiply[a, b] => ops.Add[ops.Multiply[a, b], ops.Multiply[a, b]]
 # SyntacticPattern
 # DynamicPattern
