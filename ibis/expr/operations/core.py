@@ -7,6 +7,7 @@ from public import public
 
 import ibis.expr.rules as rlz
 from ibis import util
+from ibis.common.egraph import Pattern
 from ibis.common.graph import Node as Traversable
 from ibis.common.grounds import Concrete
 
@@ -37,6 +38,10 @@ class Node(Concrete, Traversable):
 
     def __rich_repr__(self):
         return zip(self.__argnames__, self.__args__)
+
+    def __class_getitem__(cls, args):
+        args = util.promote_tuple(args)
+        return Pattern(cls, args)
 
 
 @public
