@@ -7,7 +7,8 @@ import itertools
 from pprint import pprint
 
 from ibis.common.graph import Node
-
+from ibis.util import promote_list
+from bidict import bidict
 # consider to use an EClass(id, nodes) dataclass
 
 class ENode:
@@ -28,7 +29,7 @@ class EGraph:
         # counter for generating new eclass ids
         self._counter = itertools.count()
         # map enodes to eclass ids so we can check if an enode is already in the egraph
-        self._enodes = {}
+        self._enodes = bidict()
         # map eclass ids to their parent eclass id, this is required for the union-find
         self._eparents = {}
         # map eclass ids to their eclass
@@ -90,6 +91,13 @@ class EGraph:
         # Update the parent pointer
         self._eparents[id1] = id2
 
+        # Remove the eclass from the eclasses dict
+        del self._eclasses[id1]
+
+        # Remove the enode from the corresponding etable
+        enode = self._enodes.inverse[id1]
+        del self._etables[enode.head][id1]
+
         return id2
 
     def _match_args(self, args, patargs):
@@ -113,24 +121,24 @@ class EGraph:
         return subst
 
     def match(self, pattern):
-        print()
-        pprint(self._etables)
+        # print()
+        # pprint(self._etables)
         patterns = dict(reversed(list(pattern.flatten())))
-        print()
-        print("PATTERNS:")
-        pprint(patterns)
+        # print()
+        # print("PATTERNS:")
+        # pprint(patterns)
 
         matches = {}
         for auxvar, pattern in patterns.items():
-            print()
-            print(auxvar, "<~", pattern)
+            # print()
+            # print(auxvar, "<~", pattern)
             table = self._etables[pattern.head]
 
             if auxvar is None:
                 for id, args in table.items():
                     if subst := self._match_args(args, pattern.args):
                         matches[id] = subst
-                print(matches)
+                #print(matches)
             else:
                 newmatches = {}
                 for id, subst in matches.items():
@@ -140,16 +148,20 @@ class EGraph:
                             newmatches[id] = {**subst, **newsubst}
 
                 matches = newmatches
-                print(matches)
+                #print(matches)
 
-        print('----------')
+        #print('----------')
         return matches
 
-    def apply(self, rewrite):
-        for id, subst in self.match(rewrite.lhs).items():
-            new = rewrite.rhs.substitute(subst)
-            newid = self._add(new.head, new.args)
-            self.union(id, newid)
+    def apply(self, rewrites):
+        for rewrite in promote_list(rewrites):
+            for id, subst in self.match(rewrite.lhs).items():
+                enode = rewrite.rhs.substitute(subst)
+                if isinstance(enode, ENode):
+                    otherid = self.add(enode)
+                else:
+                    otherid = enode
+                self.union(id, otherid)
 
 
 class Atom:
@@ -177,6 +189,9 @@ class Variable:
     def __hash__(self):
         return hash((self.__class__, self.name))
 
+    def substitute(self, subst):
+        return subst[self.name]
+
 
 class Pattern:
     __slots__ = ("head", "args")
@@ -189,6 +204,9 @@ class Pattern:
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
         return f"{self.head.__name__}({argstring})"
+
+    def __rshift__(self, rhs):
+        return Rewrite(self, rhs)
 
     def flatten(self, var=None):
         args = []
@@ -203,10 +221,10 @@ class Pattern:
 
     def substitute(self, subst):
         args = []
+        # print('=============')
+        # print(self)
         for arg in self.args:
-            if isinstance(arg, Variable):
-                args.append(subst[arg.name])
-            elif isinstance(arg, Pattern):
+            if isinstance(arg, (Variable, Pattern)):
                 args.append(arg.substitute(subst))
             else:
                 args.append(arg)
@@ -219,6 +237,10 @@ class Rewrite:
     def __init__(self, lhs, rhs):
         self.lhs = lhs
         self.rhs = rhs
+
+    def __repr__(self):
+        return f"{self.lhs} >> {self.rhs}"
+
 
 
 
