@@ -1,26 +1,34 @@
 import collections
 import itertools
 
-# class EClass(set[int]):
-#     pass
-# from rich.pretty import pprint
+
 from pprint import pprint
+
+from bidict import bidict
 
 from ibis.common.graph import Node
 from ibis.util import promote_list
-from bidict import bidict
+from typing import NamedTuple
+
 # consider to use an EClass(id, nodes) dataclass
+
 
 class ENode:
     __slots__ = ("head", "args")
 
     def __init__(self, head, args):
         self.head = head
-        self.args = args
+        self.args = tuple(args)
 
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
         return f"ENode({self.head.__name__}, {argstring})"
+
+    def __eq__(self, other):
+        return self.head == other.head and self.args == other.args
+
+    def __hash__(self):
+        return hash((self.__class__, self.head, self.args))
 
     @classmethod
     def from_node(cls, egraph, node):
@@ -36,8 +44,10 @@ class ENode:
 
 
 
+# move every E* into the Egraph so its API only uses Nodes
+
 class EGraph:
-    __slots__ = ("_nodes", "_counter", "_enodes", "_eparents", "_eclasses", "_etables")
+    __slots__ = ("_nodes", "_counter", "_enodes", "_eparents", "_eclasses", "_etables", "_saturated")
 
     def __init__(self):
         # store the nodes before converting them to enodes, so we can spare the initial
@@ -45,6 +55,7 @@ class EGraph:
         self._nodes = {}
         # counter for generating new eclass ids
         self._counter = itertools.count()
+        self._saturated = False
         # map enodes to eclass ids so we can check if an enode is already in the egraph
         self._enodes = bidict()
         # map eclass ids to their parent eclass id, this is required for the union-find
@@ -75,13 +86,14 @@ class EGraph:
         return enode.head(*args)
 
     def add(self, node):
+
         if isinstance(node, Node):
             enode = self._nodes.get(node) or ENode.from_node(self, node)
             self._nodes[node] = enode
         elif isinstance(node, ENode):
             enode = node
         else:
-            raise TypeError("`node` must be an instance of ibis.common.graph.Node")
+            raise TypeError(f"`node` must be an instance of ibis.common.graph.Node but got {type(node)}")
 
         if (id := self._enodes.get(enode)) is not None:
             return id
@@ -92,7 +104,7 @@ class EGraph:
         self._enodes[enode] = id
         self._eparents[id] = id
         self._eclasses[id] = {id}
-        self._etables[enode.head][id] = enode.args
+        self._etables[enode.head][id] = tuple(enode.args)
         return id
 
     def find(self, id):
@@ -119,11 +131,11 @@ class EGraph:
         self._eparents[id1] = id2
 
         # Remove the eclass from the eclasses dict
-        del self._eclasses[id1]
+        #del self._eclasses[id1]
 
-        # Remove the enode from the corresponding etable
-        enode = self._enodes.inverse[id1]
-        del self._etables[enode.head][id1]
+        # Remove the enode from the corresponding etable (should remove all enodes from the merged eclass I guess)
+        # enode = self._enodes.inverse[id1]
+        # del self._etables[enode.head][id1]
 
         return id2
 
@@ -148,8 +160,6 @@ class EGraph:
         return subst
 
     def match(self, pattern):
-        # print()
-        # pprint(self._etables)
         # patterns could be reordered to match on the most selective one first
         patterns = dict(reversed(list(pattern.flatten())))
         # print()
@@ -166,30 +176,55 @@ class EGraph:
                 for id, args in table.items():
                     if (subst := self._match_args(args, pattern.args)) is not None:
                         matches[id] = subst
-                #print(matches)
+                # print(matches)
             else:
                 newmatches = {}
                 for id, subst in matches.items():
                     sid = subst[auxvar.name]
                     if args := table.get(sid):
-                        if (newsubst := self._match_args(args, pattern.args)) is not None:
+                        if (
+                            newsubst := self._match_args(args, pattern.args)
+                        ) is not None:
                             newmatches[id] = {**subst, **newsubst}
 
                 matches = newmatches
-                #print(matches)
 
-        #print('----------')
         return matches
 
     def apply(self, rewrites):
+        n_changes = 0
         for rewrite in promote_list(rewrites):
+            # print('--------------')
+            # print(self._etables)
+            # print(rewrite)
             for id, subst in self.match(rewrite.lhs).items():
-                enode = rewrite.rhs.substitute(subst)
-                if isinstance(enode, ENode):
-                    otherid = self.add(enode)
-                else:
-                    otherid = enode
+                # print(id, subst)
+                if isinstance(rewrite.rhs, (Variable, Pattern)):
+                    enode = rewrite.rhs.substitute(subst)
+                    if isinstance(enode, ENode):
+                        otherid = self.add(enode)
+                    else:
+                        otherid = enode
+                elif isinstance(rewrite.rhs, Node):
+                    otherid = self.add(rewrite.rhs)
+
+                print("UNION", id, otherid)
                 self.union(id, otherid)
+
+                # if id != otherid:
+                #     n_changes += 1
+                # #print(self._etables)
+
+        # print(n_changes)
+        # if n_changes == 0:
+        #     print("SATURATED")
+        #     self._saturated = True
+
+    def run(self, rewrites, n=1):
+        if self._saturated:
+            return
+        for i in range(n):
+            self.apply(rewrites)
 
     def extract(self, node):
         if isinstance(node, Node):
@@ -208,10 +243,13 @@ class Atom:
         self.value = value
 
     def __repr__(self):
-        return f"Atom({self.value})"
+        return f"`{self.value}`"
 
     def __hash__(self):
         return hash((self.__class__, self.value))
+
+    def __eq__(self, other):
+        return self.value == other.value
 
 
 class Variable:
@@ -222,6 +260,9 @@ class Variable:
 
     def __repr__(self):
         return f"${self.name}"
+
+    def __eq__(self, other):
+        return self.name == other.name
 
     def __hash__(self):
         return hash((self.__class__, self.name))
@@ -236,7 +277,7 @@ class Pattern:
 
     def __init__(self, head, args):
         self.head = head
-        self.args = args
+        self.args = tuple(args)
 
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
@@ -244,6 +285,12 @@ class Pattern:
 
     def __rshift__(self, rhs):
         return Rewrite(self, rhs)
+
+    def __eq__(self, other):
+        return self.head == other.head and self.args == other.args
+
+    def __hash__(self):
+        return hash((self.__class__, self.head, self.args))
 
     def flatten(self, var=None):
         args = []
@@ -262,19 +309,26 @@ class Pattern:
             if isinstance(arg, (Variable, Pattern)):
                 args.append(arg.substitute(subst))
             else:
-                args.append(arg)
+                args.append(Atom(arg))
         return ENode(self.head, args)
 
 
 class Rewrite:
-    __slots__ = ("lhs", "rhs")
+    __slots__ = ("lhs", "rhs", "name")
 
-    def __init__(self, lhs, rhs):
+    def __init__(self, lhs, rhs, name=None):
         self.lhs = lhs
         self.rhs = rhs
+        self.name = name
 
     def __repr__(self):
         return f"{self.lhs} >> {self.rhs}"
+
+    def __eq__(self, other):
+        return self.lhs == other.lhs and self.rhs == other.rhs
+
+    def __hash__(self):
+        return hash((self.__class__, self.lhs, self.rhs))
 
 
 
