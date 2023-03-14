@@ -18,6 +18,23 @@ class ENode:
         self.head = head
         self.args = args
 
+    def __repr__(self):
+        argstring = ", ".join(map(repr, self.args))
+        return f"ENode({self.head.__name__}, {argstring})"
+
+    @classmethod
+    def from_node(cls, egraph, node):
+        head = type(node)
+        args = tuple(
+            egraph.add(arg) if isinstance(arg, Node) else Atom(arg)
+            for arg in node.__args__
+        )
+        return cls(head, args)
+
+    def to_node(self, egraph):
+        return self.head(*self.args)
+
+
 
 class EGraph:
     __slots__ = ("_nodes", "_counter", "_enodes", "_eparents", "_eclasses", "_etables")
@@ -41,27 +58,37 @@ class EGraph:
     def __repr__(self):
         return f"EGraph({self._eclasses})"
 
-    def _create_enode(self, node):
-        head = type(node)
-        args = tuple(
-            self.add(arg) if isinstance(arg, Node) else Atom(arg)
-            for arg in node.__args__
-        )
-        return ENode(head, args)
+    def _create_node(self, id):
+        id = self._eparents[id]
+        eclass = self._eclasses[id]
+        enodes = [self._enodes.inverse[id] for id in eclass]
+        enode = enodes[0]
+
+        args = []
+        for arg in enode.args:
+            if isinstance(arg, Atom):
+                args.append(arg.value)
+            else:
+                arg = self._create_node(arg)
+                args.append(arg)
+
+        return enode.head(*args)
 
     def add(self, node):
         if isinstance(node, Node):
-            enode = self._nodes.get(node) or self._create_enode(node)
+            enode = self._nodes.get(node) or ENode.from_node(self, node)
             self._nodes[node] = enode
         elif isinstance(node, ENode):
             enode = node
         else:
             raise TypeError("`node` must be an instance of ibis.common.graph.Node")
 
-        if id := self._enodes.get(enode):
+        if (id := self._enodes.get(enode)) is not None:
             return id
+        assert enode not in self._enodes
 
         id = next(self._counter)
+
         self._enodes[enode] = id
         self._eparents[id] = id
         self._eclasses[id] = {id}
@@ -123,6 +150,7 @@ class EGraph:
     def match(self, pattern):
         # print()
         # pprint(self._etables)
+        # patterns could be reordered to match on the most selective one first
         patterns = dict(reversed(list(pattern.flatten())))
         # print()
         # print("PATTERNS:")
@@ -136,7 +164,7 @@ class EGraph:
 
             if auxvar is None:
                 for id, args in table.items():
-                    if subst := self._match_args(args, pattern.args):
+                    if (subst := self._match_args(args, pattern.args)) is not None:
                         matches[id] = subst
                 #print(matches)
             else:
@@ -144,7 +172,7 @@ class EGraph:
                 for id, subst in matches.items():
                     sid = subst[auxvar.name]
                     if args := table.get(sid):
-                        if newsubst := self._match_args(args, pattern.args):
+                        if (newsubst := self._match_args(args, pattern.args)) is not None:
                             newmatches[id] = {**subst, **newsubst}
 
                 matches = newmatches
@@ -162,6 +190,15 @@ class EGraph:
                 else:
                     otherid = enode
                 self.union(id, otherid)
+
+    def extract(self, node):
+        if isinstance(node, Node):
+            enode = self._nodes.get(node)
+            id = self._enodes[enode]
+        elif isinstance(node, ENode):
+            id = self._enodes[node]
+
+        return self._create_node(id)
 
 
 class Atom:
@@ -221,8 +258,6 @@ class Pattern:
 
     def substitute(self, subst):
         args = []
-        # print('=============')
-        # print(self)
         for arg in self.args:
             if isinstance(arg, (Variable, Pattern)):
                 args.append(arg.substitute(subst))
