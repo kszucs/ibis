@@ -123,12 +123,13 @@ class EGraph:
             id1, id2 = id2, id1
             class1, class2 = class2, class1
 
+        # Update the parent pointer
+        for id in class1:
+            self._eparents[id] = id2
+
         # Do the actual merging and clear the other eclass
         class2 |= class1
         class1.clear()
-
-        # Update the parent pointer
-        self._eparents[id1] = id2
 
         # Remove the eclass from the eclasses dict
         #del self._eclasses[id1]
@@ -230,6 +231,8 @@ class EGraph:
         if isinstance(node, Node):
             enode = self._nodes.get(node)
             id = self._enodes[enode]
+            # print(id)
+            # print(print(self._eparents[self._eparents[id]]))
         elif isinstance(node, ENode):
             id = self._enodes[node]
 
