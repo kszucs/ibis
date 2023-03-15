@@ -139,7 +139,7 @@ class EGraph:
         # Merge the smaller eclass into the larger one
         class1 = self._eclasses[id1]
         class2 = self._eclasses[id2]
-        if len(class1) > len(class2):
+        if len(class1) >= len(class2):
             id1, id2 = id2, id1
             class1, class2 = class2, class1
 
@@ -172,7 +172,6 @@ class EGraph:
                 elif isinstance(arg, ENode):
                     subst[patarg.name] = arg
                 else:
-                    # this branch shouldn't be needed perhaps
                     subst[patarg.name] = self._eparents[arg]
             elif isinstance(arg, Atom):
                 if patarg != arg.value:

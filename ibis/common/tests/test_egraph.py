@@ -101,25 +101,24 @@ def test_simple_2():
 def test_simple_3():
     rules = [
         Mul[a, b] >> Mul[b, a],
-        Mul[a, 1] >> a,
+        Mul[a, Lit[1]] >> a,
     ]
 
-    node = Mul(2, Mul(1, 3))
-    expected = Mul(2, 3)
+    node = Mul(Lit(2), Mul(Lit(1), Lit(3)))
+    expected = Mul(Lit(2), Lit(3))
     assert simplify(node, rules, iters=20000) == expected
 
 
-math_rules = [
-    Add[a, b] >> Add[b, a],
-    Add[a, Add[b, c]] >> Add[Add[a, b], c]
-]
-
-
 def test_math_associate_adds():
-    # expr_a = Add(1, Add(2, Add(3, Add(4, Add(5, Add(6, 7))))))
-    # expr_b = Add(7, Add(6, Add(5, Add(4, Add(3, Add(2, 1))))))
+    math_rules = [
+        Add[a, b] >> Add[b, a],
+        Add[a, Add[b, c]] >> Add[Add[a, b], c]
+    ]
 
-    expr_a = Add(0, Add(1, Add(2, 3)))
-    expr_b = Add(Add(0, 2), Add(3, 1))
+    expr_a = Add(1, Add(2, Add(3, Add(4, Add(5, Add(6, 7))))))
+    expr_b = Add(7, Add(6, Add(5, Add(4, Add(3, Add(2, 1))))))
+    assert is_equal(expr_a, expr_b, math_rules, iters=500)
 
+    expr_a = Add(6, Add(Add(1, 5), Add(0, Add(4, Add(2, 3)))))
+    expr_b = Add(6, Add(Add(4, 5), Add(Add(0, 2), Add(3, 1))))
     assert is_equal(expr_a, expr_b, math_rules, iters=500)
