@@ -139,7 +139,7 @@ class EGraph:
         # Merge the smaller eclass into the larger one
         class1 = self._eclasses[id1]
         class2 = self._eclasses[id2]
-        if len(class1) >= len(class2):
+        if len(class1) >= len(class2):  # >= is important
             id1, id2 = id2, id1
             class1, class2 = class2, class1
 
@@ -220,6 +220,7 @@ class EGraph:
         n_changes = 0
         for rewrite in promote_list(rewrites):
             for id, subst in self.match(rewrite.lhs).items():
+                # MOVE this check to specific subclasses to avoid the isinstance check
                 if isinstance(rewrite.rhs, (Variable, Pattern)):
                     enode = rewrite.rhs.substitute(subst)
                     if isinstance(enode, ENode):
@@ -228,6 +229,12 @@ class EGraph:
                         otherid = enode
                 elif isinstance(rewrite.rhs, Node):
                     otherid = self.add(rewrite.rhs)
+                elif callable(rewrite.rhs):
+                    enode = rewrite.rhs(self, id, subst)
+                    if isinstance(enode, ENode):
+                        otherid = self.add(enode)
+                    else:
+                        otherid = enode
 
                 n_changes += self.union(id, otherid)
 
@@ -255,14 +262,14 @@ class EGraph:
             id = self._enodes[enode]
         elif isinstance(node, ENode):
             id = self._enodes[node]
+        elif isinstance(node, int):
+            id = node
 
         return self._create_node(id)
 
     def equivalent(self, id1, id2):
-        print(id1, id2)
         id1 = self._eparents[id1]
         id2 = self._eparents[id2]
-        print(id1, id2)
         return id1 == id2
 
 
@@ -343,13 +350,15 @@ class Pattern:
         return ENode(self.head, args)
 
 
+# USE SEARCHER AND APPLIER NOTATIONS
+
 class Rewrite:
     __slots__ = ("lhs", "rhs", "name")
 
     def __init__(self, lhs, rhs, name=None):
         assert isinstance(lhs, Pattern)
         # TODO: use a substitutable mixin
-        assert isinstance(rhs, (Variable, Pattern, Node))
+        # assert isinstance(rhs, (Variable, Pattern, Node))
         self.lhs = lhs
         self.rhs = rhs
         self.name = name
@@ -362,6 +371,8 @@ class Rewrite:
 
     def __hash__(self):
         return hash((self.__class__, self.lhs, self.rhs))
+
+
 
 
 # ops.Multiply[a, b] => ops.Add[ops.Multiply[a, b], ops.Multiply[a, b]]

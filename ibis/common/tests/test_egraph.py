@@ -21,6 +21,7 @@ seven_ = seven * 1
 eleven = seven_ + 4
 
 a, b, c = Variable('a'), Variable('b'), Variable('c')
+x, y, z = Variable('x'), Variable('y'), Variable('z')
 
 
 def test_simple():
@@ -122,3 +123,22 @@ def test_math_associate_adds():
     expr_a = Add(6, Add(Add(1, 5), Add(0, Add(4, Add(2, 3)))))
     expr_b = Add(6, Add(Add(4, 5), Add(Add(0, 2), Add(3, 1))))
     assert is_equal(expr_a, expr_b, math_rules, iters=500)
+
+
+def replace_add(egraph, id, subst):
+    node = egraph.extract(id)
+    id = egraph.add(node)
+    return id
+
+
+
+def test_dynamic_rewrite():
+    rules = [
+        Rewrite(Add[x, Mul[z, y]], replace_add, name="replace-add"),
+    ]
+
+    simplify(Add(1, Mul(2, 3)), rules) == Add(1, Mul(2, 3))
+
+
+def test_dynamic_condition():
+    pass
