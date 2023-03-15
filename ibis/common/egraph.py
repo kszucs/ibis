@@ -1,14 +1,11 @@
 import collections
 import itertools
-
-
-from pprint import pprint
+from typing import NamedTuple
 
 from bidict import bidict
 
 from ibis.common.graph import Node
 from ibis.util import promote_list
-from typing import NamedTuple
 
 # consider to use an EClass(id, nodes) dataclass
 
@@ -43,11 +40,21 @@ class ENode:
         return self.head(*self.args)
 
 
+# TODO: move every E* into the Egraph so its API only uses Nodes
+# TODO: track whether the egraph is saturated or not
 
-# move every E* into the Egraph so its API only uses Nodes
 
 class EGraph:
-    __slots__ = ("_nodes", "_counter", "_enodes", "_eparents", "_eclasses", "_etables", "_saturated")
+    __slots__ = (
+        "_nodes",
+        "_counter",
+        "_enodes",
+        "_eparents",
+        "_eclasses",
+        "_etables",
+        "_saturated",
+
+    )
 
     def __init__(self):
         # store the nodes before converting them to enodes, so we can spare the initial
@@ -86,35 +93,48 @@ class EGraph:
         return enode.head(*args)
 
     def add(self, node):
-
         if isinstance(node, Node):
             enode = self._nodes.get(node) or ENode.from_node(self, node)
             self._nodes[node] = enode
         elif isinstance(node, ENode):
-            enode = node
+            args = []
+            for arg in node.args:
+                if isinstance(arg, ENode):
+                    args.append(self.add(arg))
+                elif isinstance(arg, (Atom, int)):
+                    args.append(arg)
+                else:
+                    raise TypeError(arg)
+            enode = ENode(node.head, args)
         else:
-            raise TypeError(f"`node` must be an instance of ibis.common.graph.Node but got {type(node)}")
+            raise TypeError(
+                f"`node` must be an instance of ibis.common.graph.Node but got {type(node)}"
+            )
 
         if (id := self._enodes.get(enode)) is not None:
             return id
-        assert enode not in self._enodes
 
+        assert enode not in self._enodes
         id = next(self._counter)
 
         self._enodes[enode] = id
         self._eparents[id] = id
         self._eclasses[id] = {id}
         self._etables[enode.head][id] = tuple(enode.args)
+        self._saturated = False
+
         return id
 
     def find(self, id):
         return self._eparents[id]
 
     def union(self, id1, id2):
+        assert isinstance(id1, int)
+        assert isinstance(id2, int)
         id1 = self._eparents[id1]
         id2 = self._eparents[id2]
         if id1 == id2:
-            return id1
+            return False
 
         # Merge the smaller eclass into the larger one
         class1 = self._eclasses[id1]
@@ -132,13 +152,13 @@ class EGraph:
         class1.clear()
 
         # Remove the eclass from the eclasses dict
-        #del self._eclasses[id1]
+        # del self._eclasses[id1]
 
         # Remove the enode from the corresponding etable (should remove all enodes from the merged eclass I guess)
         # enode = self._enodes.inverse[id1]
         # del self._etables[enode.head][id1]
 
-        return id2
+        return True
 
     def _match_args(self, args, patargs):
         if len(args) != len(patargs):
@@ -149,7 +169,10 @@ class EGraph:
             if isinstance(patarg, Variable):
                 if isinstance(arg, Atom):
                     subst[patarg.name] = arg
+                elif isinstance(arg, ENode):
+                    subst[patarg.name] = arg
                 else:
+                    # this branch shouldn't be needed perhaps
                     subst[patarg.name] = self._eparents[arg]
             elif isinstance(arg, Atom):
                 if patarg != arg.value:
@@ -160,23 +183,25 @@ class EGraph:
 
         return subst
 
+    # def fixup(self):
+    #     for id, enode in self._todos.items():
+    #         assert all(isinstance(arg, (Atom, int)) for arg in enode.args)
+    #         self._etables[enode.head][id] = tuple(enode.args)
+    #     self._todos.clear()
+
     def match(self, pattern):
         # patterns could be reordered to match on the most selective one first
         patterns = dict(reversed(list(pattern.flatten())))
-        # print()
-        # print("PATTERNS:")
-        # pprint(patterns)
 
         matches = {}
         for auxvar, pattern in patterns.items():
-            # print()
-            # print(auxvar, "<~", pattern)
             table = self._etables[pattern.head]
 
             if auxvar is None:
                 for id, args in table.items():
                     if (subst := self._match_args(args, pattern.args)) is not None:
                         matches[id] = subst
+                # self.fixup()
                 # print(matches)
             else:
                 newmatches = {}
@@ -195,11 +220,7 @@ class EGraph:
     def apply(self, rewrites):
         n_changes = 0
         for rewrite in promote_list(rewrites):
-            # print('--------------')
-            # print(self._etables)
-            # print(rewrite)
             for id, subst in self.match(rewrite.lhs).items():
-                # print(id, subst)
                 if isinstance(rewrite.rhs, (Variable, Pattern)):
                     enode = rewrite.rhs.substitute(subst)
                     if isinstance(enode, ENode):
@@ -209,34 +230,41 @@ class EGraph:
                 elif isinstance(rewrite.rhs, Node):
                     otherid = self.add(rewrite.rhs)
 
-                print("UNION", id, otherid)
-                self.union(id, otherid)
+                n_changes += self.union(id, otherid)
 
-                # if id != otherid:
-                #     n_changes += 1
-                # #print(self._etables)
+        # print(self._todos)
+        # for id, enode in self._todos.items():
+        #     self._etables[enode.head][id] = tuple(enode.args)
+        # self._todos.clear()
 
-        # print(n_changes)
-        # if n_changes == 0:
-        #     print("SATURATED")
-        #     self._saturated = True
+        return n_changes
 
     def run(self, rewrites, n=1):
         if self._saturated:
-            return
-        for i in range(n):
-            self.apply(rewrites)
+            return None
+        for _i in range(n):
+            if not self.apply(rewrites):
+                print(f"Saturated after {_i} iterations")
+                self._saturated = True
+                return True
+        return False
 
     def extract(self, node):
+        print(node)
         if isinstance(node, Node):
             enode = self._nodes.get(node)
             id = self._enodes[enode]
-            # print(id)
-            # print(print(self._eparents[self._eparents[id]]))
         elif isinstance(node, ENode):
             id = self._enodes[node]
 
         return self._create_node(id)
+
+    def equivalent(self, id1, id2):
+        print(id1, id2)
+        id1 = self._eparents[id1]
+        id2 = self._eparents[id2]
+        print(id1, id2)
+        return id1 == id2
 
 
 class Atom:
@@ -320,6 +348,9 @@ class Rewrite:
     __slots__ = ("lhs", "rhs", "name")
 
     def __init__(self, lhs, rhs, name=None):
+        assert isinstance(lhs, Pattern)
+        # TODO: use a substitutable mixin
+        assert isinstance(rhs, (Variable, Pattern, Node))
         self.lhs = lhs
         self.rhs = rhs
         self.name = name
@@ -332,8 +363,6 @@ class Rewrite:
 
     def __hash__(self):
         return hash((self.__class__, self.lhs, self.rhs))
-
-
 
 
 # ops.Multiply[a, b] => ops.Add[ops.Multiply[a, b], ops.Multiply[a, b]]
