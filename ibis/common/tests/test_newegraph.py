@@ -1,12 +1,17 @@
+import functools
+import itertools
 from pprint import pprint
 from typing import Tuple
 
 import pytest
 
+import ibis
+import ibis.expr.datatypes as dt
+import ibis.expr.operations as ops
 from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.common.grounds import Concrete
-from ibis.common.newegraph import ENode
+from ibis.common.newegraph import EGraph, ENode, Pattern, Variable
 
 
 def test_enode():
@@ -128,3 +133,96 @@ def test_disjoint_set_with_enode():
     assert ds.find(three1_) == three1_
     assert ds.find(three_) == three1_
     assert ds[three_] == {three_, three1_}
+
+
+def test_pattern():
+    Pattern._counter = itertools.count()
+
+    p = Pattern(ops.Literal, (1, dt.int8))
+    assert p.head == ops.Literal
+    assert p.args == (1, dt.int8)
+    assert p.name == "_0"
+
+    p = "name" @ Pattern(ops.Literal, (1, dt.int8))
+    assert p.head == ops.Literal
+    assert p.args == (1, dt.int8)
+    assert p.name == "name"
+
+
+def test_pattern_flatten():
+    Pattern._counter = itertools.count()
+
+    # using auto-generated names
+    one = Pattern(ops.Literal, (1, dt.int8))
+    two = Pattern(ops.Literal, (2, dt.int8))
+    three = Pattern(ops.Add, (one, two))
+
+    result = dict(three.flatten())
+    expected = {
+        None: Pattern(ops.Add, (Variable("_0"), Variable("_1"))),
+        Variable("_1"): Pattern(ops.Literal, (2, dt.int8)),
+        Variable("_0"): Pattern(ops.Literal, (1, dt.int8)),
+    }
+    assert result == expected
+
+    # using user-provided names which helps capturing variables
+    one = "one" @ Pattern(ops.Literal, (1, dt.int8))
+    two = "two" @ Pattern(ops.Literal, (2, dt.int8))
+    three = "three" @ Pattern(ops.Add, (one, two))
+
+    result = dict(three.flatten())
+    expected = {
+        None: Pattern(ops.Add, (Variable("one"), Variable("two"))),
+        Variable("two"): Pattern(ops.Literal, (2, dt.int8)),
+        Variable("one"): Pattern(ops.Literal, (1, dt.int8)),
+    }
+    assert result == expected
+
+
+class PatternNamespace:
+    __slots__ = '_module'
+
+    def __init__(self, module):
+        self._module = module
+
+    def __getattr__(self, name):
+        klass = getattr(self._module, name)
+
+        def pattern(*args):
+            return Pattern(klass, args)
+
+        return pattern
+
+
+p = PatternNamespace(ops)
+a = Variable('a')
+
+
+def test_egraph_simple():
+    one = ibis.literal(1)
+    two = one * 2
+    two_ = one + one
+    three = one + two
+    six = three * two_
+    seven = six + 1
+    seven_ = seven * 1
+    eleven = seven_ + 4
+
+    # a, b, c = Variable('a'), Variable('b'), Variable('c')
+    # x, y, z = Variable('x'), Variable('y'), Variable('z')
+
+    op = eleven.op()
+    eg = EGraph()
+    eg.add(op)
+
+    pat = p.Multiply(a, p.Literal(1, dt.int8))
+    pprint(tuple(pat.flatten()))
+
+    # eg.add(op)
+    # print(eg.match(ops.Multiply[a, ops.Literal[1, dt.int8]]))
+
+    # r3 = ops.Multiply[a, ops.Literal[1, dt.int8]] >> a
+    # eg.apply(r3)
+
+    # print()
+    # pprint(eg.extract(op))

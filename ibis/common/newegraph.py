@@ -4,6 +4,7 @@ from typing import Any, NamedTuple
 
 from bidict import bidict
 
+from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.util import promote_list
 
@@ -11,7 +12,11 @@ from ibis.util import promote_list
 # based on the number of nodes in the ENode's tree
 
 
-class ENode(Node):
+# TODO(kszucs): consider to implement Comparable for ETerms in order to have
+# more performant equality checks
+
+
+class Term:
     __slots__ = ("head", "args", "__precomputed_hash__")
 
     def __init__(self, head, args):
@@ -20,6 +25,23 @@ class ENode(Node):
         object.__setattr__(
             self, "__precomputed_hash__", hash((self.__class__, self.head, self.args))
         )
+
+    def __eq__(self, other):
+        return (
+            type(self) is type(other)
+            and self.head == other.head
+            and self.args == other.args
+        )
+
+    def __hash__(self):
+        return self.__precomputed_hash__
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Can't set attributes on immutable ENode instance")
+
+
+class ENode(Term, Node):
+    __slots__ = ()
 
     @property
     def __args__(self):
@@ -46,60 +68,76 @@ class ENode(Node):
 
         return self.map(mapper)[self]
 
-    def __eq__(self, other):
-        return self.head == other.head and self.args == other.args
-
     def __repr__(self) -> str:
         return f"ENode({self.head.__name__}, {self.args})"
 
+
+class EGraph:
+    __slots__ = ("_nodes", "_eclasses", "_erelations")
+
+    def __init__(self):
+        self._nodes = bidict()
+        self._eclasses = DisjointSet()
+        self._erelations = collections.defaultdict(dict)
+
+    def add(self, node):
+        enode = ENode.from_node(node)
+        self._nodes[node] = enode
+        self._eclasses.add(enode)
+        self._erelations[enode.head][enode] = enode.args
+
+    def match(self, pattern):
+        pass
+
+
+class Variable:
+    __slots__ = ("name", "__precomputed_hash__")
+
+    def __init__(self, name):
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "__precomputed_hash__", hash((self.__class__, name)))
+
+    def __repr__(self) -> str:
+        return f"${self.name}"
+
     def __hash__(self):
         return self.__precomputed_hash__
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.name == other.name
 
     def __setattr__(self, name, value):
         raise AttributeError("Can't set attributes on immutable ENode instance")
 
 
-# class EPattern:
-#     __slots__ = ("head", "args", "hash")
+class Pattern(Term):
+    __slots__ = ("name",)
+    _counter = itertools.count()
 
-#     def __init__(self, head, args):
-#         object.__setattr__(self, "head", head)
-#         object.__setattr__(self, "args", tuple(args))
-#         object.__setattr__(self, "hash", hash((self.__class__, self.head, self.args)))
+    def __init__(self, head, args, name=None):
+        super().__init__(head, args)
+        name = name or f'_{next(self._counter)}'
+        object.__setattr__(self, "name", name)
 
-#     @classmethod
-#     def from_node(cls, node: Any):
-#         if isinstance(node, Node):
-#             args = tuple(map(cls.from_node, node.__args__))
-#             return EPattern(node.__class__, args)
-#         elif isinstance(node, Variable):
-#             return EVariable(node.name)
-#         else:
-#             return ELeaf(node)
+    def __repr__(self):
+        argstring = ", ".join(map(repr, self.args))
+        return f"{self.head.__name__}({argstring})"
 
-#     def to_node(self):
-#         args = (arg.to_node() for arg in self.args)
-#         return self.head(*args)
+    def __rmatmul__(self, name):
+        return self.__class__(self.head, self.args, name)
 
-#     def traverse(self):
-#         """Traverse the tree in a depth-first manner."""
-#         for arg in self.args:
-#             yield from arg.traverse()
-#         yield self
+    def flatten(self, var=None):
+        args = []
+        for arg in self.args:
+            if isinstance(arg, Pattern):
+                aux = Variable(arg.name)
+                yield from arg.flatten(aux)
+                args.append(aux)
+            else:
+                args.append(arg)
+        yield (var, Pattern(self.head, args))
 
-#     def __eq__(self, other):
-#         return self.head == other.head and self.args == other.args
 
-#     def __repr__(self) -> str:
-#         return f"EPattern({self.head.__name__}, {self.args})"
-
-#     def __hash__(self):
-#         return self.hash
-
-#     def __setattr__(self, name, value):
-#         raise AttributeError("Can't set attributes on immutable EPattern instance")
-
-# class Variable
 
 
 # class EPattern(ETerm):
