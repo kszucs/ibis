@@ -25,6 +25,12 @@ class Node(Hashable):
     def __children__(self, filter=None):
         return tuple(_flatten_collections(self.__args__, filter or Node))
 
+    def traverse(self, filter=None, toposort=False):
+        graph = Graph.from_bfs(self, filter=filter)
+        if toposort:
+            graph = graph.toposort()
+        return graph.keys()
+
     def map(self, fn, filter=None):
         results = {}
         for node in Graph.from_bfs(self, filter=filter).toposort():
