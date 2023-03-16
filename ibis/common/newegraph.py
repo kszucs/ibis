@@ -1,6 +1,6 @@
 import collections
 import itertools
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from bidict import bidict
 
@@ -9,7 +9,7 @@ from ibis.util import promote_list
 
 
 class ENode:
-    __slots__ = ('head', 'args', 'hash')
+    __slots__ = ("head", "args", "hash")
 
     def __init__(self, head, args):
         object.__setattr__(self, "head", head)
@@ -17,15 +17,24 @@ class ENode:
         object.__setattr__(self, "hash", hash((self.__class__, self.head, self.args)))
 
     @classmethod
-    def from_node(cls, node: Node):
-        args = tuple(
-            cls.from_node(arg) if isinstance(arg, Node) else ELeaf(arg)
-            for arg in node.__args__
-        )
-        return cls(node.__class__, args)
+    def from_node(cls, node: Any):
+        if isinstance(node, Node):
+            args = tuple(map(cls.from_node, node.__args__))
+            return ENode(node.__class__, args)
+        else:
+            return ELeaf(node)
+
+    def traverse(self):
+        """Traverse the tree in a depth-first manner."""
+        for arg in self.args:
+            yield from arg.traverse()
+        yield self
 
     def __eq__(self, other):
         return self.head == other.head and self.args == other.args
+
+    def __repr__(self) -> str:
+        return f"ENode({self.head.__name__}, {self.args})"
 
     def __hash__(self):
         return self.hash
@@ -35,14 +44,20 @@ class ENode:
 
 
 class ELeaf:
-    __slots__ = ('value', 'hash')
+    __slots__ = ("value", "hash")
 
     def __init__(self, value):
         object.__setattr__(self, "value", value)
         object.__setattr__(self, "hash", hash((self.__class__, self.value)))
 
+    def traverse(self):
+        yield self
+
     def __eq__(self, other):
         return self.value == other.value
+
+    def __repr__(self):
+        return f"ELeaf({self.value})"
 
     def __hash__(self):
         return self.hash

@@ -208,7 +208,6 @@ class DotDict(dict):
         return f"{self.__class__.__name__}({super().__repr__()})"
 
 
-
 class DisjointSet(Generic[K]):
     """Disjoint set data structure.
 
@@ -253,6 +252,10 @@ class DisjointSet(Generic[K]):
 
     def __contains__(self, id) -> bool:
         return id in self._parents
+
+    def __getitem__(self, id) -> set[K]:
+        id = self._parents[id]
+        return self._classes[id]
 
     def __len__(self) -> int:
         return len(self._parents)

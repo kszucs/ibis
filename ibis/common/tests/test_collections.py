@@ -232,10 +232,20 @@ def test_disjoint_set():
 
     ds1 = DisjointSet([1, 2, 3, 4])
     assert ds == ds1
+    assert ds[1] == {1}
+    assert ds[2] == {2}
+    assert ds[3] == {3}
+    assert ds[4] == {4}
 
     assert ds.union(1, 2) is True
+    assert ds[1] == {1, 2}
+    assert ds[2] == {1, 2}
     assert ds.union(2, 3) is True
+    assert ds[1] == {1, 2, 3}
+    assert ds[2] == {1, 2, 3}
+    assert ds[3] == {1, 2, 3}
     assert ds.union(1, 3) is False
+    assert ds[4] == {4}
     assert ds != ds1
     assert 1 in ds
     assert 2 in ds
