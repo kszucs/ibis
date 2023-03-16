@@ -16,6 +16,26 @@ from ibis.util import promote_list
 # more performant equality checks
 
 
+class Variable:
+    __slots__ = ("name", "__precomputed_hash__")
+
+    def __init__(self, name):
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "__precomputed_hash__", hash((self.__class__, name)))
+
+    def __repr__(self) -> str:
+        return f"${self.name}"
+
+    def __hash__(self):
+        return self.__precomputed_hash__
+
+    def __eq__(self, other):
+        return type(self) is type(other) and self.name == other.name
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Can't set attributes on immutable ENode instance")
+
+
 class Term:
     __slots__ = ("head", "args", "__precomputed_hash__")
 
@@ -35,76 +55,6 @@ class Term:
 
     def __hash__(self):
         return self.__precomputed_hash__
-
-    def __setattr__(self, name, value):
-        raise AttributeError("Can't set attributes on immutable ENode instance")
-
-
-class ENode(Term, Node):
-    __slots__ = ()
-
-    @property
-    def __args__(self):
-        return self.args
-
-    @property
-    def __argnames__(self):
-        return self.head.__argnames__
-
-    # we can maybe spare this conversion if we don't try to recreate the original type
-    # but rather use a Term[head, args] along with the original inputs, during
-    # substitution a term would be produced but it would be nice to have the same hash
-    # as the original
-    @classmethod
-    def from_node(cls, node: Any):
-        def mapper(node, _, **kwargs):
-            return cls(node.__class__, kwargs.values())
-
-        return node.map(mapper)[node]
-
-    def to_node(self):
-        def mapper(node, _, **kwargs):
-            return node.head(**kwargs)
-
-        return self.map(mapper)[self]
-
-    def __repr__(self) -> str:
-        return f"ENode({self.head.__name__}, {self.args})"
-
-
-class EGraph:
-    __slots__ = ("_nodes", "_eclasses", "_erelations")
-
-    def __init__(self):
-        self._nodes = bidict()
-        self._eclasses = DisjointSet()
-        self._erelations = collections.defaultdict(dict)
-
-    def add(self, node):
-        enode = ENode.from_node(node)
-        self._nodes[node] = enode
-        self._eclasses.add(enode)
-        self._erelations[enode.head][enode] = enode.args
-
-    def match(self, pattern):
-        pass
-
-
-class Variable:
-    __slots__ = ("name", "__precomputed_hash__")
-
-    def __init__(self, name):
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "__precomputed_hash__", hash((self.__class__, name)))
-
-    def __repr__(self) -> str:
-        return f"${self.name}"
-
-    def __hash__(self):
-        return self.__precomputed_hash__
-
-    def __eq__(self, other):
-        return type(self) is type(other) and self.name == other.name
 
     def __setattr__(self, name, value):
         raise AttributeError("Can't set attributes on immutable ENode instance")
@@ -137,6 +87,99 @@ class Pattern(Term):
                 args.append(arg)
         yield (var, Pattern(self.head, args))
 
+
+class ENode(Term, Node):
+    __slots__ = ()
+
+    @property
+    def __args__(self):
+        return self.args
+
+    @property
+    def __argnames__(self):
+        return self.head.__argnames__
+
+    # we can maybe spare this conversion if we don't try to recreate the original type
+    # but rather use a Term[head, args] along with the original inputs, during
+    # substitution a term would be produced but it would be nice to have the same hash
+    # as the original
+    @classmethod
+    def from_node(cls, node: Any):
+        def mapper(node, _, **kwargs):
+            return cls(node.__class__, kwargs.values())
+
+        return node.map(mapper)[node]
+
+    def to_node(self):
+        def mapper(node, _, **kwargs):
+            return node.head(**kwargs)
+
+        return self.map(mapper)[self]
+
+    def __repr__(self) -> str:
+        return f"ENode({self.head.__name__}, ...)"
+
+
+class EGraph:
+    __slots__ = ("_nodes", "_eclasses", "_erelations")
+
+    def __init__(self):
+        self._nodes = bidict()
+        self._eclasses = DisjointSet()
+        self._erelations = collections.defaultdict(dict)
+
+    def add(self, node):
+        # self._nodes[node] = enode
+        enode = ENode.from_node(node)
+        for child in enode.traverse():
+            self._eclasses.add(child)
+            self._erelations[child.head][child] = child.args
+        return enode
+
+    # on extraction the ENode must be mapped through self._eclasses.find
+
+    def _match_args(self, args, patargs):
+        if len(args) != len(patargs):
+            return
+
+        subst = {}
+        for arg, patarg in zip(args, patargs):
+            if isinstance(patarg, Variable):
+                if isinstance(arg, ENode):
+                    subst[patarg.name] = self._eclasses.find(arg)
+                else:
+                    subst[patarg.name] = arg
+            elif isinstance(patarg, ENode):
+                if isinstance(arg, ENode):
+                    if self._eclasses.find(arg) != self._eclasses.find(patarg):
+                        return
+                else:
+                    return
+            else:
+                if arg != patarg:
+                    return
+
+        return subst
+
+    def match(self, pattern):
+        (_, pattern), *rest = reversed(list(pattern.flatten()))
+        matches = {}
+
+        rel = self._erelations[pattern.head]
+        for enode, args in rel.items():
+            if (subst := self._match_args(args, pattern.args)) is not None:
+                matches[enode] = subst
+
+        for auxvar, pattern in rest:
+            rel = self._erelations[pattern.head]
+            tmp = {}
+            for enode, subst in matches.items():
+                if args := rel.get(subst[auxvar.name]):
+                    if (newsubst := self._match_args(args, pattern.args)) is not None:
+                        tmp[enode] = {**subst, **newsubst}
+            matches = tmp
+
+        return matches
 
 
 

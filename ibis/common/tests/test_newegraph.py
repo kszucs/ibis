@@ -170,12 +170,12 @@ def test_pattern_flatten():
     two = "two" @ Pattern(ops.Literal, (2, dt.int8))
     three = "three" @ Pattern(ops.Add, (one, two))
 
-    result = dict(three.flatten())
-    expected = {
-        None: Pattern(ops.Add, (Variable("one"), Variable("two"))),
-        Variable("two"): Pattern(ops.Literal, (2, dt.int8)),
-        Variable("one"): Pattern(ops.Literal, (1, dt.int8)),
-    }
+    result = tuple(three.flatten())
+    expected = (
+        (Variable("one"), Pattern(ops.Literal, (1, dt.int8))),
+        (Variable("two"), Pattern(ops.Literal, (2, dt.int8))),
+        (None, Pattern(ops.Add, (Variable("one"), Variable("two")))),
+    )
     assert result == expected
 
 
@@ -198,7 +198,7 @@ p = PatternNamespace(ops)
 a = Variable('a')
 
 
-def test_egraph_simple():
+def test_egraph_simple_match():
     one = ibis.literal(1)
     two = one * 2
     two_ = one + one
@@ -208,21 +208,13 @@ def test_egraph_simple():
     seven_ = seven * 1
     eleven = seven_ + 4
 
-    # a, b, c = Variable('a'), Variable('b'), Variable('c')
-    # x, y, z = Variable('x'), Variable('y'), Variable('z')
-
-    op = eleven.op()
     eg = EGraph()
-    eg.add(op)
+    eg.add(eleven.op())
 
-    pat = p.Multiply(a, p.Literal(1, dt.int8))
-    pprint(tuple(pat.flatten()))
+    pat = p.Multiply(a, "lit" @ p.Literal(1, dt.int8))
+    res = eg.match(pat)
 
-    # eg.add(op)
-    # print(eg.match(ops.Multiply[a, ops.Literal[1, dt.int8]]))
-
-    # r3 = ops.Multiply[a, ops.Literal[1, dt.int8]] >> a
-    # eg.apply(r3)
-
-    # print()
-    # pprint(eg.extract(op))
+    enode = ENode.from_node(seven_.op())
+    matches = res[enode]
+    assert matches['a'] == ENode.from_node(seven.op())
+    assert matches['lit'] == ENode.from_node(one.op())
