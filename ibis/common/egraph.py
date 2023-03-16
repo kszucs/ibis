@@ -42,6 +42,7 @@ class ENode:
 
 # TODO: move every E* into the Egraph so its API only uses Nodes
 # TODO: track whether the egraph is saturated or not
+# TODO: support parent classes in etables (Join <= InnerJoin)
 
 
 class EGraph:
@@ -53,7 +54,6 @@ class EGraph:
         "_eclasses",
         "_etables",
         "_saturated",
-
     )
 
     def __init__(self):
@@ -352,6 +352,7 @@ class Pattern:
 
 # USE SEARCHER AND APPLIER NOTATIONS
 
+
 class Rewrite:
     __slots__ = ("lhs", "rhs", "name")
 
@@ -371,8 +372,6 @@ class Rewrite:
 
     def __hash__(self):
         return hash((self.__class__, self.lhs, self.rhs))
-
-
 
 
 # ops.Multiply[a, b] => ops.Add[ops.Multiply[a, b], ops.Multiply[a, b]]

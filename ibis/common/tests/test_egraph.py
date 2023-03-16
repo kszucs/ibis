@@ -86,8 +86,8 @@ def is_equal(a, b, rules, iters=7):
     id_a = egraph.add(a)
     id_b = egraph.add(b)
     egraph.run(rules, iters)
-    #pprint(egraph._etables)
-    #pprint(egraph._eclasses)
+    # pprint(egraph._etables)
+    # pprint(egraph._eclasses)
     return egraph.equivalent(id_a, id_b)
 
 
@@ -111,10 +111,7 @@ def test_simple_3():
 
 
 def test_math_associate_adds():
-    math_rules = [
-        Add[a, b] >> Add[b, a],
-        Add[a, Add[b, c]] >> Add[Add[a, b], c]
-    ]
+    math_rules = [Add[a, b] >> Add[b, a], Add[a, Add[b, c]] >> Add[Add[a, b], c]]
 
     expr_a = Add(1, Add(2, Add(3, Add(4, Add(5, Add(6, 7))))))
     expr_b = Add(7, Add(6, Add(5, Add(4, Add(3, Add(2, 1))))))
@@ -129,7 +126,6 @@ def replace_add(egraph, id, subst):
     node = egraph.extract(id)
     id = egraph.add(node)
     return id
-
 
 
 def test_dynamic_rewrite():

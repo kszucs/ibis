@@ -2,7 +2,7 @@ from collections.abc import ItemsView, Iterator, KeysView, ValuesView
 
 import pytest
 
-from ibis.common.collections import DotDict, FrozenDict, MapSet
+from ibis.common.collections import DotDict, FrozenDict, MapSet, DisjointSet
 from ibis.tests.util import assert_pickle_roundtrip
 
 
@@ -221,3 +221,18 @@ def test_frozendict():
 
     assert hash(d)
     assert_pickle_roundtrip(d)
+
+
+def test_disjoint_set():
+    ds = DisjointSet()
+    ds.add(1)
+    ds.add(2)
+    ds.add(3)
+    ds.add(4)
+    assert ds.union(1, 2) is True
+    assert ds.union(2, 3) is True
+    assert ds.union(1, 3) is False
+    assert ds.find(1) == 1
+    assert ds.find(2) == 1
+    assert ds.find(3) == 1
+    assert ds.find(4) == 4

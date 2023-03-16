@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import Any, Hashable, Mapping, TypeVar
+from typing import Any, Generic, Hashable, Iterable, Mapping, TypeVar
 
 from public import public
 from typing_extensions import Self
 
 K = TypeVar("K")
 V = TypeVar("V")
+T = TypeVar("T")
 
 
 @public
@@ -206,6 +207,85 @@ class DotDict(dict):
 
     def __repr__(self):
         return f"{self.__class__.__name__}({super().__repr__()})"
+
+
+class DisjointSet(Generic[T]):
+    """Disjoint set data structure.
+
+    Also known as union-find data structure. It is a data structure that keeps
+    track of a set of elements partitioned into a number of disjoint (non-overlapping)
+    subsets. It provides near-constant-time operations to add new sets, to merge
+    existing sets, and to determine whether elements are in the same set.
+
+    Examples
+    --------
+    >>> ds = DisjointSet()
+    >>> ds.add(1)
+    >>> ds.add(2)
+    >>> ds.add(3)
+    >>> ds.union(1, 2)
+    True
+    >>> ds.union(2, 3)
+    True
+    >>> ds.find(1)
+    1
+    >>> ds.find(2)
+    1
+    >>> ds.find(3)
+    1
+    >>> ds.union(1, 3)
+    False
+    """
+
+    __slots__ = ("_parents", "_classes")
+
+    def __init__(self, data: Iterable[T] | None = None):
+        self._parents = {}
+        self._classes = {}
+        if data is not None:
+            for id in data:
+                self.add(id)
+
+    def __contains__(self, id) -> bool:
+        return id in self._parents
+
+    def add(self, id: T) -> None:
+        self._parents[id] = id
+        self._classes[id] = {id}
+
+    def find(self, id: T) -> T:
+        return self._parents[id]
+
+    def union(self, id1, id2) -> bool:
+        # Find the root of each class
+        id1 = self._parents[id1]
+        id2 = self._parents[id2]
+        if id1 == id2:
+            return False
+
+        # Merge the smaller eclass into the larger one
+        class1 = self._classes[id1]
+        class2 = self._classes[id2]
+        if len(class1) >= len(class2):
+            id1, id2 = id2, id1
+            class1, class2 = class2, class1
+
+        # Update the parent pointers
+        for id in class1:
+            self._parents[id] = id2
+
+        # Do the actual merging and clear the other eclass
+        class2 |= class1
+        class1.clear()
+
+        return True
+
+    def connected(self, id1, id2):
+        return self._parents[id1] == self._parents[id2]
+
+    def verify(self):
+        for id in self._parents:
+            assert id in self._classes[self._parents[id]]
 
 
 public(frozendict=FrozenDict, dotdict=DotDict)
