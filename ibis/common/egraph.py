@@ -151,13 +151,6 @@ class EGraph:
         class2 |= class1
         class1.clear()
 
-        # Remove the eclass from the eclasses dict
-        # del self._eclasses[id1]
-
-        # Remove the enode from the corresponding etable (should remove all enodes from the merged eclass I guess)
-        # enode = self._enodes.inverse[id1]
-        # del self._etables[enode.head][id1]
-
         return True
 
     def _match_args(self, args, patargs):
@@ -182,12 +175,6 @@ class EGraph:
 
         return subst
 
-    # def fixup(self):
-    #     for id, enode in self._todos.items():
-    #         assert all(isinstance(arg, (Atom, int)) for arg in enode.args)
-    #         self._etables[enode.head][id] = tuple(enode.args)
-    #     self._todos.clear()
-
     def match(self, pattern):
         # patterns could be reordered to match on the most selective one first
         patterns = dict(reversed(list(pattern.flatten())))
@@ -200,8 +187,6 @@ class EGraph:
                 for id, args in table.items():
                     if (subst := self._match_args(args, pattern.args)) is not None:
                         matches[id] = subst
-                # self.fixup()
-                # print(matches)
             else:
                 newmatches = {}
                 for id, subst in matches.items():
@@ -237,11 +222,6 @@ class EGraph:
                         otherid = enode
 
                 n_changes += self.union(id, otherid)
-
-        # print(self._todos)
-        # for id, enode in self._todos.items():
-        #     self._etables[enode.head][id] = tuple(enode.args)
-        # self._todos.clear()
 
         return n_changes
 

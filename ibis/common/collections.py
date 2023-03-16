@@ -6,9 +6,8 @@ from typing import Any, Generic, Hashable, Iterable, Mapping, TypeVar
 from public import public
 from typing_extensions import Self
 
-K = TypeVar("K")
+K = TypeVar("K", bound=Hashable)
 V = TypeVar("V")
-T = TypeVar("T")
 
 
 @public
@@ -209,13 +208,19 @@ class DotDict(dict):
         return f"{self.__class__.__name__}({super().__repr__()})"
 
 
-class DisjointSet(Generic[T]):
+
+class DisjointSet(Generic[K]):
     """Disjoint set data structure.
 
     Also known as union-find data structure. It is a data structure that keeps
     track of a set of elements partitioned into a number of disjoint (non-overlapping)
     subsets. It provides near-constant-time operations to add new sets, to merge
     existing sets, and to determine whether elements are in the same set.
+
+    Parameters
+    ----------
+    data :
+        Initial data to add to the disjoint set.
 
     Examples
     --------
@@ -239,7 +244,7 @@ class DisjointSet(Generic[T]):
 
     __slots__ = ("_parents", "_classes")
 
-    def __init__(self, data: Iterable[T] | None = None):
+    def __init__(self, data: Iterable[K] | None = None):
         self._parents = {}
         self._classes = {}
         if data is not None:
@@ -252,18 +257,18 @@ class DisjointSet(Generic[T]):
     def __len__(self) -> int:
         return len(self._parents)
 
-    def __eq__(self, other: Self[T]) -> bool:
+    def __eq__(self, other: Self[K]) -> bool:
         if not isinstance(other, DisjointSet):
             return NotImplemented
         return self._parents == other._parents
 
-    def add(self, id: T) -> None:
+    def add(self, id: K) -> None:
         if id in self._parents:
             return
         self._parents[id] = id
         self._classes[id] = {id}
 
-    def find(self, id: T) -> T:
+    def find(self, id: K) -> K:
         return self._parents[id]
 
     def union(self, id1, id2) -> bool:
@@ -273,14 +278,15 @@ class DisjointSet(Generic[T]):
         if id1 == id2:
             return False
 
-        # Merge the smaller eclass into the larger one
+        # Merge the smaller eclass into the larger one, aka. union-find by size
         class1 = self._classes[id1]
         class2 = self._classes[id2]
         if len(class1) >= len(class2):
             id1, id2 = id2, id1
             class1, class2 = class2, class1
 
-        # Update the parent pointers
+        # Update the parent pointers, this is called path compression but done
+        # during the union operation to keep the find operation minimal
         for id in class1:
             self._parents[id] = id2
 
@@ -296,7 +302,9 @@ class DisjointSet(Generic[T]):
     def verify(self):
         for id in self._parents:
             if id not in self._classes[self._parents[id]]:
-                raise RuntimeError(f"DisjointSet is corrupted: {id} is not in its class")
+                raise RuntimeError(
+                    f"DisjointSet is corrupted: {id} is not in its class"
+                )
 
 
 public(frozendict=FrozenDict, dotdict=DotDict)
