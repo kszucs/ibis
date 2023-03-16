@@ -249,7 +249,17 @@ class DisjointSet(Generic[T]):
     def __contains__(self, id) -> bool:
         return id in self._parents
 
+    def __len__(self) -> int:
+        return len(self._parents)
+
+    def __eq__(self, other: Self[T]) -> bool:
+        if not isinstance(other, DisjointSet):
+            return NotImplemented
+        return self._parents == other._parents
+
     def add(self, id: T) -> None:
+        if id in self._parents:
+            return
         self._parents[id] = id
         self._classes[id] = {id}
 
@@ -285,7 +295,8 @@ class DisjointSet(Generic[T]):
 
     def verify(self):
         for id in self._parents:
-            assert id in self._classes[self._parents[id]]
+            if id not in self._classes[self._parents[id]]:
+                raise RuntimeError(f"DisjointSet is corrupted: {id} is not in its class")
 
 
 public(frozendict=FrozenDict, dotdict=DotDict)
