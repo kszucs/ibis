@@ -159,7 +159,7 @@ def test_pattern_flatten():
 
     result = dict(three.flatten())
     expected = {
-        None: Pattern(ops.Add, (Variable("_0"), Variable("_1"))),
+        Variable("_2"): Pattern(ops.Add, (Variable("_0"), Variable("_1"))),
         Variable("_1"): Pattern(ops.Literal, (2, dt.int8)),
         Variable("_0"): Pattern(ops.Literal, (1, dt.int8)),
     }
@@ -174,7 +174,7 @@ def test_pattern_flatten():
     expected = (
         (Variable("one"), Pattern(ops.Literal, (1, dt.int8))),
         (Variable("two"), Pattern(ops.Literal, (2, dt.int8))),
-        (None, Pattern(ops.Add, (Variable("one"), Variable("two")))),
+        (Variable("three"), Pattern(ops.Add, (Variable("one"), Variable("two")))),
     )
     assert result == expected
 
@@ -221,7 +221,7 @@ def test_egraph_simple_match():
     assert matches['lit'] == ENode.from_node(one.op())
 
 
-def test_egraph_simple_extract():
+def test_egraph_extract():
     eg = EGraph()
     eg.add(eleven.op())
 
@@ -229,7 +229,7 @@ def test_egraph_simple_extract():
     assert res == one.op()
 
 
-def test_egraph_simple_extract_minimum_cost():
+def test_egraph_extract_minimum_cost():
     assert ENode.from_node(two.op()).cost == 4
     assert ENode.from_node(two_.op()).cost == 4
     assert ENode.from_node(two__.op()).cost == 2
@@ -246,7 +246,7 @@ def test_egraph_simple_extract_minimum_cost():
     assert eg.extract(two.op()) == two__.op()
 
 
-def test_egraph_simple_rewrite_to_variable():
+def test_egraph_rewrite_to_variable():
     eg = EGraph()
     eg.add(eleven.op())
 
@@ -256,7 +256,7 @@ def test_egraph_simple_rewrite_to_variable():
     assert eg.equivalent(seven_.op(), seven.op())
 
 
-def test_egraph_simple_rewrite_to_constant():
+def test_egraph_rewrite_to_constant():
     node = (one * 0).op()
 
     eg = EGraph()
@@ -268,7 +268,7 @@ def test_egraph_simple_rewrite_to_constant():
     assert eg.equivalent(node, 0)
 
 
-def test_egraph_simple_rewrite_to_pattern():
+def test_egraph_rewrite_to_pattern():
     eg = EGraph()
     eg.add(three.op())
 
@@ -276,3 +276,19 @@ def test_egraph_simple_rewrite_to_pattern():
     rule = Rewrite(p.Multiply(a, "lit" @ p.Literal(2, dt.int8)), p.Add(a, a))
     eg.apply(rule)
     assert eg.equivalent(two.op(), two_.op())
+
+
+def test_egraph_rewrite_dynamic():
+    def applier(match, subst):
+        return p.Add(subst['a'], subst['a']).to_enode()
+
+    node = (one * 2).op()
+
+    eg = EGraph()
+    eg.add(node)
+
+    # rule with a dynamic pattern on the right-hand side
+    rule = Rewrite("mul" @ p.Multiply(a, p.Literal(Variable("times"), dt.int8)), applier)
+    eg.apply(rule)
+
+    assert eg.extract_all(node) == {two.op(), two_.op()}

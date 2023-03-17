@@ -1,6 +1,6 @@
 import collections
 import itertools
-from typing import Any, NamedTuple
+from typing import Any, List, NamedTuple
 
 from bidict import bidict
 
@@ -88,7 +88,16 @@ class Pattern(Term):
     def __rmatmul__(self, name):
         return self.__class__(self.head, self.args, name)
 
+    def __rshift__(self, applier):
+        return Rewrite(self, applier)
+
+    def to_enode(self):
+        return ENode(self.head, self.args)
+
     def flatten(self, var=None):
+        # TODO(kszucs): assign consistent names to the variables if the pattern
+        # is not named (remove the global _counter)
+        var = var or Variable(self.name)
         args = []
         for arg in self.args:
             if isinstance(arg, Pattern):
@@ -107,6 +116,23 @@ class Pattern(Term):
             else:
                 args.append(arg)
         return ENode(self.head, args)
+
+
+class Rewrite:
+    __slots__ = ("matcher", "applier")
+
+    def __init__(self, matcher, applier):
+        self.matcher = matcher
+        self.applier = applier
+
+    def __repr__(self):
+        return f"{self.lhs} >> {self.rhs}"
+
+    def __eq__(self, other):
+        return self.matcher == other.matcher and self.applier == other.applier
+
+    def __hash__(self):
+        return hash((self.__class__, self.matcher, self.applier))
 
 
 class ENode(Term, Node):
@@ -165,6 +191,11 @@ class EGraph:
         best = min(eclass, key=lambda x: x.cost)
         return best.to_node()
 
+    def extract_all(self, node: Node) -> List[Node]:
+        enode = ENode.from_node(node) if isinstance(node, Node) else node
+        eclass = self._eclasses[enode]
+        return {x.to_node() for x in eclass}
+
     def union(self, node1, node2):
         enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
         enode2 = ENode.from_node(node2) if isinstance(node2, Node) else node2
@@ -201,12 +232,13 @@ class EGraph:
         return subst
 
     def match(self, pattern):
-        (_, pattern), *rest = reversed(list(pattern.flatten()))
+        (auxvar, pattern), *rest = reversed(list(pattern.flatten()))
         matches = {}
 
         rel = self._erelations[pattern.head]
         for enode, args in rel.items():
             if (subst := self._match_args(args, pattern.args)) is not None:
+                subst[auxvar.name] = enode
                 matches[enode] = subst
 
         for auxvar, pattern in rest:
@@ -221,12 +253,15 @@ class EGraph:
         return matches
 
     def apply(self, rules) -> int:
+        # TODO(kszucs): backoff scheduler to penalize rules that match many times
         n_changes = 0
         for rule in promote_list(rules):
             matches = self.match(rule.matcher)
             for match, subst in matches.items():
                 if isinstance(rule.applier, (Variable, Pattern)):
                     new = rule.applier.substitute(subst)
+                elif callable(rule.applier):
+                    new = rule.applier(match, subst)
                 else:
                     new = rule.applier
                 self._eclasses.add(new)
@@ -239,11 +274,3 @@ class EGraph:
                 print(f"Saturated after {_i} iterations")
                 return True
         return False
-
-
-class Rewrite:
-    __slots__ = ("matcher", "applier")
-
-    def __init__(self, matcher, applier):
-        self.matcher = matcher
-        self.applier = applier
