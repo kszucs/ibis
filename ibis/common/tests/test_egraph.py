@@ -72,8 +72,8 @@ def simplify(expr, rules, iters=7):
     egraph = EGraph()
     egraph.add(expr)
     egraph.run(rules, iters)
-    print(egraph._etables)
-    print(egraph._eclasses)
+    pprint(egraph._etables)
+    pprint(egraph._eclasses)
     best = egraph.extract(expr)
     return best
 

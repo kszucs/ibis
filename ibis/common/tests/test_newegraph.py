@@ -1,7 +1,7 @@
 import functools
 import itertools
 from pprint import pprint
-from typing import Tuple
+from typing import Any, Tuple
 
 import pytest
 
@@ -12,6 +12,7 @@ from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.common.grounds import Concrete
 from ibis.common.newegraph import EGraph, ENode, Pattern, Rewrite, Variable
+from ibis.util import promote_tuple
 
 
 def test_enode():
@@ -229,21 +230,21 @@ def test_egraph_extract():
     assert res == one.op()
 
 
-def test_egraph_extract_minimum_cost():
-    assert ENode.from_node(two.op()).cost == 4
-    assert ENode.from_node(two_.op()).cost == 4
-    assert ENode.from_node(two__.op()).cost == 2
+# def test_egraph_extract_minimum_cost():
+#     assert ENode.from_node(two.op()).cost == 4
+#     assert ENode.from_node(two_.op()).cost == 4
+#     assert ENode.from_node(two__.op()).cost == 2
 
-    eg = EGraph()
-    eg.add(two.op())
-    eg.add(two_.op())
-    eg.add(two__.op())
+#     eg = EGraph()
+#     eg.add(two.op())
+#     eg.add(two_.op())
+#     eg.add(two__.op())
 
-    eg.union(two.op(), two_.op())
-    assert eg.extract(two.op()) in {two.op(), two_.op()}
+#     eg.union(two.op(), two_.op())
+#     assert eg.extract(two.op()) in {two.op(), two_.op()}
 
-    eg.union(two.op(), two__.op())
-    assert eg.extract(two.op()) == two__.op()
+#     eg.union(two.op(), two__.op())
+#     assert eg.extract(two.op()) == two__.op()
 
 
 def test_egraph_rewrite_to_variable():
@@ -288,7 +289,83 @@ def test_egraph_rewrite_dynamic():
     eg.add(node)
 
     # rule with a dynamic pattern on the right-hand side
-    rule = Rewrite("mul" @ p.Multiply(a, p.Literal(Variable("times"), dt.int8)), applier)
+    rule = Rewrite(
+        "mul" @ p.Multiply(a, p.Literal(Variable("times"), dt.int8)), applier
+    )
     eg.apply(rule)
 
     assert eg.extract_all(node) == {two.op(), two_.op()}
+
+
+class Base(Concrete, Node):
+    def __class_getitem__(cls, args):
+        args = promote_tuple(args)
+        return Pattern(cls, args)
+
+
+class Lit(Base):
+    value: Any
+
+
+class Add(Base):
+    x: Any
+    y: Any
+
+
+class Mul(Base):
+    x: Any
+    y: Any
+
+
+# Rewrite rules
+a, b = Variable("a"), Variable("b")
+rules = [
+    Add[a, b] >> Add[b, a],
+    Mul[a, b] >> Mul[b, a],
+    Add[a, Lit[0]] >> a,
+    Mul[a, Lit[0]] >> Lit[0],
+    Mul[a, Lit[1]] >> a,
+]
+
+from pprint import pprint
+
+
+def simplify(expr, rules, iters=7):
+    egraph = EGraph()
+    egraph.add(expr)
+    egraph.run(rules, iters)
+    pprint(egraph._erelations)
+    pprint(egraph._eclasses._classes)
+
+    best = egraph.extract(expr)
+    return best
+
+
+def test_simple_1():
+    assert simplify(Mul(Lit(0), Lit(42)), rules) == Lit(0)
+
+
+def test_simple_2():
+    assert simplify(Add(Lit(0), Mul(Lit(1), Lit(2))), rules, iters=1) == Lit(2)
+
+
+def test_simple_3():
+    rules = [
+        Mul[a, b] >> Mul[b, a],
+        Mul[a, Lit[1]] >> a,
+    ]
+
+    node = Mul(Lit(2), Mul(Lit(1), Lit(3)))
+    expected = Mul(Lit(2), Lit(3))
+    assert simplify(node, rules, iters=20000) == expected
+
+
+def test_simple_4():
+    rules = [
+        Mul[a, b] >> Mul[b, a],
+        Mul[a, 1] >> a,
+    ]
+
+    node = Mul(2, Mul(1, 3))
+    expected = Mul(2, 3)
+    assert simplify(node, rules, iters=20000) == expected

@@ -1,5 +1,6 @@
 import collections
 import itertools
+import math
 from typing import Any, List, NamedTuple
 
 from bidict import bidict
@@ -41,20 +42,15 @@ class Variable:
 
 
 class Term:
-    __slots__ = ("head", "args", "cost", "__precomputed_hash__")
+    __slots__ = ("head", "args", "__precomputed_hash__")
 
     def __init__(self, head, args):
         object.__setattr__(self, "head", head)
         object.__setattr__(self, "args", tuple(args))
         object.__setattr__(
             self,
-            "cost",
-            sum(arg.cost if isinstance(arg, Term) else 1 for arg in self.args),
-        )
-        object.__setattr__(
-            self,
             "__precomputed_hash__",
-            hash((self.__class__, self.head, self.args, self.cost)),
+            hash((self.__class__, self.head, self.args)),
         )
 
     def __eq__(self, other):
@@ -62,7 +58,6 @@ class Term:
             type(self) is type(other)
             and self.head == other.head
             and self.args == other.args
-            and self.cost == other.cost
         )
 
     def __hash__(self):
@@ -109,6 +104,7 @@ class Pattern(Term):
         yield (var, Pattern(self.head, args))
 
     def substitute(self, mapping):
+        # use the node.map() method to substitute the variables
         args = []
         for arg in self.args:
             if isinstance(arg, (Pattern, Variable)):
@@ -118,6 +114,8 @@ class Pattern(Term):
         return ENode(self.head, args)
 
 
+# TODO(kszucs): maybe we should prohibit non-pattern appliers e.g. Add[a, b] >> b
+# where b is not a pattern but a constant/literal/leaf
 class Rewrite:
     __slots__ = ("matcher", "applier")
 
@@ -126,7 +124,7 @@ class Rewrite:
         self.applier = applier
 
     def __repr__(self):
-        return f"{self.lhs} >> {self.rhs}"
+        return f"{self.matcher} >> {self.applier}"
 
     def __eq__(self, other):
         return self.matcher == other.matcher and self.applier == other.applier
@@ -164,7 +162,12 @@ class ENode(Term, Node):
         return self.map(mapper)[self]
 
     def __repr__(self) -> str:
-        return f"ENode({self.head.__name__}, ...)"
+        argstring = ", ".join(map(repr, self.args))
+        return f"E{self.head.__name__}({argstring})"
+        # return f"E{self.head.__name__}({self.})"
+
+    def __lt__(self, other):
+        return False
 
 
 class EGraph:
@@ -185,16 +188,74 @@ class EGraph:
             self._erelations[child.head][child] = child.args
         return enode
 
+    ###########################
+
+    # def extract(self, node: Node) -> Node:
+    #     enode = ENode.from_node(node) if isinstance(node, Node) else node
+    #     original_enode = enode
+    #     eclass = self._eclasses[enode]
+
+    #     costs = {enode: (math.inf, None) for enode in self._eclasses.keys()}
+
+    #     def enode_cost(enode):
+    #         # cost of the enode.head
+    #         cost = 1
+    #         if isinstance(enode, ENode):
+    #             for arg in enode.args:
+    #                 if isinstance(arg, ENode):
+    #                     cost += costs[enode][0]
+    #                 else:
+    #                     cost += 1
+
+    #         return cost
+
+    #     changed = True
+
+    #     # iterate until we settle, taking the lowest cost option
+    #     while changed:
+    #         changed = False
+    #         for enode, eclass in self._eclasses.items():
+    #             new_cost = min((enode_cost(e), e) for e in eclass)
+
+    #             if costs[enode][0] != new_cost[0]:
+    #                 changed = True
+    #             costs[enode] = new_cost
+
+    #     def mapper(enode, _, **kwargs):
+    #         best = costs[enode][1]
+
+    #         print("BEST", enode, "=>", best)
+    #         if isinstance(best, ENode):
+    #             args = kwargs.values()
+    #             return ENode(best.head, args)
+    #         else:
+    #             return best
+
+    #     best = costs[original_enode][1]
+    #     return best.to_node()
+
+    def _create_node(self, enode):
+        eclass = self._eclasses[enode]
+        enode = next(iter(eclass))
+
+        if isinstance(enode, ENode):
+            args = []
+            for arg in enode.args:
+                if isinstance(arg, ENode):
+                    arg = self._create_node(arg)
+                args.append(arg)
+            return enode.head(*args)
+        else:
+            return enode
+
     def extract(self, node: Node) -> Node:
         enode = ENode.from_node(node) if isinstance(node, Node) else node
-        eclass = self._eclasses[enode]
-        best = min(eclass, key=lambda x: x.cost)
-        return best.to_node()
+        return self._create_node(enode)
 
-    def extract_all(self, node: Node) -> List[Node]:
-        enode = ENode.from_node(node) if isinstance(node, Node) else node
-        eclass = self._eclasses[enode]
-        return {x.to_node() for x in eclass}
+    # def extract_all(self, node: Node) -> List[Node]:
+    #     enode = ENode.from_node(node) if isinstance(node, Node) else node
+    #     eclass = self._eclasses[enode]
+    #     return {x.to_node() for x in eclass}
 
     def union(self, node1, node2):
         enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
@@ -264,13 +325,18 @@ class EGraph:
                     new = rule.applier(match, subst)
                 else:
                     new = rule.applier
-                self._eclasses.add(new)
+
+                new = self._eclasses.add(new)
+                if isinstance(new, ENode):
+                    self._erelations[new.head][new] = new.args
+
                 n_changes += self._eclasses.union(match, new)
+
         return n_changes
 
     def run(self, rules, iters=100) -> bool:
         for _i in range(iters):
             if not self.apply(rules):
-                print(f"Saturated after {_i} iterations")
+                print(f"Saturated after {_i + 1} iterations")
                 return True
         return False

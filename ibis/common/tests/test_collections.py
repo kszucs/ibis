@@ -260,6 +260,28 @@ def test_disjoint_set():
     assert ds.connected(1, 3) is True
     assert ds.connected(1, 4) is False
 
+    # test mapping api get
+    assert ds.get(1) == {1, 2, 3}
+    assert ds.get(4) == {4}
+    assert ds.get(5) is None
+    assert ds.get(5, 5) == 5
+    assert ds.get(5, default=5) == 5
+
+    # test mapping api keys
+    assert set(ds.keys()) == {1, 2, 3, 4}
+    assert set(ds) == {1, 2, 3, 4}
+
+    # test mapping api values
+    assert tuple(ds.values()) == ({1, 2, 3}, {1, 2, 3}, {1, 2, 3}, {4})
+
+    # test mapping api items
+    assert tuple(ds.items()) == (
+        (1, {1, 2, 3}),
+        (2, {1, 2, 3}),
+        (3, {1, 2, 3}),
+        (4, {4}),
+    )
+
     # check that the disjoint set doesn't get corrupted by adding an existing element
     ds.verify()
     ds.add(1)

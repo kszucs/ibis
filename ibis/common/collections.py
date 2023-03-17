@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import Any, Generic, Hashable, Iterable, Mapping, TypeVar
+from typing import Any, Generic, Hashable, Iterable, Iterator, Mapping, TypeVar
 
 from public import public
 from typing_extensions import Self
@@ -208,7 +208,7 @@ class DotDict(dict):
         return f"{self.__class__.__name__}({super().__repr__()})"
 
 
-class DisjointSet(Generic[K]):
+class DisjointSet(Mapping[K, set[K]]):
     """Disjoint set data structure.
 
     Also known as union-find data structure. It is a data structure that keeps
@@ -257,6 +257,9 @@ class DisjointSet(Generic[K]):
         id = self._parents[id]
         return self._classes[id]
 
+    def __iter__(self) -> Iterator[K]:
+        return iter(self._parents)
+
     def __len__(self) -> int:
         return len(self._parents)
 
@@ -267,9 +270,10 @@ class DisjointSet(Generic[K]):
 
     def add(self, id: K) -> None:
         if id in self._parents:
-            return
+            return self._parents[id]
         self._parents[id] = id
         self._classes[id] = {id}
+        return id
 
     def find(self, id: K) -> K:
         return self._parents[id]
