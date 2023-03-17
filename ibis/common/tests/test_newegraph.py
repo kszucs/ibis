@@ -294,7 +294,7 @@ def test_egraph_rewrite_dynamic():
     )
     eg.apply(rule)
 
-    assert eg.extract_all(node) == {two.op(), two_.op()}
+    assert eg.extract(node) in {two.op(), two_.op()}
 
 
 class Base(Concrete, Node):

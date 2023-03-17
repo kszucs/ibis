@@ -188,52 +188,6 @@ class EGraph:
             self._erelations[child.head][child] = child.args
         return enode
 
-    ###########################
-
-    # def extract(self, node: Node) -> Node:
-    #     enode = ENode.from_node(node) if isinstance(node, Node) else node
-    #     original_enode = enode
-    #     eclass = self._eclasses[enode]
-
-    #     costs = {enode: (math.inf, None) for enode in self._eclasses.keys()}
-
-    #     def enode_cost(enode):
-    #         # cost of the enode.head
-    #         cost = 1
-    #         if isinstance(enode, ENode):
-    #             for arg in enode.args:
-    #                 if isinstance(arg, ENode):
-    #                     cost += costs[enode][0]
-    #                 else:
-    #                     cost += 1
-
-    #         return cost
-
-    #     changed = True
-
-    #     # iterate until we settle, taking the lowest cost option
-    #     while changed:
-    #         changed = False
-    #         for enode, eclass in self._eclasses.items():
-    #             new_cost = min((enode_cost(e), e) for e in eclass)
-
-    #             if costs[enode][0] != new_cost[0]:
-    #                 changed = True
-    #             costs[enode] = new_cost
-
-    #     def mapper(enode, _, **kwargs):
-    #         best = costs[enode][1]
-
-    #         print("BEST", enode, "=>", best)
-    #         if isinstance(best, ENode):
-    #             args = kwargs.values()
-    #             return ENode(best.head, args)
-    #         else:
-    #             return best
-
-    #     best = costs[original_enode][1]
-    #     return best.to_node()
-
     def _create_node(self, enode):
         eclass = self._eclasses[enode]
         enode = next(iter(eclass))
