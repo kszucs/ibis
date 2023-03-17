@@ -3,8 +3,6 @@ import itertools
 import math
 from typing import Any, List, NamedTuple
 
-from bidict import bidict
-
 from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.util import promote_list
@@ -171,10 +169,12 @@ class ENode(Term, Node):
 
 
 class EGraph:
-    __slots__ = ("_nodes", "_eclasses", "_erelations")
+    __slots__ = ("_nodes", "_eclasses", "_erelations", "_ecosts", "_ebests")
 
     def __init__(self):
         # self._nodes = bidict()
+        self._ebests = {}
+        self._ecosts = {}
         self._eclasses = DisjointSet()
         self._erelations = collections.defaultdict(dict)
 
@@ -182,34 +182,33 @@ class EGraph:
         # TODO(kszucs): if the Node to ENode mapping cannot be ommitted, then
         # use the from_node implementation here directly so we can spare the
         # additional .traverse() call
-        enode = ENode.from_node(node)
-        for child in enode.traverse():
-            self._eclasses.add(child)
-            self._erelations[child.head][child] = child.args
-        return enode
+        # enode = ENode.from_node(node)
+        # for child in enode.traverse():
+        #     self._ecosts[child] = 1
+        #     self._eclasses.add(child)
+        #     self._erelations[child.head][child] = child.args
 
-    def _create_node(self, enode):
-        eclass = self._eclasses[enode]
-        enode = next(iter(eclass))
-
-        if isinstance(enode, ENode):
-            args = []
-            for arg in enode.args:
-                if isinstance(arg, ENode):
-                    arg = self._create_node(arg)
-                args.append(arg)
-            return enode.head(*args)
-        else:
+        def mapper(node, _, **kwargs):
+            enode = ENode(node.__class__, kwargs.values())
+            cost = sum(self._ecosts.get(arg, 1) for arg in enode.args)
+            self._ecosts[enode] = cost
+            self._ebests[enode] = enode
+            self._eclasses.add(enode)
+            self._erelations[enode.head][enode] = enode.args
             return enode
+
+        return node.map(mapper)[node]
 
     def extract(self, node: Node) -> Node:
         enode = ENode.from_node(node) if isinstance(node, Node) else node
-        return self._create_node(enode)
+        best = self._ebests[enode]
 
-    # def extract_all(self, node: Node) -> List[Node]:
-    #     enode = ENode.from_node(node) if isinstance(node, Node) else node
-    #     eclass = self._eclasses[enode]
-    #     return {x.to_node() for x in eclass}
+        if self._ecosts[best] == self._ecosts[enode]:
+            args = [self._ebests.get(arg, arg) for arg in enode.args]
+            best = ENode(enode.head, args)
+
+        return best.to_node()
+
 
     def union(self, node1, node2):
         enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
@@ -280,11 +279,29 @@ class EGraph:
                 else:
                     new = rule.applier
 
+                if new not in self._eclasses:
+                    self._ecosts[new] = 1
+
                 new = self._eclasses.add(new)
                 if isinstance(new, ENode):
                     self._erelations[new.head][new] = new.args
 
+                print("UNION", match, new)
                 n_changes += self._eclasses.union(match, new)
+
+                eclass = self._eclasses[match]
+                costs = {enode: self._ecosts[enode] for enode in eclass}
+                best = min(costs, key=costs.get)
+
+                # self._ebests[self._eclasses.find(match)] = best
+                for enode in eclass:
+                    if isinstance(enode, ENode):
+                        cost = sum(self._ecosts.get(arg, 1) for arg in enode.args)
+                    else:
+                        cost = 1
+                    self._ebests[enode] = best
+                    self._ecosts[enode] = cost
+
 
         return n_changes
 

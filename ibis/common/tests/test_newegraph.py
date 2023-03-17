@@ -334,8 +334,22 @@ def simplify(expr, rules, iters=7):
     egraph = EGraph()
     egraph.add(expr)
     egraph.run(rules, iters)
+    print()
+    print("ERelations:")
+    print("-----------")
     pprint(egraph._erelations)
+    print()
+    print("EClasses:")
+    print("---------")
     pprint(egraph._eclasses._classes)
+    print()
+    print("ECosts:")
+    print("-------")
+    pprint(egraph._ecosts)
+    print()
+    print("EBests:")
+    print("-------")
+    pprint(egraph._ebests)
 
     best = egraph.extract(expr)
     return best
@@ -368,4 +382,5 @@ def test_simple_4():
 
     node = Mul(2, Mul(1, 3))
     expected = Mul(2, 3)
+
     assert simplify(node, rules, iters=20000) == expected
