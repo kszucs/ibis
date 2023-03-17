@@ -199,12 +199,24 @@ class EGraph:
 
         return node.map(mapper)[node]
 
+    def _pickbest(self, enode):
+        if not isinstance(enode, ENode):
+            return enode
+        eclass = self._eclasses[enode]
+        costs = {enode: self._ecosts[enode] for enode in eclass}
+        best = min(costs, key=costs.get)
+        return best
+
     def extract(self, node: Node) -> Node:
         enode = ENode.from_node(node) if isinstance(node, Node) else node
-        best = self._ebests[enode]
+        # best = self._ebests[enode]
+        # if self._ecosts[best] == self._ecosts[enode]:
+        #     args = [self._ebests.get(arg, arg) for arg in enode.args]
+        #     best = ENode(enode.head, args)
 
+        best = self._pickbest(enode)
         if self._ecosts[best] == self._ecosts[enode]:
-            args = [self._ebests.get(arg, arg) for arg in enode.args]
+            args = [self._pickbest(arg) for arg in enode.args]
             best = ENode(enode.head, args)
 
         return best.to_node()
@@ -288,12 +300,10 @@ class EGraph:
                 # print("UNION", match, new)
                 n_changes += self._eclasses.union(match, new)
 
-                eclass = self._eclasses[match]
-                costs = {enode: self._ecosts[enode] for enode in eclass}
-                best = min(costs, key=costs.get)
+                best = self._pickbest(match)
 
                 # self._ebests[self._eclasses.find(match)] = best
-                for enode in eclass:
+                for enode in self._eclasses[match]:
                     if isinstance(enode, ENode):
                         cost = sum(self._ecosts.get(arg, 1) for arg in enode.args)
                     else:
