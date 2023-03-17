@@ -99,10 +99,10 @@ class ENode(Term, Node):
     def __argnames__(self):
         return self.head.__argnames__
 
-    # we can maybe spare this conversion if we don't try to recreate the original type
-    # but rather use a Term[head, args] along with the original inputs, during
-    # substitution a term would be produced but it would be nice to have the same hash
-    # as the original
+    # TODO(kszucs): perhaps we can spare this conversion if we don't try to recreate
+    # the original type but rather use a Term[head, args] along with the original
+    # inputs, during substitution a term would be produced but it would be nice to
+    # have the same hash as the original
     @classmethod
     def from_node(cls, node: Any):
         def mapper(node, _, **kwargs):
@@ -124,7 +124,7 @@ class EGraph:
     __slots__ = ("_nodes", "_eclasses", "_erelations")
 
     def __init__(self):
-        self._nodes = bidict()
+        # self._nodes = bidict()
         self._eclasses = DisjointSet()
         self._erelations = collections.defaultdict(dict)
 
@@ -136,11 +136,21 @@ class EGraph:
             self._erelations[child.head][child] = child.args
         return enode
 
+    def extract(self, node):
+        enode = ENode.from_node(node)
+        enode = self._eclasses.find(enode)
+        return enode.to_node()
+
+    # def equivalent(self, id1, id2):
+    #     id1 = self._eparents[id1]
+    #     id2 = self._eparents[id2]
+    #     return id1 == id2
+
     # on extraction the ENode must be mapped through self._eclasses.find
 
     def _match_args(self, args, patargs):
         if len(args) != len(patargs):
-            return
+            return None
 
         subst = {}
         for arg, patarg in zip(args, patargs):
@@ -152,12 +162,12 @@ class EGraph:
             elif isinstance(patarg, ENode):
                 if isinstance(arg, ENode):
                     if self._eclasses.find(arg) != self._eclasses.find(patarg):
-                        return
+                        return None
                 else:
-                    return
+                    return None
             else:
                 if arg != patarg:
-                    return
+                    return None
 
         return subst
 
@@ -180,7 +190,6 @@ class EGraph:
             matches = tmp
 
         return matches
-
 
 
 # class EPattern(ETerm):

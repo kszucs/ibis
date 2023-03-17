@@ -197,17 +197,17 @@ class PatternNamespace:
 p = PatternNamespace(ops)
 a = Variable('a')
 
+one = ibis.literal(1)
+two = one * 2
+two_ = one + one
+three = one + two
+six = three * two_
+seven = six + 1
+seven_ = seven * 1
+eleven = seven_ + 4
+
 
 def test_egraph_simple_match():
-    one = ibis.literal(1)
-    two = one * 2
-    two_ = one + one
-    three = one + two
-    six = three * two_
-    seven = six + 1
-    seven_ = seven * 1
-    eleven = seven_ + 4
-
     eg = EGraph()
     eg.add(eleven.op())
 
@@ -218,3 +218,11 @@ def test_egraph_simple_match():
     matches = res[enode]
     assert matches['a'] == ENode.from_node(seven.op())
     assert matches['lit'] == ENode.from_node(one.op())
+
+
+def test_egraph_simple_extract():
+    eg = EGraph()
+    eg.add(eleven.op())
+
+    res = eg.extract(one.op())
+    assert res == one.op()
