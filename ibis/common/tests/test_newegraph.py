@@ -1,6 +1,5 @@
 import functools
 import itertools
-from pprint import pprint
 from typing import Any, Tuple
 
 import pytest
@@ -230,21 +229,21 @@ def test_egraph_extract():
     assert res == one.op()
 
 
-# def test_egraph_extract_minimum_cost():
-#     assert ENode.from_node(two.op()).cost == 4
-#     assert ENode.from_node(two_.op()).cost == 4
-#     assert ENode.from_node(two__.op()).cost == 2
+def test_egraph_extract_minimum_cost():
+    assert ENode.from_node(two.op()).cost == 4
+    assert ENode.from_node(two_.op()).cost == 4
+    assert ENode.from_node(two__.op()).cost == 2
 
-#     eg = EGraph()
-#     eg.add(two.op())
-#     eg.add(two_.op())
-#     eg.add(two__.op())
+    eg = EGraph()
+    eg.add(two.op())
+    eg.add(two_.op())
+    eg.add(two__.op())
 
-#     eg.union(two.op(), two_.op())
-#     assert eg.extract(two.op()) in {two.op(), two_.op()}
+    eg.union(two.op(), two_.op())
+    assert eg.extract(two.op()) in {two.op(), two_.op()}
 
-#     eg.union(two.op(), two__.op())
-#     assert eg.extract(two.op()) == two__.op()
+    eg.union(two.op(), two__.op())
+    assert eg.extract(two.op()) == two__.op()
 
 
 def test_egraph_rewrite_to_variable():
@@ -327,30 +326,29 @@ rules = [
     Mul[a, Lit[1]] >> a,
 ]
 
-from pprint import pprint
-
 
 def simplify(expr, rules, iters=7):
+    from pprint import pprint
+
     egraph = EGraph()
     egraph.add(expr)
     egraph.run(rules, iters)
-    print()
-    print("ERelations:")
-    print("-----------")
-    pprint(egraph._erelations)
-    print()
-    print("EClasses:")
-    print("---------")
-    pprint(egraph._eclasses._classes)
-    print()
-    print("ECosts:")
-    print("-------")
-    pprint(egraph._ecosts)
-    print()
-    print("EBests:")
-    print("-------")
-    pprint(egraph._ebests)
-
+    # print()
+    # print("ERelations:")
+    # print("-----------")
+    # pprint(egraph._erelations)
+    # print()
+    # print("EClasses:")
+    # print("---------")
+    # pprint(egraph._eclasses._classes)
+    # print()
+    # print("ECosts:")
+    # print("-------")
+    # pprint(egraph._ecosts)
+    # print()
+    # print("EBests:")
+    # print("-------")
+    # pprint(egraph._ebests)
     best = egraph.extract(expr)
     return best
 

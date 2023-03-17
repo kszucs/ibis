@@ -209,7 +209,6 @@ class EGraph:
 
         return best.to_node()
 
-
     def union(self, node1, node2):
         enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
         enode2 = ENode.from_node(node2) if isinstance(node2, Node) else node2
@@ -286,7 +285,7 @@ class EGraph:
                 if isinstance(new, ENode):
                     self._erelations[new.head][new] = new.args
 
-                print("UNION", match, new)
+                # print("UNION", match, new)
                 n_changes += self._eclasses.union(match, new)
 
                 eclass = self._eclasses[match]
@@ -301,7 +300,6 @@ class EGraph:
                         cost = 1
                     self._ebests[enode] = best
                     self._ecosts[enode] = cost
-
 
         return n_changes
 
