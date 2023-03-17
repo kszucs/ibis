@@ -230,32 +230,20 @@ def test_egraph_extract():
 
 
 def test_egraph_extract_minimum_cost():
-    # assert ENode.from_node(two.op()).cost == 4
-    # assert ENode.from_node(two_.op()).cost == 4
-    # assert ENode.from_node(two__.op()).cost == 2
-
     eg = EGraph()
-    eg.add(two.op())   # 1 * 2
+    eg.add(two.op())  # 1 * 2
     eg.add(two_.op())  # 1 + 1
-    eg.add(two__.op()) # 2
-
-    # assert eg.extract(two.op()) == two.op()
+    eg.add(two__.op())  # 2
+    assert eg.extract(two.op()) == two.op()
 
     eg.union(two.op(), two_.op())
-    # assert eg.extract(two.op()) in {two.op(), two_.op()}
+    assert eg.extract(two.op()) in {two.op(), two_.op()}
 
     eg.union(two.op(), two__.op())
-    # assert eg.extract(two.op()) == two__.op()
+    assert eg.extract(two.op()) == two__.op()
 
-    print(eg.extract(two.op()))
-
-    debug(eg)
-
-    #eg.union(two.op(), two_.op())
-    # assert eg.extract(two.op()) in {two.op(), two_.op()}
-
-    # eg.union(two.op(), two__.op())
-    #assert eg.extract(two.op()) == two__.op()
+    eg.union(two.op(), two__.op())
+    assert eg.extract(two.op()) == two__.op()
 
 
 def test_egraph_rewrite_to_variable():
@@ -329,7 +317,7 @@ class Mul(Base):
 
 
 # Rewrite rules
-a, b = Variable("a"), Variable("b")
+a, b, c = Variable("a"), Variable("b"), Variable("c")
 rules = [
     Add[a, b] >> Add[b, a],
     Mul[a, b] >> Mul[b, a],
@@ -358,6 +346,7 @@ def debug(egraph):
     print("EBests:")
     print("-------")
     pprint(egraph._ebests)
+
 
 def simplify(expr, rules, iters=7):
     egraph = EGraph()
@@ -396,3 +385,30 @@ def test_simple_4():
     expected = Mul(2, 3)
 
     assert simplify(node, rules, iters=20000) == expected
+
+
+def is_equal(a, b, rules, iters=7):
+    egraph = EGraph()
+    id_a = egraph.add(a)
+    id_b = egraph.add(b)
+    egraph.run(rules, iters)
+    res = egraph.equivalent(id_a, id_b)
+    debug(egraph)
+    return res
+
+    # pprint(egraph._etables)
+    # pprint(egraph._eclasses)
+
+
+
+def test_math_associate_adds():
+    math_rules = [Add[a, b] >> Add[b, a], Add[a, Add[b, c]] >> Add[Add[a, b], c]]
+
+    expr_a = Add(1, Add(2, Add(3, Add(4, Add(5, Add(6, 7))))))
+    expr_b = Add(7, Add(6, Add(5, Add(4, Add(3, Add(2, 1))))))
+    assert is_equal(expr_a, expr_b, math_rules, iters=500)
+    return
+
+    expr_a = Add(6, Add(Add(1, 5), Add(0, Add(4, Add(2, 3)))))
+    expr_b = Add(6, Add(Add(4, 5), Add(Add(0, 2), Add(3, 1))))
+    assert is_equal(expr_a, expr_b, math_rules, iters=500)

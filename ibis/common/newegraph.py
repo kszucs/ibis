@@ -178,6 +178,20 @@ class EGraph:
         self._eclasses = DisjointSet()
         self._erelations = collections.defaultdict(dict)
 
+    def _add_enode(self, enode: ENode) -> ENode:
+        if enode in self._eclasses:
+            return self._eclasses.find(enode)
+        if isinstance(enode, ENode):
+            cost = sum(self._ecosts.get(arg, 1) for arg in enode.args)
+        else:
+            cost = 1
+        self._ecosts[enode] = cost
+        self._ebests[enode] = enode
+        self._eclasses.add(enode)
+        if isinstance(enode, ENode):
+            self._erelations[enode.head][enode] = enode.args
+        return enode
+
     def add(self, node: Node) -> ENode:
         # TODO(kszucs): if the Node to ENode mapping cannot be ommitted, then
         # use the from_node implementation here directly so we can spare the
@@ -190,12 +204,8 @@ class EGraph:
 
         def mapper(node, _, **kwargs):
             enode = ENode(node.__class__, kwargs.values())
-            cost = sum(self._ecosts.get(arg, 1) for arg in enode.args)
-            self._ecosts[enode] = cost
-            self._ebests[enode] = enode
-            self._eclasses.add(enode)
-            self._erelations[enode.head][enode] = enode.args
-            return enode
+            return self._add_enode(enode)
+
 
         return node.map(mapper)[node]
 
@@ -221,16 +231,26 @@ class EGraph:
 
         return best.to_node()
 
+    def _coerce_enode(self, node):
+        if isinstance(node, ENode):
+            return node
+        elif isinstance(node, Node):
+            return ENode.from_node(node)
+        else:
+            return node
+
     def union(self, node1, node2):
-        enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
-        enode2 = ENode.from_node(node2) if isinstance(node2, Node) else node2
+        enode1 = self._coerce_enode(node1)
+        enode2 = self._coerce_enode(node2)
         return self._eclasses.union(enode1, enode2)
 
     def equivalent(self, node1, node2) -> bool:
-        enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
-        enode2 = ENode.from_node(node2) if isinstance(node2, Node) else node2
+        enode1 = self._coerce_enode(node1)
+        enode2 = self._coerce_enode(node2)
         root1 = self._eclasses.find(enode1)
         root2 = self._eclasses.find(enode2)
+        print(root1)
+        print(root2)
         return root1 == root2
 
     def _match_args(self, args, patargs):
@@ -241,7 +261,7 @@ class EGraph:
         for arg, patarg in zip(args, patargs):
             if isinstance(patarg, Variable):
                 if isinstance(arg, ENode):
-                    subst[patarg.name] = self._eclasses.find(arg)
+                    subst[patarg.name] = arg #self._eclasses.find(arg)
                 else:
                     subst[patarg.name] = arg
             elif isinstance(patarg, ENode):
@@ -293,9 +313,8 @@ class EGraph:
                 if new not in self._eclasses:
                     self._ecosts[new] = 1
 
-                new = self._eclasses.add(new)
-                if isinstance(new, ENode):
-                    self._erelations[new.head][new] = new.args
+                # new = self._eclasses.add(new)
+                new = self._add_enode(new)
 
                 # print("UNION", match, new)
                 n_changes += self._eclasses.union(match, new)
