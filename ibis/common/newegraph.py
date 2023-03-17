@@ -9,7 +9,8 @@ from ibis.common.graph import Node
 from ibis.util import promote_list
 
 # TODO(kszucs): cost could be directly assigned to ENodes during construction
-# based on the number of nodes in the ENode's tree
+# based on the number of nodes in the ENode's tree as well as a predefined cost
+# for each node type
 
 
 # TODO(kszucs): consider to implement Comparable for ETerms in order to have
@@ -35,15 +36,25 @@ class Variable:
     def __setattr__(self, name, value):
         raise AttributeError("Can't set attributes on immutable ENode instance")
 
+    def substitute(self, mapping):
+        return mapping[self.name]
+
 
 class Term:
-    __slots__ = ("head", "args", "__precomputed_hash__")
+    __slots__ = ("head", "args", "cost", "__precomputed_hash__")
 
     def __init__(self, head, args):
         object.__setattr__(self, "head", head)
         object.__setattr__(self, "args", tuple(args))
         object.__setattr__(
-            self, "__precomputed_hash__", hash((self.__class__, self.head, self.args))
+            self,
+            "cost",
+            sum(arg.cost if isinstance(arg, Term) else 1 for arg in self.args),
+        )
+        object.__setattr__(
+            self,
+            "__precomputed_hash__",
+            hash((self.__class__, self.head, self.args, self.cost)),
         )
 
     def __eq__(self, other):
@@ -51,6 +62,7 @@ class Term:
             type(self) is type(other)
             and self.head == other.head
             and self.args == other.args
+            and self.cost == other.cost
         )
 
     def __hash__(self):
@@ -86,6 +98,15 @@ class Pattern(Term):
             else:
                 args.append(arg)
         yield (var, Pattern(self.head, args))
+
+    def substitute(self, mapping):
+        args = []
+        for arg in self.args:
+            if isinstance(arg, (Pattern, Variable)):
+                args.append(arg.substitute(mapping))
+            else:
+                args.append(arg)
+        return ENode(self.head, args)
 
 
 class ENode(Term, Node):
@@ -128,25 +149,33 @@ class EGraph:
         self._eclasses = DisjointSet()
         self._erelations = collections.defaultdict(dict)
 
-    def add(self, node):
-        # self._nodes[node] = enode
+    def add(self, node: Node) -> ENode:
+        # TODO(kszucs): if the Node to ENode mapping cannot be ommitted, then
+        # use the from_node implementation here directly so we can spare the
+        # additional .traverse() call
         enode = ENode.from_node(node)
         for child in enode.traverse():
             self._eclasses.add(child)
             self._erelations[child.head][child] = child.args
         return enode
 
-    def extract(self, node):
-        enode = ENode.from_node(node)
-        enode = self._eclasses.find(enode)
-        return enode.to_node()
+    def extract(self, node: Node) -> Node:
+        enode = ENode.from_node(node) if isinstance(node, Node) else node
+        eclass = self._eclasses[enode]
+        best = min(eclass, key=lambda x: x.cost)
+        return best.to_node()
 
-    # def equivalent(self, id1, id2):
-    #     id1 = self._eparents[id1]
-    #     id2 = self._eparents[id2]
-    #     return id1 == id2
+    def union(self, node1, node2):
+        enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
+        enode2 = ENode.from_node(node2) if isinstance(node2, Node) else node2
+        return self._eclasses.union(enode1, enode2)
 
-    # on extraction the ENode must be mapped through self._eclasses.find
+    def equivalent(self, node1, node2) -> bool:
+        enode1 = ENode.from_node(node1) if isinstance(node1, Node) else node1
+        enode2 = ENode.from_node(node2) if isinstance(node2, Node) else node2
+        root1 = self._eclasses.find(enode1)
+        root2 = self._eclasses.find(enode2)
+        return root1 == root2
 
     def _match_args(self, args, patargs):
         if len(args) != len(patargs):
@@ -191,7 +220,30 @@ class EGraph:
 
         return matches
 
+    def apply(self, rules) -> int:
+        n_changes = 0
+        for rule in promote_list(rules):
+            matches = self.match(rule.matcher)
+            for match, subst in matches.items():
+                if isinstance(rule.applier, (Variable, Pattern)):
+                    new = rule.applier.substitute(subst)
+                else:
+                    new = rule.applier
+                self._eclasses.add(new)
+                n_changes += self._eclasses.union(match, new)
+        return n_changes
 
-# class EPattern(ETerm):
-#     __slots__ = ()
-# Pattern is almost identical with ENode it just can hold Variables
+    def run(self, rules, iters=100) -> bool:
+        for _i in range(iters):
+            if not self.apply(rules):
+                print(f"Saturated after {_i} iterations")
+                return True
+        return False
+
+
+class Rewrite:
+    __slots__ = ("matcher", "applier")
+
+    def __init__(self, matcher, applier):
+        self.matcher = matcher
+        self.applier = applier

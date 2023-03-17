@@ -11,7 +11,7 @@ import ibis.expr.operations as ops
 from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.common.grounds import Concrete
-from ibis.common.newegraph import EGraph, ENode, Pattern, Variable
+from ibis.common.newegraph import EGraph, ENode, Pattern, Rewrite, Variable
 
 
 def test_enode():
@@ -200,6 +200,7 @@ a = Variable('a')
 one = ibis.literal(1)
 two = one * 2
 two_ = one + one
+two__ = ibis.literal(2)
 three = one + two
 six = three * two_
 seven = six + 1
@@ -226,3 +227,52 @@ def test_egraph_simple_extract():
 
     res = eg.extract(one.op())
     assert res == one.op()
+
+
+def test_egraph_simple_extract_minimum_cost():
+    assert ENode.from_node(two.op()).cost == 4
+    assert ENode.from_node(two_.op()).cost == 4
+    assert ENode.from_node(two__.op()).cost == 2
+
+    eg = EGraph()
+    eg.add(two.op())
+    eg.add(two_.op())
+    eg.add(two__.op())
+
+    eg.union(two.op(), two_.op())
+    assert eg.extract(two.op()) in {two.op(), two_.op()}
+
+    eg.union(two.op(), two__.op())
+    assert eg.extract(two.op()) == two__.op()
+
+
+def test_egraph_simple_rewrite_to_variable():
+    eg = EGraph()
+    eg.add(eleven.op())
+
+    # rule with a variable on the right-hand side
+    rule = Rewrite(p.Multiply(a, "lit" @ p.Literal(1, dt.int8)), a)
+    eg.apply(rule)
+    assert eg.equivalent(seven_.op(), seven.op())
+
+
+def test_egraph_simple_rewrite_to_constant():
+    node = (one * 0).op()
+
+    eg = EGraph()
+    eg.add(node)
+
+    # rule with a constant on the right-hand side
+    rule = Rewrite(p.Multiply(a, "lit" @ p.Literal(0, dt.int8)), 0)
+    eg.apply(rule)
+    assert eg.equivalent(node, 0)
+
+
+def test_egraph_simple_rewrite_to_pattern():
+    eg = EGraph()
+    eg.add(three.op())
+
+    # rule with a pattern on the right-hand side
+    rule = Rewrite(p.Multiply(a, "lit" @ p.Literal(2, dt.int8)), p.Add(a, a))
+    eg.apply(rule)
+    assert eg.equivalent(two.op(), two_.op())
