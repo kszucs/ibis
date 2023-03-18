@@ -3,7 +3,7 @@ import itertools
 from typing import NamedTuple
 
 from bidict import bidict
-
+import math
 from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.util import promote_list
@@ -21,12 +21,24 @@ class ENode:
             self, "__precomputed_hash__", hash((self.__class__, self.head, self.args))
         )
 
+    # @property
+    # def __argnames__(self):
+    #     return ()
+
+    # @property
+    # def __args__(self):
+    #     return self.args
+
+    # @property
+    # def id(self):
+    #     return self.__precomputed_hash__
+
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
         return f"ENode({self.head.__name__}, {argstring})"
 
     def __eq__(self, other):
-        return self.head == other.head and self.args == other.args
+        return type(self) is type(other) and self.head == other.head and self.args == other.args
 
     def __hash__(self):
         return self.__precomputed_hash__
@@ -74,24 +86,84 @@ class EGraph:
     def __repr__(self):
         return f"EGraph({self._eclasses})"
 
-    def _create_node(self, id):
+    # TODO(kszucs): this should be done during `union` operation
+    def pina(self, id):
+        print(self._eclasses._parents)
+        print(self._eclasses._classes)
+        head_costs = collections.defaultdict(lambda: 1)
+
         id = self._eclasses.find(id)
-        eclass = self._eclasses[id]
-        enodes = [self._enodes.inverse[id] for id in eclass]
-        enode = enodes[0]
 
-        args = []
-        for arg in enode.args:
-            if isinstance(arg, Atom):
-                args.append(arg.value)
+
+        #eclasses = eg.eclasses()
+        # set each cost to infinity
+        cost = {eid: (math.inf, None) for eid in self._eclasses.keys()} # eclass -> (cost, enode)
+        changed = True
+        def enode_cost(enode):
+            if isinstance(enode, ENode):
+                return head_costs.get(enode.head, 0) + sum(cost[eid][0] for eid in enode.args)
             else:
-                arg = self._create_node(arg)
-                args.append(arg)
+                return 1
 
-        return enode.head(*args)
+        # iterate until we settle, taking the lowest cost option
+        while changed:
+            changed = False
+            for eid, enodes in self._eclasses.items():
+                #print(enodes)
+                new_cost = min((enode_cost(enode), enode) for enode in enodes)
+                if cost[eid][0] != new_cost[0]:
+                    changed = True
+                cost[eid] = new_cost
+
+        print(cost)
+
+        def extract(eid):
+            if isinstance(eid, Atom):
+                return eid.value
+
+            best = cost[eid][1]
+            enode = self._enodes.inverse[best]
+
+            if isinstance(enode, ENode):
+                return enode.head(*tuple(extract(a) for a in enode.args))
+            else:
+                return enode
+
+        return extract(id)
+
+    # def _extract_best(self, id):
+    #     id = self._eclasses.find(id)
+    #     eclass = self._eclasses[id]
+    #     enodes = [self._enodes.inverse[id] for id in eclass]
+    #     best = enodes[0]
+    #     return best
+
+    # def _create_node(self, id):
+    #     print(id)
+    #     enode = self._extract_best(id)
+
+    #     args = []
+    #     for arg in enode.args:
+    #         if isinstance(arg, Atom):
+    #             args.append(arg.value)
+    #         else:
+    #             arg = self._create_node(arg)
+    #             args.append(arg)
+
+    #     return enode.head(*args)
 
     def add(self, node):
-        if isinstance(node, Node):
+        if isinstance(node, ENode):
+            args = []
+            for arg in node.args:
+                if isinstance(arg, ENode):
+                    args.append(self.add(arg))
+                elif isinstance(arg, (Atom, int)):
+                    args.append(arg)
+                else:
+                    raise TypeError(arg)
+            enode = ENode(node.head, args)
+        elif isinstance(node, Node):
             if node in self._nodes:
                 enode = self._nodes[node]
             else:
@@ -102,16 +174,6 @@ class EGraph:
                 )
                 enode = ENode(head, args)
             self._nodes[node] = enode
-        elif isinstance(node, ENode):
-            args = []
-            for arg in node.args:
-                if isinstance(arg, ENode):
-                    args.append(self.add(arg))
-                elif isinstance(arg, (Atom, int)):
-                    args.append(arg)
-                else:
-                    raise TypeError(arg)
-            enode = ENode(node.head, args)
         else:
             raise TypeError(
                 f"`node` must be an instance of ibis.common.graph.Node but got {type(node)}"
@@ -121,7 +183,10 @@ class EGraph:
             return id
 
         assert enode not in self._enodes
+
         id = next(self._counter)
+        #print(id, enode.id)
+        #id = enode.id
 
         self._enodes[enode] = id
         self._eclasses.add(id)
@@ -188,6 +253,8 @@ class EGraph:
                         otherid = self.add(enode)
                     else:
                         otherid = enode
+                elif isinstance(rewrite.rhs, ENode):
+                    otherid = self.add(rewrite.rhs)
                 elif isinstance(rewrite.rhs, Node):
                     otherid = self.add(rewrite.rhs)
                 elif callable(rewrite.rhs):
@@ -218,7 +285,8 @@ class EGraph:
         elif isinstance(node, int):
             id = node
 
-        return self._create_node(id)
+        return self.pina(id)
+        # return self._create_node(id)
 
     def equivalent(self, id1, id2):
         id1 = self._eclasses.find(id1)
