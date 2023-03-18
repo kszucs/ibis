@@ -400,7 +400,6 @@ def is_equal(a, b, rules, iters=7):
     # pprint(egraph._eclasses)
 
 
-
 def test_math_associate_adds():
     math_rules = [Add[a, b] >> Add[b, a], Add[a, Add[b, c]] >> Add[Add[a, b], c]]
 

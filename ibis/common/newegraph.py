@@ -206,7 +206,6 @@ class EGraph:
             enode = ENode(node.__class__, kwargs.values())
             return self._add_enode(enode)
 
-
         return node.map(mapper)[node]
 
     def _pickbest(self, enode):
@@ -261,7 +260,7 @@ class EGraph:
         for arg, patarg in zip(args, patargs):
             if isinstance(patarg, Variable):
                 if isinstance(arg, ENode):
-                    subst[patarg.name] = arg #self._eclasses.find(arg)
+                    subst[patarg.name] = arg  # self._eclasses.find(arg)
                 else:
                     subst[patarg.name] = arg
             elif isinstance(patarg, ENode):

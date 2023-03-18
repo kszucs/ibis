@@ -86,8 +86,8 @@ def is_equal(a, b, rules, iters=7):
     id_a = egraph.add(a)
     id_b = egraph.add(b)
     egraph.run(rules, iters)
-    #pprint(egraph._etables)
-    #pprint(egraph._eclasses)
+    # pprint(egraph._etables)
+    # pprint(egraph._eclasses)
     return egraph.equivalent(id_a, id_b)
 
 

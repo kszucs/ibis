@@ -53,7 +53,7 @@ class EGraph:
         "_eparents",
         "_eclasses",
         "_etables",
-        "_saturated",
+
     )
 
     def __init__(self):
@@ -62,7 +62,7 @@ class EGraph:
         self._nodes = {}
         # counter for generating new eclass ids
         self._counter = itertools.count()
-        self._saturated = False
+
         # map enodes to eclass ids so we can check if an enode is already in the egraph
         self._enodes = bidict()
         # map eclass ids to their parent eclass id, this is required for the union-find
@@ -121,7 +121,6 @@ class EGraph:
         self._eparents[id] = id
         self._eclasses[id] = {id}
         self._etables[enode.head][id] = tuple(enode.args)
-        self._saturated = False
 
         return id
 
@@ -226,12 +225,10 @@ class EGraph:
         return n_changes
 
     def run(self, rewrites, n=1):
-        if self._saturated:
-            return None
+
         for _i in range(n):
             if not self.apply(rewrites):
                 print(f"Saturated after {_i} iterations")
-                self._saturated = True
                 return True
         return False
 
