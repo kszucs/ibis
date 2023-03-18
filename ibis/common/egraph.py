@@ -6,6 +6,7 @@ from bidict import bidict
 
 from ibis.common.graph import Node
 from ibis.util import promote_list
+from ibis.common.collections import DisjointSet
 
 # consider to use an EClass(id, nodes) dataclass
 
@@ -50,10 +51,9 @@ class EGraph:
         "_nodes",
         "_counter",
         "_enodes",
-        "_eparents",
         "_eclasses",
         "_etables",
-
+        "_classes"
     )
 
     def __init__(self):
@@ -66,9 +66,8 @@ class EGraph:
         # map enodes to eclass ids so we can check if an enode is already in the egraph
         self._enodes = bidict()
         # map eclass ids to their parent eclass id, this is required for the union-find
-        self._eparents = {}
-        # map eclass ids to their eclass
-        self._eclasses = {}
+
+        self._eclasses = DisjointSet()
         # map enode heads to their eclass ids and their arguments, this is required for
         # the relational e-matching
         self._etables = collections.defaultdict(dict)
@@ -77,7 +76,7 @@ class EGraph:
         return f"EGraph({self._eclasses})"
 
     def _create_node(self, id):
-        id = self._eparents[id]
+        id = self._eclasses.find(id)
         eclass = self._eclasses[id]
         enodes = [self._enodes.inverse[id] for id in eclass]
         enode = enodes[0]
@@ -118,39 +117,16 @@ class EGraph:
         id = next(self._counter)
 
         self._enodes[enode] = id
-        self._eparents[id] = id
-        self._eclasses[id] = {id}
+        self._eclasses.add(id)
         self._etables[enode.head][id] = tuple(enode.args)
 
         return id
 
     def find(self, id):
-        return self._eparents[id]
+        return self._eclasses.find(id)
 
     def union(self, id1, id2):
-        assert isinstance(id1, int)
-        assert isinstance(id2, int)
-        id1 = self._eparents[id1]
-        id2 = self._eparents[id2]
-        if id1 == id2:
-            return False
-
-        # Merge the smaller eclass into the larger one
-        class1 = self._eclasses[id1]
-        class2 = self._eclasses[id2]
-        if len(class1) >= len(class2):  # >= is important
-            id1, id2 = id2, id1
-            class1, class2 = class2, class1
-
-        # Update the parent pointer
-        for id in class1:
-            self._eparents[id] = id2
-
-        # Do the actual merging and clear the other eclass
-        class2 |= class1
-        class1.clear()
-
-        return True
+        return self._eclasses.union(id1, id2)
 
     def _match_args(self, args, patargs):
         if len(args) != len(patargs):
@@ -164,12 +140,12 @@ class EGraph:
                 elif isinstance(arg, ENode):
                     subst[patarg.name] = arg
                 else:
-                    subst[patarg.name] = self._eparents[arg]
+                    subst[patarg.name] = self._eclasses.find(arg)
             elif isinstance(arg, Atom):
                 if patarg != arg.value:
                     return None
             else:
-                if self._eparents[arg] != self._eparents[patarg]:
+                if self._eclasses.find(arg) != self._eclasses.find(arg):
                     return None
 
         return subst
@@ -225,7 +201,6 @@ class EGraph:
         return n_changes
 
     def run(self, rewrites, n=1):
-
         for _i in range(n):
             if not self.apply(rewrites):
                 print(f"Saturated after {_i} iterations")
@@ -245,8 +220,8 @@ class EGraph:
         return self._create_node(id)
 
     def equivalent(self, id1, id2):
-        id1 = self._eparents[id1]
-        id2 = self._eparents[id2]
+        id1 = self._eclasses.find(id1)
+        id2 = self._eclasses.find(id2)
         return id1 == id2
 
 
