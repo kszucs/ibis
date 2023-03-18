@@ -4,19 +4,22 @@ from typing import NamedTuple
 
 from bidict import bidict
 
+from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.util import promote_list
-from ibis.common.collections import DisjointSet
 
 # consider to use an EClass(id, nodes) dataclass
 
 
 class ENode:
-    __slots__ = ("head", "args")
+    __slots__ = ("head", "args", "__precomputed_hash__")
 
     def __init__(self, head, args):
-        self.head = head
-        self.args = tuple(args)
+        object.__setattr__(self, "head", head)
+        object.__setattr__(self, "args", tuple(args))
+        object.__setattr__(
+            self, "__precomputed_hash__", hash((self.__class__, self.head, self.args))
+        )
 
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
@@ -26,18 +29,21 @@ class ENode:
         return self.head == other.head and self.args == other.args
 
     def __hash__(self):
-        return hash((self.__class__, self.head, self.args))
+        return self.__precomputed_hash__
+
+    def __setattr__(self, name, value):
+        raise AttributeError("immutable")
 
     @classmethod
-    def from_node(cls, egraph, node):
+    def from_node(cls, node):
         head = type(node)
         args = tuple(
-            egraph.add(arg) if isinstance(arg, Node) else Atom(arg)
+            cls.from_node(arg) if isinstance(arg, Node) else arg
             for arg in node.__args__
         )
         return cls(head, args)
 
-    def to_node(self, egraph):
+    def to_node(self):
         return self.head(*self.args)
 
 
@@ -47,14 +53,7 @@ class ENode:
 
 
 class EGraph:
-    __slots__ = (
-        "_nodes",
-        "_counter",
-        "_enodes",
-        "_eclasses",
-        "_etables",
-        "_classes"
-    )
+    __slots__ = ("_nodes", "_counter", "_enodes", "_eclasses", "_etables", "_classes")
 
     def __init__(self):
         # store the nodes before converting them to enodes, so we can spare the initial
@@ -93,7 +92,15 @@ class EGraph:
 
     def add(self, node):
         if isinstance(node, Node):
-            enode = self._nodes.get(node) or ENode.from_node(self, node)
+            if node in self._nodes:
+                enode = self._nodes[node]
+            else:
+                head = type(node)
+                args = tuple(
+                    self.add(arg) if isinstance(arg, Node) else Atom(arg)
+                    for arg in node.__args__
+                )
+                enode = ENode(head, args)
             self._nodes[node] = enode
         elif isinstance(node, ENode):
             args = []
@@ -121,12 +128,6 @@ class EGraph:
         self._etables[enode.head][id] = tuple(enode.args)
 
         return id
-
-    def find(self, id):
-        return self._eclasses.find(id)
-
-    def union(self, id1, id2):
-        return self._eclasses.union(id1, id2)
 
     def _match_args(self, args, patargs):
         if len(args) != len(patargs):
@@ -196,7 +197,7 @@ class EGraph:
                     else:
                         otherid = enode
 
-                n_changes += self.union(id, otherid)
+                n_changes += self._eclasses.union(id, otherid)
 
         return n_changes
 

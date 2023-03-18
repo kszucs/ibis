@@ -1,15 +1,48 @@
 from typing import Any
 
+import pytest
 from rich.pretty import pprint
 
 # from pprint import pprint
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.egraph import EGraph, Pattern, Rewrite, Variable
+from ibis.common.egraph import EGraph, ENode, Pattern, Rewrite, Variable
 from ibis.common.graph import Node
 from ibis.common.grounds import Annotable, Concrete
 from ibis.util import promote_tuple
+
+
+def test_enode():
+    node = ENode(1, (2, 3))
+    assert node == ENode(1, (2, 3))
+    assert node != ENode(1, [2, 4])
+    assert node != ENode(1, [2, 3, 4])
+    assert node != ENode(1, [2])
+    assert hash(node) == hash(ENode(1, (2, 3)))
+    assert hash(node) != hash(ENode(1, (2, 4)))
+
+    with pytest.raises(AttributeError, match="immutable"):
+        node.head = 2
+    with pytest.raises(AttributeError, match="immutable"):
+        node.args = (2, 3)
+
+
+def test_enode_roundtrip():
+    class MyNode(Concrete, Node):
+        a: int
+        b: int
+        c: str
+
+    # create e-node from node
+    node = MyNode(a=1, b=2, c="3")
+    enode = ENode.from_node(node)
+    assert enode == ENode(MyNode, (1, 2, "3"))
+
+    # reconstruct node from e-node
+    node_ = enode.to_node()
+    assert node_ == node
+
 
 one = ibis.literal(1)
 two = one * 2
