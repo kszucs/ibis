@@ -38,13 +38,20 @@ class ENode:
         return f"ENode({self.head.__name__}, {argstring})"
 
     def __eq__(self, other):
-        return type(self) is type(other) and self.head == other.head and self.args == other.args
+        if self is other:
+            return True
+        if type(self) is not type(other):
+            return NotImplemented
+        return self.head == other.head and self.args == other.args
 
     def __hash__(self):
         return self.__precomputed_hash__
 
     def __setattr__(self, name, value):
         raise AttributeError("immutable")
+
+    def __lt__(self, other):
+        return False
 
     @classmethod
     def from_node(cls, node):
@@ -65,7 +72,7 @@ class ENode:
 
 
 class EGraph:
-    __slots__ = ("_nodes", "_counter", "_enodes", "_eclasses", "_etables", "_classes")
+    __slots__ = ("_nodes", "_counter", "_eclasses", "_etables", "_classes")
 
     def __init__(self):
         # store the nodes before converting them to enodes, so we can spare the initial
@@ -73,10 +80,6 @@ class EGraph:
         self._nodes = {}
         # counter for generating new eclass ids
         self._counter = itertools.count()
-
-        # map enodes to eclass ids so we can check if an enode is already in the egraph
-        self._enodes = bidict()
-        # map eclass ids to their parent eclass id, this is required for the union-find
 
         self._eclasses = DisjointSet()
         # map enode heads to their eclass ids and their arguments, this is required for
@@ -87,25 +90,19 @@ class EGraph:
         return f"EGraph({self._eclasses})"
 
     # TODO(kszucs): this should be done during `union` operation
-    def pina(self, id):
-        print(id)
-        print(self._eclasses._parents)
-        print(self._eclasses._classes)
+    def pina(self, enode):
         head_costs = collections.defaultdict(lambda: 100)
 
-        id = self._eclasses.find(id)
+        enode = self._eclasses.find(enode)
 
-
-        #eclasses = eg.eclasses()
         # set each cost to infinity
-        costs = {eid: (math.inf, None) for eid in self._eclasses.keys()} # eclass -> (cost, enode)
+        costs = {en: (math.inf, None) for en in self._eclasses.keys()} # eclass -> (cost, enode)
         changed = True
-        def enode_cost(id):
 
-            if isinstance(id, Atom):
+        def enode_cost(enode):
+            if isinstance(enode, Atom):
                 return 1
 
-            enode = self._enodes.inverse[id]
             cost = head_costs[enode.head]
             for arg in enode.args:
                 if isinstance(arg, Atom):
@@ -118,53 +115,28 @@ class EGraph:
         # iterate until we settle, taking the lowest cost option
         while changed:
             changed = False
-            for eid, enodes in self._eclasses.items():
-                #print(enodes)
-                new_cost = min((enode_cost(enode), enode) for enode in enodes)
-                if costs[eid][0] != new_cost[0]:
+            for en, enodes in self._eclasses.items():
+
+                new_cost = min((enode_cost(en), en) for en in enodes)
+                if costs[en][0] != new_cost[0]:
                     changed = True
-                costs[eid] = new_cost
+                costs[en] = new_cost
 
-        print(costs)
+        def extract(en):
 
-        def extract(eid):
-            #print(eid)
-            if isinstance(eid, Atom):
-                return eid.value
+            if isinstance(en, Atom):
+                return en.value
 
-            best = costs[eid][1]
-            print("BEST OF", eid, best, costs[best][1])
+            best = costs[en][1]
+            print("BEST OF", en, best, costs[best][1])
 
-            enode = self._enodes.inverse[best]
-
-            if isinstance(enode, ENode):
-                return enode.head(*tuple(extract(a) for a in enode.args))
+            if isinstance(best, ENode):
+                return best.head(*tuple(extract(a) for a in best.args))
             else:
-                return enode
+                return best
 
         print("==== BEST ====")
-        return extract(id)
-
-    # def _extract_best(self, id):
-    #     id = self._eclasses.find(id)
-    #     eclass = self._eclasses[id]
-    #     enodes = [self._enodes.inverse[id] for id in eclass]
-    #     best = enodes[0]
-    #     return best
-
-    # def _create_node(self, id):
-    #     print(id)
-    #     enode = self._extract_best(id)
-
-    #     args = []
-    #     for arg in enode.args:
-    #         if isinstance(arg, Atom):
-    #             args.append(arg.value)
-    #         else:
-    #             arg = self._create_node(arg)
-    #             args.append(arg)
-
-    #     return enode.head(*args)
+        return extract(enode)
 
     def add(self, node):
         if isinstance(node, ENode):
@@ -193,20 +165,13 @@ class EGraph:
                 f"`node` must be an instance of ibis.common.graph.Node but got {type(node)}"
             )
 
-        if (id := self._enodes.get(enode)) is not None:
-            return id
+        if enode in self._eclasses:
+            return self._eclasses.find(enode)
 
-        assert enode not in self._enodes
+        self._eclasses.add(enode)
+        self._etables[enode.head][enode] = tuple(enode.args)
 
-        id = next(self._counter)
-        #print(id, enode.id)
-        id = enode.id
-
-        self._enodes[enode] = id
-        self._eclasses.add(id)
-        self._etables[enode.head][id] = tuple(enode.args)
-
-        return id
+        return enode
 
     def _match_args(self, args, patargs):
         if len(args) != len(patargs):
@@ -239,18 +204,18 @@ class EGraph:
             table = self._etables[pattern.head]
 
             if auxvar is None:
-                for id, args in table.items():
+                for enode, args in table.items():
                     if (subst := self._match_args(args, pattern.args)) is not None:
-                        matches[id] = subst
+                        matches[enode] = subst
             else:
                 newmatches = {}
-                for id, subst in matches.items():
-                    sid = subst[auxvar.name]
-                    if args := table.get(sid):
+                for enode, subst in matches.items():
+                    subenode = subst[auxvar.name]
+                    if args := table.get(subenode):
                         if (
                             newsubst := self._match_args(args, pattern.args)
                         ) is not None:
-                            newmatches[id] = {**subst, **newsubst}
+                            newmatches[enode] = {**subst, **newsubst}
 
                 matches = newmatches
 
@@ -290,22 +255,19 @@ class EGraph:
         return False
 
     def extract(self, node):
-        print(node)
         if isinstance(node, Node):
             enode = self._nodes.get(node)
-            id = self._enodes[enode]
         elif isinstance(node, ENode):
-            id = self._enodes[node]
+            enode = node
         elif isinstance(node, int):
-            id = node
+            raise TypeError(node)
 
-        return self.pina(id)
-        # return self._create_node(id)
+        return self.pina(enode)
 
-    def equivalent(self, id1, id2):
-        id1 = self._eclasses.find(id1)
-        id2 = self._eclasses.find(id2)
-        return id1 == id2
+    def equivalent(self, enode1, enode2):
+        enode1 = self._eclasses.find(enode1)
+        enode2 = self._eclasses.find(enode2)
+        return enode1 == enode2
 
 
 class Atom:
@@ -321,6 +283,10 @@ class Atom:
         return hash((self.__class__, self.value))
 
     def __eq__(self, other):
+        if self is other:
+            return True
+        if type(self) is not type(other):
+            return NotImplemented
         return self.value == other.value
 
 
