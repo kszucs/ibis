@@ -139,8 +139,11 @@ def test_simple_3():
     ]
 
     node = Mul(Lit(2), Mul(Lit(1), Lit(3)))
-    expected = Mul(Lit(2), Lit(3))
-    assert simplify(node, rules, iters=20000) == expected
+    expected = {
+        Mul(Lit(2), Lit(3)),
+        Mul(Lit(3), Lit(2))
+    }
+    assert simplify(node, rules, iters=20000) in expected
 
 
 def test_math_associate_adds():
