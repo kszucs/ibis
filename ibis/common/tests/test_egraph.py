@@ -267,22 +267,22 @@ def test_egraph_rewrite_to_pattern():
     assert eg.equivalent(two.op(), two_.op())
 
 
-# def test_egraph_rewrite_dynamic():
-#     def applier(match, subst):
-#         return p.Add(subst['a'], subst['a']).to_enode()
+def test_egraph_rewrite_dynamic():
+    def applier(egraph, match, subst):
+        return p.Add(subst['a'], subst['a']).to_enode()
 
-#     node = (one * 2).op()
+    node = (one * 2).op()
 
-#     eg = EGraph()
-#     eg.add(node)
+    eg = EGraph()
+    eg.add(node)
 
-#     # rule with a dynamic pattern on the right-hand side
-#     rule = Rewrite(
-#         "mul" @ p.Multiply(a, p.Literal(Variable("times"), dt.int8)), applier
-#     )
-#     eg.apply(rule)
+    # rule with a dynamic pattern on the right-hand side
+    rule = Rewrite(
+        "mul" @ p.Multiply(a, p.Literal(Variable("times"), dt.int8)), applier
+    )
+    eg.apply(rule)
 
-#     assert eg.extract(node) in {two.op(), two_.op()}
+    assert eg.extract(node) in {two.op(), two_.op()}
 
 
 ################################################################

@@ -45,15 +45,11 @@ class Slotted:
         raise AttributeError("Can't set attributes on immutable ENode instance")
 
 
-class ENode:
+class ENode(Slotted):
     __slots__ = ("head", "args", "__precomputed_hash__")
 
     def __init__(self, head, args):
-        object.__setattr__(self, "head", head)
-        object.__setattr__(self, "args", tuple(args))
-        object.__setattr__(
-            self, "__precomputed_hash__", hash((self.__class__, self.head, self.args))
-        )
+        super().__init__(head, tuple(args))
 
     # @property
     # def __argnames__(self):
@@ -63,26 +59,9 @@ class ENode:
     # def __args__(self):
     #     return self.args
 
-    @property
-    def id(self):
-        return self.__precomputed_hash__
-
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
         return f"ENode({self.head.__name__}, {argstring})"
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.head == other.head and self.args == other.args
-
-    def __hash__(self):
-        return self.__precomputed_hash__
-
-    def __setattr__(self, name, value):
-        raise AttributeError("immutable")
 
     def __lt__(self, other):
         return False
@@ -121,7 +100,7 @@ class EGraph:
 
     # TODO(kszucs): this should be done during `union` operation
     def pina(self, enode):
-        head_costs = collections.defaultdict(lambda: 100)
+        head_costs = collections.defaultdict(lambda: 10)
 
         enode = self._eclasses.find(enode)
 
@@ -321,6 +300,10 @@ class Pattern(Slotted):
 
     def __rmatmul__(self, name):
         return self.__class__(self.head, self.args, name)
+
+    def to_enode(self):
+        # TODO(kszucs): ensure that self is a ground term
+        return ENode(self.head, self.args)
 
     def flatten(self, var=None, counter=None):
         counter = counter or itertools.count()
