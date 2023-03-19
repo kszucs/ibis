@@ -1,9 +1,10 @@
 import collections
 import itertools
-from typing import NamedTuple
+import math
+from typing import Any, NamedTuple, Tuple
 
 from bidict import bidict
-import math
+
 from ibis.common.collections import DisjointSet
 from ibis.common.graph import Node
 from ibis.util import promote_list
@@ -11,6 +12,32 @@ from ibis.util import promote_list
 # consider to use an EClass(id, nodes) dataclass
 # TODO(kszucs): using ENode ids instead of integer ids makes the egraph slightly
 # slower (22ms -> 25ms)
+
+
+class Slotted:
+    __slots__ = ('__precomputed_hash__',)
+
+    def __init__(self, *args):
+        for name, value in itertools.zip_longest(self.__slots__, args):
+            object.__setattr__(self, name, value)
+        object.__setattr__(self, "__precomputed_hash__", hash(args))
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if type(self) is not type(other):
+            return NotImplemented
+        for name in self.__slots__:
+            if getattr(self, name) != getattr(other, name):
+                return False
+        return True
+
+    def __hash__(self):
+        return self.__precomputed_hash__
+
+    def __setattr__(self, name, value):
+        raise AttributeError("Can't set attributes on immutable ENode instance")
+
 
 class ENode:
     __slots__ = ("head", "args", "__precomputed_hash__")
@@ -55,7 +82,11 @@ class ENode:
         return False
 
     @classmethod
-    def from_node(cls, node):
+    def from_node(cls, node: Any):
+        def mapper(node, _, **kwargs):
+            return cls(node.__class__, kwargs.values())
+
+        return node.map(mapper)[node]
         head = type(node)
         args = tuple(
             cls.from_node(arg) if isinstance(arg, Node) else arg
@@ -73,14 +104,12 @@ class ENode:
 
 
 class EGraph:
-    __slots__ = ("_nodes", "_counter", "_eclasses", "_etables", "_classes")
+    __slots__ = ("_nodes", "_eclasses", "_etables", "_classes")
 
     def __init__(self):
         # store the nodes before converting them to enodes, so we can spare the initial
         # node traversal and omit the creation of enodes
         self._nodes = {}
-        # counter for generating new eclass ids
-        self._counter = itertools.count()
 
         self._eclasses = DisjointSet()
         # map enode heads to their eclass ids and their arguments, this is required for
@@ -97,7 +126,9 @@ class EGraph:
         enode = self._eclasses.find(enode)
 
         # set each cost to infinity
-        costs = {en: (math.inf, None) for en in self._eclasses.keys()} # eclass -> (cost, enode)
+        costs = {
+            en: (math.inf, None) for en in self._eclasses.keys()
+        }  # eclass -> (cost, enode)
         changed = True
 
         def enode_cost(enode):
@@ -112,19 +143,16 @@ class EGraph:
                 cost = 1
             return cost
 
-
         # iterate until we settle, taking the lowest cost option
         while changed:
             changed = False
             for en, enodes in self._eclasses.items():
-
                 new_cost = min((enode_cost(en), en) for en in enodes)
                 if costs[en][0] != new_cost[0]:
                     changed = True
                 costs[en] = new_cost
 
         def extract(en):
-
             if not isinstance(en, ENode):
                 return en
 
@@ -196,27 +224,23 @@ class EGraph:
 
     def match(self, pattern):
         # patterns could be reordered to match on the most selective one first
-        patterns = dict(reversed(list(pattern.flatten())))
-
+        (auxvar, pattern), *rest = reversed(list(pattern.flatten()))
         matches = {}
-        for auxvar, pattern in patterns.items():
-            table = self._etables[pattern.head]
 
-            if auxvar is None:
-                for enode, args in table.items():
-                    if (subst := self._match_args(args, pattern.args)) is not None:
-                        matches[enode] = subst
-            else:
-                newmatches = {}
-                for enode, subst in matches.items():
-                    subenode = subst[auxvar.name]
-                    if args := table.get(subenode):
-                        if (
-                            newsubst := self._match_args(args, pattern.args)
-                        ) is not None:
-                            newmatches[enode] = {**subst, **newsubst}
+        rel = self._etables[pattern.head]
+        for enode, args in rel.items():
+            if (subst := self._match_args(args, pattern.args)) is not None:
+                subst[auxvar.name] = enode
+                matches[enode] = subst
 
-                matches = newmatches
+        for auxvar, pattern in rest:
+            rel = self._etables[pattern.head]
+            tmp = {}
+            for enode, subst in matches.items():
+                if args := rel.get(subst[auxvar.name]):
+                    if (newsubst := self._match_args(args, pattern.args)) is not None:
+                        tmp[enode] = {**subst, **newsubst}
+            matches = tmp
 
         return matches
 
@@ -269,33 +293,21 @@ class EGraph:
         return enode1 == enode2
 
 
-
-class Variable:
+class Variable(Slotted):
     __slots__ = ("name",)
-
-    def __init__(self, name):
-        self.name = name
 
     def __repr__(self):
         return f"${self.name}"
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __hash__(self):
-        return hash((self.__class__, self.name))
 
     def substitute(self, subst):
         return subst[self.name]
 
 
-class Pattern:
-    __slots__ = ("head", "args")
-    _counter = itertools.count()
+class Pattern(Slotted):
+    __slots__ = ("head", "args", "name")
 
-    def __init__(self, head, args):
-        self.head = head
-        self.args = tuple(args)
+    def __init__(self, head, args, name=None):
+        super().__init__(head, tuple(args), name)
 
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
@@ -304,21 +316,30 @@ class Pattern:
     def __rshift__(self, rhs):
         return Rewrite(self, rhs)
 
-    def __eq__(self, other):
-        return self.head == other.head and self.args == other.args
+    def __rmatmul__(self, name):
+        return self.__class__(self.head, self.args, name)
 
-    def __hash__(self):
-        return hash((self.__class__, self.head, self.args))
+    def flatten(self, var=None, counter=None):
+        counter = counter or itertools.count()
 
-    def flatten(self, var=None):
+        if var is None:
+            if self.name is None:
+                var = Variable(next(counter))
+            else:
+                var = Variable(self.name)
+
         args = []
         for arg in self.args:
             if isinstance(arg, Pattern):
-                aux = Variable(f'_{next(self._counter)}')
-                yield from arg.flatten(aux)
+                if arg.name is None:
+                    aux = Variable(next(counter))
+                else:
+                    aux = Variable(arg.name)
+                yield from arg.flatten(aux, counter)
                 args.append(aux)
             else:
                 args.append(arg)
+
         yield (var, Pattern(self.head, args))
 
     def substitute(self, subst):

@@ -36,6 +36,7 @@ def test_enode_roundtrip():
         c: str
 
     # create e-node from node
+
     node = MyNode(a=1, b=2, c="3")
     enode = ENode.from_node(node)
     assert enode == ENode(MyNode, (1, 2, "3"))
@@ -157,7 +158,7 @@ def test_pattern_flatten():
     two = Pattern(ops.Literal, (2, dt.int8))
     three = Pattern(ops.Add, (one, two))
 
-    result = dict(three.flatten())
+    result = dict(three.newflatten())
     expected = {
         Variable("_2"): Pattern(ops.Add, (Variable("_0"), Variable("_1"))),
         Variable("_1"): Pattern(ops.Literal, (2, dt.int8)),
@@ -170,7 +171,7 @@ def test_pattern_flatten():
     two = "two" @ Pattern(ops.Literal, (2, dt.int8))
     three = "three" @ Pattern(ops.Add, (one, two))
 
-    result = tuple(three.flatten())
+    result = tuple(three.newflatten())
     expected = (
         (Variable("one"), Pattern(ops.Literal, (1, dt.int8))),
         (Variable("two"), Pattern(ops.Literal, (2, dt.int8))),
