@@ -201,6 +201,11 @@ class EGraph:
 
         return enode
 
+    def union(self, node1, node2):
+        enode1 = ENode.from_node(node1)
+        enode2 = ENode.from_node(node2)
+        return self._eclasses.union(enode1, enode2)
+
     def _match_args(self, args, patargs):
         if len(args) != len(patargs):
             return None
@@ -287,7 +292,15 @@ class EGraph:
 
         return self.pina(enode)
 
-    def equivalent(self, enode1, enode2):
+    def equivalent(self, node1, node2):
+        if isinstance(node1, Node):
+            enode1 = ENode.from_node(node1)
+        else:
+            enode1 = node1
+        if isinstance(node2, Node):
+            enode2 = ENode.from_node(node2)
+        else:
+            enode2 = node2
         enode1 = self._eclasses.find(enode1)
         enode2 = self._eclasses.find(enode2)
         return enode1 == enode2
@@ -350,6 +363,22 @@ class Pattern(Slotted):
             else:
                 args.append(arg)
         return ENode(self.head, args)
+
+    @classmethod
+    def namespace(cls, module):
+        return PatternNamespace(module)
+
+
+class PatternNamespace(Slotted):
+    __slots__ = ('module',)
+
+    def __getattr__(self, name):
+        klass = getattr(self.module, name)
+
+        def pattern(*args):
+            return Pattern(klass, args)
+
+        return pattern
 
 
 # USE SEARCHER AND APPLIER NOTATIONS

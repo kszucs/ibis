@@ -1,18 +1,19 @@
+import itertools
+from pprint import pprint
 from typing import Any, Tuple
 
 import pytest
 from rich.pretty import pprint
 
-# from pprint import pprint
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
+from ibis.common.collections import DisjointSet
 from ibis.common.egraph import EGraph, ENode, Pattern, Rewrite, Variable
 from ibis.common.graph import Node
 from ibis.common.grounds import Annotable, Concrete
 from ibis.util import promote_tuple
-from ibis.common.collections import DisjointSet
-import itertools
+
 
 def test_enode():
     node = ENode(1, (2, 3))
@@ -137,7 +138,6 @@ def test_disjoint_set_with_enode():
     # assert ds[three_] == {three_, three1_}
 
 
-
 def test_pattern():
     Pattern._counter = itertools.count()
 
@@ -183,14 +183,109 @@ def test_pattern_flatten():
 one = ibis.literal(1)
 two = one * 2
 two_ = one + one
+two__ = ibis.literal(2)
 three = one + two
 six = three * two_
 seven = six + 1
 seven_ = seven * 1
 eleven = seven_ + 4
 
+
 a, b, c = Variable('a'), Variable('b'), Variable('c')
 x, y, z = Variable('x'), Variable('y'), Variable('z')
+
+p = Pattern.namespace(ops)
+
+
+def test_egraph_simple_match():
+    eg = EGraph()
+    eg.add(eleven.op())
+
+    pat = p.Multiply(a, "lit" @ p.Literal(1, dt.int8))
+    res = eg.match(pat)
+
+    enode = ENode.from_node(seven_.op())
+    matches = res[enode]
+    assert matches['a'] == ENode.from_node(seven.op())
+    assert matches['lit'] == ENode.from_node(one.op())
+
+
+def test_egraph_extract():
+    eg = EGraph()
+    eg.add(eleven.op())
+
+    res = eg.extract(one.op())
+    assert res == one.op()
+
+
+def test_egraph_extract_minimum_cost():
+    eg = EGraph()
+    eg.add(two.op())  # 1 * 2
+    eg.add(two_.op())  # 1 + 1
+    eg.add(two__.op())  # 2
+    assert eg.extract(two.op()) == two.op()
+
+    eg.union(two.op(), two_.op())
+    assert eg.extract(two.op()) in {two.op(), two_.op()}
+
+    eg.union(two.op(), two__.op())
+    assert eg.extract(two.op()) == two__.op()
+
+    eg.union(two.op(), two__.op())
+    assert eg.extract(two.op()) == two__.op()
+
+
+def test_egraph_rewrite_to_variable():
+    eg = EGraph()
+    eg.add(eleven.op())
+
+    # rule with a variable on the right-hand side
+    rule = Rewrite(p.Multiply(a, "lit" @ p.Literal(1, dt.int8)), a)
+    eg.apply(rule)
+    assert eg.equivalent(seven_.op(), seven.op())
+
+
+# def test_egraph_rewrite_to_constant():
+#     node = (one * 0).op()
+
+#     eg = EGraph()
+#     eg.add(node)
+
+#     # rule with a constant on the right-hand side
+#     rule = Rewrite(p.Multiply(a, "lit" @ p.Literal(0, dt.int8)), 0)
+#     eg.apply(rule)
+#     assert eg.equivalent(node, 0)
+
+
+def test_egraph_rewrite_to_pattern():
+    eg = EGraph()
+    eg.add(three.op())
+
+    # rule with a pattern on the right-hand side
+    rule = Rewrite(p.Multiply(a, "lit" @ p.Literal(2, dt.int8)), p.Add(a, a))
+    eg.apply(rule)
+    assert eg.equivalent(two.op(), two_.op())
+
+
+# def test_egraph_rewrite_dynamic():
+#     def applier(match, subst):
+#         return p.Add(subst['a'], subst['a']).to_enode()
+
+#     node = (one * 2).op()
+
+#     eg = EGraph()
+#     eg.add(node)
+
+#     # rule with a dynamic pattern on the right-hand side
+#     rule = Rewrite(
+#         "mul" @ p.Multiply(a, p.Literal(Variable("times"), dt.int8)), applier
+#     )
+#     eg.apply(rule)
+
+#     assert eg.extract(node) in {two.op(), two_.op()}
+
+
+################################################################
 
 
 def test_simple():
@@ -245,9 +340,6 @@ def simplify(expr, rules, iters=7):
     pprint(egraph._eclasses)
     best = egraph.extract(expr)
     return best
-
-
-from pprint import pprint
 
 
 def is_equal(a, b, rules, iters=7):
