@@ -15,6 +15,12 @@ from ibis.util import promote_list
 
 
 class Slotted:
+    """A lightweight alternative to `ibis.common.grounds.Concrete`.
+
+    This class is used to create immutable dataclasses with slots and a precomputed
+    hash value for quicker dictionary lookups.
+    """
+
     __slots__ = ('__precomputed_hash__',)
 
     def __init__(self, *args):
@@ -167,6 +173,12 @@ class EGraph:
         print("==== BEST ====")
         return extract(enode)
 
+    def add_enode(self, enode):
+        assert isinstance(enode, ENode)
+        self._eclasses.add(enode)
+        self._etables[enode.head][enode.args] = enode
+        return enode
+
     def add(self, node):
         if isinstance(node, ENode):
             args = []
@@ -252,26 +264,20 @@ class EGraph:
     def apply(self, rewrites):
         n_changes = 0
         for rewrite in promote_list(rewrites):
-            for id, subst in self.match(rewrite.lhs).items():
+            for enode, subst in self.match(rewrite.matcher).items():
                 # MOVE this check to specific subclasses to avoid the isinstance check
-                if isinstance(rewrite.rhs, (Variable, Pattern)):
-                    enode = rewrite.rhs.substitute(subst)
-                    if isinstance(enode, ENode):
-                        otherid = self.add(enode)
-                    else:
-                        otherid = enode
-                elif isinstance(rewrite.rhs, ENode):
-                    otherid = self.add(rewrite.rhs)
-                elif isinstance(rewrite.rhs, Node):
-                    otherid = self.add(rewrite.rhs)
-                elif callable(rewrite.rhs):
-                    enode = rewrite.rhs(self, id, subst)
-                    if isinstance(enode, ENode):
-                        otherid = self.add(enode)
-                    else:
-                        otherid = enode
+                if isinstance(rewrite.applier, (Variable, Pattern)):
+                    # add enode recursively
+                    new = self.add(rewrite.applier.substitute(subst))
+                elif callable(rewrite.applier):
+                    # add node as is without recursing
+                    new = self.add_enode(rewrite.applier(self, enode, subst))
+                else:
+                    raise TypeError(
+                        f"Rewrite applier must be a callable or a Pattern or Variable but got {type(rewrite.applier)}"
+                    )
 
-                n_changes += self._eclasses.union(id, otherid)
+                n_changes += self._eclasses.union(enode, new)
 
         return n_changes
 
@@ -381,28 +387,12 @@ class PatternNamespace(Slotted):
         return pattern
 
 
-# USE SEARCHER AND APPLIER NOTATIONS
 
-
-class Rewrite:
-    __slots__ = ("lhs", "rhs", "name")
-
-    def __init__(self, lhs, rhs, name=None):
-        assert isinstance(lhs, Pattern)
-        # TODO: use a substitutable mixin
-        # assert isinstance(rhs, (Variable, Pattern, Node))
-        self.lhs = lhs
-        self.rhs = rhs
-        self.name = name
+class Rewrite(Slotted):
+    __slots__ = ("matcher", "applier")
 
     def __repr__(self):
         return f"{self.lhs} >> {self.rhs}"
-
-    def __eq__(self, other):
-        return self.lhs == other.lhs and self.rhs == other.rhs
-
-    def __hash__(self):
-        return hash((self.__class__, self.lhs, self.rhs))
 
 
 # ops.Multiply[a, b] => ops.Add[ops.Multiply[a, b], ops.Multiply[a, b]]
