@@ -29,9 +29,9 @@ class ENode:
     # def __args__(self):
     #     return self.args
 
-    # @property
-    # def id(self):
-    #     return self.__precomputed_hash__
+    @property
+    def id(self):
+        return self.__precomputed_hash__
 
     def __repr__(self):
         argstring = ", ".join(map(repr, self.args))
@@ -88,6 +88,7 @@ class EGraph:
 
     # TODO(kszucs): this should be done during `union` operation
     def pina(self, id):
+        print(id)
         print(self._eclasses._parents)
         print(self._eclasses._classes)
         head_costs = collections.defaultdict(lambda: 1)
@@ -118,10 +119,12 @@ class EGraph:
         print(cost)
 
         def extract(eid):
+            print(eid)
             if isinstance(eid, Atom):
                 return eid.value
 
             best = cost[eid][1]
+            print("BEST OF", eid, best)
             enode = self._enodes.inverse[best]
 
             if isinstance(enode, ENode):
@@ -129,6 +132,7 @@ class EGraph:
             else:
                 return enode
 
+        print("==== BEST ====")
         return extract(id)
 
     # def _extract_best(self, id):
