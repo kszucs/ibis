@@ -390,9 +390,7 @@ def replace_add(egraph, id, subst):
 
 
 def test_dynamic_rewrite():
-    rules = [
-        Rewrite(Add[x, Mul[z, y]], replace_add)
-    ]
+    rules = [Rewrite(Add[x, Mul[z, y]], replace_add)]
 
     simplify(Add(1, Mul(2, 3)), rules) == Add(1, Mul(2, 3))
 

@@ -93,12 +93,6 @@ class ENode:
             return cls(node.__class__, kwargs.values())
 
         return node.map(mapper)[node]
-        head = type(node)
-        args = tuple(
-            cls.from_node(arg) if isinstance(arg, Node) else arg
-            for arg in node.__args__
-        )
-        return cls(head, args)
 
     def to_node(self):
         return self.head(*self.args)
@@ -175,43 +169,40 @@ class EGraph:
 
     def add_enode(self, enode):
         assert isinstance(enode, ENode)
-        self._eclasses.add(enode)
-        self._etables[enode.head][enode.args] = enode
-        return enode
-
-    def add(self, node):
-        if isinstance(node, ENode):
-            args = []
-            for arg in node.args:
-                if isinstance(arg, ENode):
-                    args.append(self.add(arg))
-                else:
-                    args.append(arg)
-
-            enode = ENode(node.head, args)
-        elif isinstance(node, Node):
-            if node in self._nodes:
-                enode = self._nodes[node]
-            else:
-                head = type(node)
-                args = tuple(
-                    self.add(arg) if isinstance(arg, Node) else arg
-                    for arg in node.__args__
-                )
-                enode = ENode(head, args)
-            self._nodes[node] = enode
-        else:
-            raise TypeError(
-                f"`node` must be an instance of ibis.common.graph.Node but got {type(node)}"
-            )
-
         if enode in self._eclasses:
             return self._eclasses.find(enode)
-
         self._eclasses.add(enode)
         self._etables[enode.head][enode] = tuple(enode.args)
-
         return enode
+
+    def add_enode_recursive(self, enode):
+        assert isinstance(enode, ENode)
+
+        args = []
+        for arg in enode.args:
+            if isinstance(arg, ENode):
+                args.append(self.add_enode_recursive(arg))
+            else:
+                args.append(arg)
+
+        enode = ENode(enode.head, args)
+        return self.add_enode(enode)
+
+    def add(self, node):
+        assert isinstance(node, Node)
+
+        if node in self._nodes:
+            return self._nodes[node]
+
+        head = type(node)
+        args = tuple(
+            self.add(arg) if isinstance(arg, Node) else arg for arg in node.__args__
+        )
+        enode = ENode(head, args)
+
+        self._nodes[node] = enode
+
+        return self.add_enode(enode)
 
     def union(self, node1, node2):
         enode1 = ENode.from_node(node1)
@@ -266,16 +257,9 @@ class EGraph:
         for rewrite in promote_list(rewrites):
             for enode, subst in self.match(rewrite.matcher).items():
                 # MOVE this check to specific subclasses to avoid the isinstance check
-                if isinstance(rewrite.applier, (Variable, Pattern)):
-                    # add enode recursively
-                    new = self.add(rewrite.applier.substitute(subst))
-                elif callable(rewrite.applier):
-                    # add node as is without recursing
-                    new = self.add_enode(rewrite.applier(self, enode, subst))
-                else:
-                    raise TypeError(
-                        f"Rewrite applier must be a callable or a Pattern or Variable but got {type(rewrite.applier)}"
-                    )
+                new = self.add_enode_recursive(
+                    rewrite.applier.substitute(self, enode, subst)
+                )
 
                 n_changes += self._eclasses.union(enode, new)
 
@@ -318,7 +302,7 @@ class Variable(Slotted):
     def __repr__(self):
         return f"${self.name}"
 
-    def substitute(self, subst):
+    def substitute(self, egraph, enode, subst):
         return subst[self.name]
 
 
@@ -361,11 +345,11 @@ class Pattern(Slotted):
 
         yield (var, Pattern(self.head, args))
 
-    def substitute(self, subst):
+    def substitute(self, egraph, enode, subst):
         args = []
         for arg in self.args:
             if isinstance(arg, (Variable, Pattern)):
-                args.append(arg.substitute(subst))
+                args.append(arg.substitute(egraph, enode, subst))
             else:
                 args.append(arg)
         return ENode(self.head, args)
@@ -387,9 +371,20 @@ class PatternNamespace(Slotted):
         return pattern
 
 
+class DynamicApplier(Slotted):
+    __slots__ = ("func",)
+
+    def substitute(self, egraph, enode, subst):
+        return self.func(egraph, enode, subst)
+
 
 class Rewrite(Slotted):
     __slots__ = ("matcher", "applier")
+
+    def __init__(self, matcher, applier):
+        if callable(applier):
+            applier = DynamicApplier(applier)
+        super().__init__(matcher, applier)
 
     def __repr__(self):
         return f"{self.lhs} >> {self.rhs}"
