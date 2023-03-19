@@ -46,7 +46,7 @@ class Slotted:
 
 
 class ENode(Slotted):
-    __slots__ = ("head", "args", "__precomputed_hash__")
+    __slots__ = ("head", "args")
 
     def __init__(self, head, args):
         super().__init__(head, tuple(args))
