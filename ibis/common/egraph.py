@@ -9,7 +9,8 @@ from ibis.common.graph import Node
 from ibis.util import promote_list
 
 # consider to use an EClass(id, nodes) dataclass
-
+# TODO(kszucs): using ENode ids instead of integer ids makes the egraph slightly
+# slower (22ms -> 25ms)
 
 class ENode:
     __slots__ = ("head", "args", "__precomputed_hash__")
@@ -100,15 +101,15 @@ class EGraph:
         changed = True
 
         def enode_cost(enode):
-            if isinstance(enode, Atom):
-                return 1
-
-            cost = head_costs[enode.head]
-            for arg in enode.args:
-                if isinstance(arg, Atom):
-                    cost += 1
-                else:
-                    cost += costs[arg][0]
+            if isinstance(enode, ENode):
+                cost = head_costs[enode.head]
+                for arg in enode.args:
+                    if isinstance(arg, ENode):
+                        cost += costs[arg][0]
+                    else:
+                        cost += 1
+            else:
+                cost = 1
             return cost
 
 
@@ -124,8 +125,8 @@ class EGraph:
 
         def extract(en):
 
-            if isinstance(en, Atom):
-                return en.value
+            if not isinstance(en, ENode):
+                return en
 
             best = costs[en][1]
             print("BEST OF", en, best, costs[best][1])
@@ -144,10 +145,9 @@ class EGraph:
             for arg in node.args:
                 if isinstance(arg, ENode):
                     args.append(self.add(arg))
-                elif isinstance(arg, (Atom, int)):
-                    args.append(arg)
                 else:
-                    raise TypeError(arg)
+                    args.append(arg)
+
             enode = ENode(node.head, args)
         elif isinstance(node, Node):
             if node in self._nodes:
@@ -155,7 +155,7 @@ class EGraph:
             else:
                 head = type(node)
                 args = tuple(
-                    self.add(arg) if isinstance(arg, Node) else Atom(arg)
+                    self.add(arg) if isinstance(arg, Node) else arg
                     for arg in node.__args__
                 )
                 enode = ENode(head, args)
@@ -180,17 +180,16 @@ class EGraph:
         subst = {}
         for arg, patarg in zip(args, patargs):
             if isinstance(patarg, Variable):
-                if isinstance(arg, Atom):
-                    subst[patarg.name] = arg
-                elif isinstance(arg, ENode):
-                    subst[patarg.name] = arg
-                else:
+                if isinstance(arg, ENode):
                     subst[patarg.name] = self._eclasses.find(arg)
-            elif isinstance(arg, Atom):
-                if patarg != arg.value:
+                else:
+                    subst[patarg.name] = arg
+            elif isinstance(arg, ENode):
+                # perhaps need another branch here
+                if self._eclasses.find(arg) != self._eclasses.find(arg):
                     return None
             else:
-                if self._eclasses.find(arg) != self._eclasses.find(arg):
+                if patarg != arg:
                     return None
 
         return subst
@@ -270,25 +269,6 @@ class EGraph:
         return enode1 == enode2
 
 
-class Atom:
-    __slots__ = ("value",)
-
-    def __init__(self, value):
-        self.value = value
-
-    def __repr__(self):
-        return f"`{self.value}`"
-
-    def __hash__(self):
-        return hash((self.__class__, self.value))
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-        if type(self) is not type(other):
-            return NotImplemented
-        return self.value == other.value
-
 
 class Variable:
     __slots__ = ("name",)
@@ -347,7 +327,7 @@ class Pattern:
             if isinstance(arg, (Variable, Pattern)):
                 args.append(arg.substitute(subst))
             else:
-                args.append(Atom(arg))
+                args.append(arg)
         return ENode(self.head, args)
 
 
