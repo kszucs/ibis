@@ -91,20 +91,29 @@ class EGraph:
         print(id)
         print(self._eclasses._parents)
         print(self._eclasses._classes)
-        head_costs = collections.defaultdict(lambda: 1)
+        head_costs = collections.defaultdict(lambda: 100)
 
         id = self._eclasses.find(id)
 
 
         #eclasses = eg.eclasses()
         # set each cost to infinity
-        cost = {eid: (math.inf, None) for eid in self._eclasses.keys()} # eclass -> (cost, enode)
+        costs = {eid: (math.inf, None) for eid in self._eclasses.keys()} # eclass -> (cost, enode)
         changed = True
-        def enode_cost(enode):
-            if isinstance(enode, ENode):
-                return head_costs.get(enode.head, 0) + sum(cost[eid][0] for eid in enode.args)
-            else:
+        def enode_cost(id):
+
+            if isinstance(id, Atom):
                 return 1
+
+            enode = self._enodes.inverse[id]
+            cost = head_costs[enode.head]
+            for arg in enode.args:
+                if isinstance(arg, Atom):
+                    cost += 1
+                else:
+                    cost += costs[arg][0]
+            return cost
+
 
         # iterate until we settle, taking the lowest cost option
         while changed:
@@ -112,19 +121,20 @@ class EGraph:
             for eid, enodes in self._eclasses.items():
                 #print(enodes)
                 new_cost = min((enode_cost(enode), enode) for enode in enodes)
-                if cost[eid][0] != new_cost[0]:
+                if costs[eid][0] != new_cost[0]:
                     changed = True
-                cost[eid] = new_cost
+                costs[eid] = new_cost
 
-        print(cost)
+        print(costs)
 
         def extract(eid):
-            print(eid)
+            #print(eid)
             if isinstance(eid, Atom):
                 return eid.value
 
-            best = cost[eid][1]
-            print("BEST OF", eid, best)
+            best = costs[eid][1]
+            print("BEST OF", eid, best, costs[best][1])
+
             enode = self._enodes.inverse[best]
 
             if isinstance(enode, ENode):
@@ -190,7 +200,7 @@ class EGraph:
 
         id = next(self._counter)
         #print(id, enode.id)
-        #id = enode.id
+        id = enode.id
 
         self._enodes[enode] = id
         self._eclasses.add(id)
