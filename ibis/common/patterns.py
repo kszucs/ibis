@@ -19,9 +19,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Hashable, Mapping, Sequence
 from inspect import Parameter
 from itertools import chain, zip_longest
-from typing import (
-    Any as AnyType,
-)
+from typing import Any as AnyType
 from typing import (
     Callable,
     Literal,
@@ -42,20 +40,23 @@ except ImportError:
     UnionType = object()
 
 
-class MatchError(Exception):
-    ...
-
-
 class ValidationError(Exception):
     ...
 
 
+class Validator(ABC):
+    __slots__ = ()
+
+    @abstractmethod
+    def validate(self, value, context):
+        ...
+
+    def __call__(self, value, context):
+        return self.validate(value, context)
+
+
 class CoercionError(Exception):
     ...
-
-
-class NoMatch:
-    """Sentinel value for when a pattern doesn't match."""
 
 
 class Coercible(ABC):
@@ -74,7 +75,15 @@ class Coercible(ABC):
         ...
 
 
-class Pattern(ABC, Hashable):
+class MatchError(Exception):
+    ...
+
+
+class NoMatch:
+    """Sentinel value for when a pattern doesn't match."""
+
+
+class Pattern(Validator, Hashable):
     @classmethod
     def from_typehint(cls, annot: type) -> Pattern:
         """Construct a pattern from a python type annotation.
@@ -165,7 +174,7 @@ class Pattern(ABC, Hashable):
     def __rmatmul__(self, name):
         return Capture(self, name)
 
-    def validate(self, value, *, context):
+    def validate(self, value, context):
         result = self.match(value, context=context)
         if result is NoMatch:
             raise ValidationError(f"{value} doesn't match {self}")
