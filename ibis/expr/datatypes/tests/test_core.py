@@ -10,6 +10,7 @@ from typing import Dict, List, NamedTuple, Set, Tuple
 import pytest
 
 import ibis.expr.datatypes as dt
+from ibis.common.patterns import coerce
 
 
 def test_validate_type():
@@ -610,3 +611,8 @@ def test_is_temporal():
     assert dt.date.is_temporal()
     assert dt.timestamp.is_temporal()
     assert not dt.Array(dt.Map(dt.string, dt.string)).is_temporal()
+
+
+def test_type_coercion():
+    assert coerce("int8", dt.DataType) == dt.int8
+    assert coerce("int8", dt.Int8) == dt.int8

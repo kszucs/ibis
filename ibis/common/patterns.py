@@ -22,6 +22,7 @@ from itertools import chain, zip_longest
 from typing import Any as AnyType
 from typing import (
     Callable,
+    Generic,
     Literal,
     Tuple,
     TypeVar,
@@ -32,6 +33,7 @@ from typing_extensions import Annotated, get_args, get_origin
 
 from ibis.common.collections import RewindableIterator, frozendict
 from ibis.common.dispatch import lazy_singledispatch
+from ibis.common.typing import Coercible, CoercionError
 from ibis.util import is_function, is_iterable, promote_tuple
 
 try:
@@ -53,32 +55,6 @@ class Validator(ABC):
 
     def __call__(self, value, context):
         return self.validate(value, context)
-
-
-class CoercionError(Exception):
-    ...
-
-
-# TODO(kszucs): consider to move this to ibis.common.typing
-class Coercible(ABC):
-    """Protocol for defining coercible types.
-
-    Coercible types define a special ``__coerce__`` method that accepts an object
-    with an instance of the type. Used in conjunction with the ``coerced_to``
-    pattern to coerce arguments to a specific type.
-    """
-
-    __slots__ = ()
-
-    @classmethod
-    @abstractmethod
-    def __coerce__(cls, value, *typevars):
-        ...
-
-    # similar to __instancecheck__ but takes an instance and the type vars
-    @classmethod
-    def __verify__(cls, instance, *typevars):
-        return True
 
 
 class MatchError(Exception):
@@ -113,10 +89,15 @@ class Pattern(Validator, Hashable):
         origin, args = get_origin(annot), get_args(annot)
 
         if origin is None:
-            if annot is AnyType:
+            if annot is Ellipsis:  # TODO(kszucs): test this
+                return Any()
+            elif annot is AnyType:
                 return Any()
             elif isinstance(annot, TypeVar):
-                return Any()
+                # TODO(kszucs): only use coerced_to if annot.__covariant__ is True
+                if annot.__bound__ is None:
+                    return Any()
+                return CoercedTo(annot.__bound__)
             elif issubclass(annot, Coercible):
                 return CoercedTo(annot)
             else:
@@ -414,6 +395,16 @@ class LazyInstanceOf(Matcher):
             return NoMatch
 
 
+# just a shorthand
+def coerce(value, type):
+    if type is Ellipsis:
+        return value
+    result = CoercedTo(type).match(value, {})
+    if result is NoMatch:
+        raise CoercionError(f"Unable to coerce {value} to {type}")
+    return result
+
+
 class CoercedTo(Matcher):
     """Force a value to have a particular Python type.
 
@@ -427,27 +418,26 @@ class CoercedTo(Matcher):
         The type to coerce to.
     """
 
-    __slots__ = ("func", "origin", "args")
+    __slots__ = ("func", "origin", "params")
 
     def __init__(self, type):
         origin, args = get_origin(type), get_args(type)
         if origin is None:
             origin = type
-        func = getattr(origin, "__coerce__", origin)
-        super().__init__(func, origin, args)
+
+        if issubclass(origin, Coercible):
+            func = origin.__coerce__
+            names = [p.__name__ for p in getattr(origin, "__parameters__", [])]
+            params = frozendict(zip(names, args))
+        else:
+            func = type
+            params = frozendict()
+
+        super().__init__(func, origin, params)
 
     def match(self, value, context):
-        # TODO(kszucs): maybe we should let the func handle it, at least if
-        # it's a Coercible subclass
-        if isinstance(value, self.origin):
-            if issubclass(self.origin, Coercible):
-                if self.args:
-                    if not self.origin.__verify__(value, *self.args):
-                        return NoMatch
-            return value
-
         try:
-            value = self.func(value, *self.args)
+            value = self.func(value, **self.params)
         except CoercionError:
             return NoMatch
 

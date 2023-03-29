@@ -10,7 +10,8 @@ import ibis.expr.rules as rlz
 from ibis import util
 from ibis.common.graph import Node as Traversable
 from ibis.common.grounds import Concrete
-from ibis.common.patterns import Coercible, CoercionError
+from ibis.common.patterns import coerce
+from ibis.common.typing import Coercible, CoercionError
 
 if TYPE_CHECKING:
     import ibis.expr.datatypes as dt
@@ -68,8 +69,6 @@ class Columnar(DataShape):
     pass
 
 
-# T = TypeVar("T", bound=dt.DataType)
-# S = TypeVar("S", bound=rlz.Shape)
 T = TypeVar("T", bound=dt.DataType)
 S = TypeVar("S", bound=DataShape)  # or rather as constraints
 
@@ -77,32 +76,36 @@ S = TypeVar("S", bound=DataShape)  # or rather as constraints
 @public
 class Value(Node, Named, Coercible, Generic[T, S]):
     @classmethod
-    def __coerce__(cls, value, dtype=..., shape=...):
+    def __coerce__(cls, value, T=..., S=...):
+        # should move the Literal.__coerce__ implementation here
         from ibis.expr.operations import Literal
+        from ibis.expr.types import Expr
 
-        value = Literal.__coerce__(value, dtype=dtype)
+        if isinstance(value, Expr):
+            value = value.op()
 
-        if dtype is Ellipsis:
-            return value
-        elif not isinstance(dtype, type) or not issubclass(dtype, dt.DataType):
-            raise CoercionError(
-                f"Datatype specification {dtype} is not a subclass dt.DataType"
-            )
-        elif not isinstance(value.output_dtype, dtype):
-            raise CoercionError(
-                f"f'Given argument with datatype {value.output_dtype} is not subtype of {dtype}"
-            )
+        if not isinstance(value, Value):
+            value = coerce(value, Literal[T])
 
-        if shape is Ellipsis:
-            return value
-        elif not isinstance(shape, type) or not issubclass(shape, DataShape):
-            raise CoercionError(
-                f"Shape specification {shape} is not a subclass of DataShape"
-            )
-        elif value.output_shape is not shape:
-            raise CoercionError(
-                f"Given argument with shape {value.output_shape} is not {shape}"
-            )
+        if T is not Ellipsis:
+            dtype = dt.dtype(T)
+            # retrieve literal values for implicit cast check
+            pyval = getattr(value, 'value', None)
+            if not dt.castable(value.output_dtype, dtype, value=pyval):
+                raise CoercionError(
+                    f'Given argument with datatype {value.output_dtype} is not '
+                    f'implicitly castable to {dtype}'
+                )
+
+        if S is not Ellipsis:
+            # if not issubclass(S, DataShape):
+            #     raise CoercionError(
+            #         f"Shape specification {S} is not a subclass of DataShape"
+            #     )
+            if value.output_shape is not S:
+                raise CoercionError(
+                    f"Given argument with shape {value.output_shape} is not {S}"
+                )
 
         return value
 

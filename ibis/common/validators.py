@@ -23,6 +23,7 @@ from typing_extensions import Annotated, get_args, get_origin
 from ibis.common.collections import FrozenDict
 from ibis.common.dispatch import lazy_singledispatch
 from ibis.common.exceptions import IbisTypeError
+from ibis.common.typing import Coercible
 from ibis.util import flatten_iterable, is_function, is_iterable
 
 try:
@@ -38,20 +39,20 @@ T = TypeVar('T')
 # have the slotted base here
 
 
-class Coercible(ABC):
-    """Protocol for defining coercible types.
+# class Coercible(ABC):
+#     """Protocol for defining coercible types.
 
-    Coercible types define a special ``__coerce__`` method that accepts an object
-    with an instance of the type. Used in conjunction with the ``coerced_to`` validator
-    to coerce arguments to a specific type.
-    """
+#     Coercible types define a special ``__coerce__`` method that accepts an object
+#     with an instance of the type. Used in conjunction with the ``coerced_to`` validator
+#     to coerce arguments to a specific type.
+#     """
 
-    __slots__ = ()
+#     __slots__ = ()
 
-    @classmethod
-    @abstractmethod
-    def __coerce__(cls, obj):
-        ...
+#     @classmethod
+#     @abstractmethod
+#     def __coerce__(cls, obj):
+#         ...
 
 
 class Validator(Callable):

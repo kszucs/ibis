@@ -7,8 +7,7 @@ import enum
 import ipaddress
 import itertools
 import uuid
-from operator import attrgetter
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 import numpy as np
 from public import public
@@ -20,7 +19,8 @@ from ibis.common.annotations import attribute
 from ibis.common.collections import frozendict
 from ibis.common.exceptions import IbisInputError, IbisTypeError
 from ibis.common.grounds import Singleton
-from ibis.common.patterns import Coercible, CoercionError
+from ibis.common.patterns import coerce
+from ibis.common.typing import Coercible, CoercionError
 from ibis.expr.operations.core import Columnar, DataShape, Named, Scalar, Unary, Value
 
 
@@ -82,8 +82,8 @@ class TableArrayView(Value, Named):
 class Cast(Value):
     """Explicitly cast value to a specific data type."""
 
-    arg = rlz.any
-    to = rlz.datatype
+    arg: Value  # rlz.any
+    to: dt.DataType
 
     output_shape = rlz.shape_like("arg")
 
@@ -216,7 +216,10 @@ class Literal(Value[T, Scalar], Coercible):
     # call dtype => T to indicate typevar bound
     # should support only dtype classes not instances
     @classmethod
-    def __coerce__(cls, value, dtype=..., name=...):
+    def __coerce__(cls, value, T=...):
+        if isinstance(value, cls):
+            return coerce(value, Value[T, ...])
+
         try:
             inferred_dtype = dt.infer(value)
         except (IbisInputError, IbisTypeError):
@@ -225,11 +228,11 @@ class Literal(Value[T, Scalar], Coercible):
         else:
             has_inferred = True
 
-        if dtype is Ellipsis:
+        if T is Ellipsis:
             has_explicit = False
         else:
             has_explicit = True
-            explicit_dtype = dt.dtype(dtype)
+            explicit_dtype = dt.dtype(T)
 
         if has_explicit and has_inferred:
             # ensure type correctness: check that the inferred dtype is
@@ -255,10 +258,6 @@ class Literal(Value[T, Scalar], Coercible):
         value = dt.normalize(dtype, value)
         return Literal(value, dtype=dtype)
 
-    # call dtype => T to indicate typevar bound
-    def __verify__(self, dtype=None):
-        return self.output_dtype == dt.dtype(dtype)
-
     @property
     def name(self):
         return repr(self.value)
@@ -272,15 +271,15 @@ class Literal(Value[T, Scalar], Coercible):
 class NullLiteral(Literal[dt.Null], Singleton):
     """Typeless NULL literal."""
 
-    value = rlz.optional(type(None), default=None)
-    dtype = rlz.optional(rlz.instance_of(dt.Null), default=dt.null)
+    value: None = None
+    dtype: Optional[dt.Null] = dt.null
 
 
 @public
 class ScalarParameter(Value, Named):
     _counter = itertools.count()
 
-    dtype = rlz.datatype
+    dtype: dt.DataType
     counter = rlz.optional(
         rlz.instance_of(int), default=lambda: next(ScalarParameter._counter)
     )

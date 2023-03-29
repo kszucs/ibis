@@ -7,40 +7,40 @@ from ibis.common.grounds import Concrete
 from ibis.common.patterns import MatchError, NoMatch, Pattern
 
 
-class Literal(Concrete, Pattern):
-    dtype: Optional[dt.DataType] = None
+# class Literal(Concrete, Pattern):
+#     dtype: Optional[dt.DataType] = None
 
-    def match(self, value, context):
-        has_explicit = self.dtype is not None
+#     def match(self, value, context):
+#         has_explicit = self.dtype is not None
 
-        try:
-            inferred_dtype = dt.infer(value)
-        except InputTypeError:
-            has_inferred = False
-        else:
-            has_inferred = True
+#         try:
+#             inferred_dtype = dt.infer(value)
+#         except InputTypeError:
+#             has_inferred = False
+#         else:
+#             has_inferred = True
 
-        if has_explicit and has_inferred:
-            # ensure type correctness: check that the inferred dtype is
-            # implicitly castable to the explicitly given dtype and value
-            if not dt.castable(inferred_dtype, self.dtype, value=value):
-                return NoMatch
-            dtype = self.dtype
-        elif has_explicit:
-            dtype = self.dtype
-        elif has_inferred:
-            dtype = inferred_dtype
-        else:
-            raise MatchError(
-                f"The datatype of value {value!r} cannot be inferred, try "
-                "passing it explicitly with the `type` keyword."
-            )
+#         if has_explicit and has_inferred:
+#             # ensure type correctness: check that the inferred dtype is
+#             # implicitly castable to the explicitly given dtype and value
+#             if not dt.castable(inferred_dtype, self.dtype, value=value):
+#                 return NoMatch
+#             dtype = self.dtype
+#         elif has_explicit:
+#             dtype = self.dtype
+#         elif has_inferred:
+#             dtype = inferred_dtype
+#         else:
+#             raise MatchError(
+#                 f"The datatype of value {value!r} cannot be inferred, try "
+#                 "passing it explicitly with the `type` keyword."
+#             )
 
-        if dtype.is_null():
-            return ops.NullLiteral()
+#         if dtype.is_null():
+#             return ops.NullLiteral()
 
-        value = dt.normalize(dtype, value)
-        return ops.Literal(value, dtype=dtype)
+#         value = dt.normalize(dtype, value)
+#         return ops.Literal(value, dtype=dtype)
 
 
 # class Value(Concrete, Pattern):

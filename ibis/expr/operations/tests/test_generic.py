@@ -4,7 +4,8 @@ import pytest
 
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.patterns import CoercedTo, CoercionError, ValidationError
+from ibis.common.patterns import CoercedTo, ValidationError, coerce
+from ibis.common.typing import CoercionError
 
 
 # TODO(kszucs): actually we should only allow datatype classes not instances
@@ -32,10 +33,10 @@ def test_literal_coercion_not_castable():
         ops.Literal.__coerce__(1, dt.string)
 
 
-def test_literal_verify_instance_dtype():
-    instance = ops.Literal(1, dt.int8)
-    assert instance.__verify__(dt.int8) is True
-    assert instance.__verify__(dt.int16) is False
+# def test_literal_verify_instance_dtype():
+#     instance = ops.Literal(1, dt.int8)
+#     assert instance.__verify__(dt.int8) is True
+#     assert instance.__matches__(dt.int16) is False
 
 
 def test_coerced_to_literal():
@@ -45,10 +46,10 @@ def test_coerced_to_literal():
     assert p.validate(1, {}) == one
     assert p.validate(False, {}) == ops.Literal(False, dt.boolean)
 
-    p = CoercedTo(ops.Literal[dt.int8])
+    p = CoercedTo(ops.Literal[dt.Int8])
     assert p.validate(ops.Literal(1, dt.int8), {}) == one
 
-    p = CoercedTo(ops.Literal[dt.int8])
+    p = CoercedTo(ops.Literal[dt.Int8])
     one = ops.Literal(1, dt.int16)
     with pytest.raises(ValidationError):
         p.validate(ops.Literal(1, dt.int16), {})

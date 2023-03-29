@@ -19,7 +19,7 @@ from ibis.common.annotations import attribute
 from ibis.common.collections import FrozenDict, MapSet
 from ibis.common.enums import IntervalUnit
 from ibis.common.grounds import Concrete, Singleton
-from ibis.common.validators import Coercible
+from ibis.common.typing import Coercible
 
 # TODO(kszucs): we don't support union types yet
 
@@ -45,7 +45,7 @@ def dtype_from_object(value, **kwargs) -> DataType:
             elif annots := get_type_hints(value):
                 return Struct({name: dtype(value) for name, value in annots.items()})
             elif issubclass(value, bytes):
-                return bytes
+                return binary
             elif issubclass(value, str):
                 return string
             elif issubclass(value, Integral):
@@ -616,7 +616,7 @@ class Decimal(Numeric, Parametric):
 class Interval(Parametric):
     """Interval values."""
 
-    unit: IntervalUnit = 's'
+    unit: IntervalUnit = IntervalUnit('s')
     """The time unit of the interval."""
 
     value_type: Integer = Int32()
