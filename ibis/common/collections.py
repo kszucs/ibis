@@ -227,4 +227,7 @@ class RewindableIterator(Iterator):
         self._iterator, self._checkpoint = tee(self._iterator)
 
 
-public(frozendict=FrozenDict, dotdict=DotDict)
+frozendict = FrozenDict
+dotdict = DotDict
+
+# public(frozendict=FrozenDict, dotdict=DotDict)

@@ -6,8 +6,11 @@ from typing import TYPE_CHECKING
 from public import public
 
 import ibis.expr.rules as rlz
+import ibis.expr.datatypes as dt
 from ibis import util
+from typing import TypeVar
 from ibis.common.graph import Node as Traversable
+from typing import Generic
 from ibis.common.grounds import Concrete
 
 if TYPE_CHECKING:
@@ -54,8 +57,24 @@ class Named(ABC):
         """
 
 
+class DataShape:
+    pass
+
+class Scalar(DataShape):
+    pass
+
+class Columnar(DataShape):
+    pass
+
+
+# T = TypeVar("T", bound=dt.DataType)
+# S = TypeVar("S", bound=rlz.Shape)
+T = TypeVar("T", bound=dt.DataType)
+S = TypeVar("S", bound=DataShape)
+
+
 @public
-class Value(Node, Named):
+class Value(Node, Named, Generic[T, S]):
     # TODO(kszucs): cover it with tests
     # TODO(kszucs): figure out how to represent not named arguments
     @property

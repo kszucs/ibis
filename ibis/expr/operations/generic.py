@@ -17,8 +17,11 @@ import ibis.expr.rules as rlz
 from ibis.common import exceptions as com
 from ibis.common.annotations import attribute
 from ibis.common.collections import frozendict
+from ibis.common.exceptions import IbisInputError, IbisTypeError
 from ibis.common.grounds import Singleton
-from ibis.expr.operations.core import Named, Unary, Value
+from ibis.common.patterns import Coercible, CoercionError
+from ibis.expr.operations.core import Named, Unary, Value, Scalar, Columnar, DataShape
+from typing import TypeVar
 
 
 @public
@@ -83,11 +86,14 @@ class Cast(Value):
     to = rlz.datatype
 
     output_shape = rlz.shape_like("arg")
-    output_dtype = property(attrgetter("to"))
 
     @property
     def name(self):
         return f"{self.__class__.__name__}({self.arg.name}, {self.to})"
+
+    @property
+    def output_dtype(self):
+        return self.to
 
 
 @public
@@ -167,8 +173,11 @@ class Least(Value):
     output_dtype = rlz.dtype_like('arg')
 
 
+T = TypeVar("T", bound=dt.DataType)
+S = TypeVar("S", bound=DataShape)
+
 @public
-class Literal(Value):
+class Literal(Value[T, Scalar], Coercible):
     __valid_input_types__ = (
         bytes,
         datetime.date,
@@ -201,11 +210,57 @@ class Literal(Value):
     # TODO(kszucs): it should be named actually
 
     output_shape = rlz.Shape.SCALAR
-    output_dtype = property(attrgetter("dtype"))
+
+    @classmethod
+    def __coerce__(cls, value, dtype=None):
+        try:
+            inferred_dtype = dt.infer(value)
+        except IbisInputError:
+            # TODO(kszucs): this should be InferenceError
+            has_inferred = False
+        else:
+            has_inferred = True
+
+        if dtype is None:
+            has_explicit = False
+        else:
+            has_explicit = True
+            explicit_dtype = dt.dtype(dtype)
+
+        if has_explicit and has_inferred:
+            # ensure type correctness: check that the inferred dtype is
+            # implicitly castable to the explicitly given dtype and value
+            if not dt.castable(inferred_dtype, explicit_dtype, value=value):
+                raise CoercionError(
+                    f"Value {value!r} cannot be safely coerced to `{explicit_dtype}`"
+                )
+            dtype = explicit_dtype
+        elif has_explicit:
+            dtype = explicit_dtype
+        elif has_inferred:
+            dtype = inferred_dtype
+        else:
+            raise CoercionError(
+                f"The datatype of value {value!r} cannot be inferred, try "
+                "passing it explicitly with the `type` keyword."
+            )
+
+        if dtype.is_null():
+            return NullLiteral()
+
+        value = dt.normalize(dtype, value)
+        return Literal(value, dtype=dtype)
+
+    def __verify__(self, dtype=None):
+        return self.output_dtype == dt.dtype(dtype)
 
     @property
     def name(self):
         return repr(self.value)
+
+    @property
+    def output_dtype(self):
+        return self.dtype
 
 
 @public
@@ -226,14 +281,14 @@ class ScalarParameter(Value, Named):
     )
 
     output_shape = rlz.Shape.SCALAR
-    output_dtype = property(attrgetter("dtype"))
 
     @property
     def name(self):
         return f'param_{self.counter:d}'
 
-    def __hash__(self):
-        return hash((self.dtype, self.counter))
+    @property
+    def output_dtype(self):
+        return self.dtype
 
 
 @public

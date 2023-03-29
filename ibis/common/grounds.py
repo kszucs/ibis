@@ -157,6 +157,13 @@ class Annotable(Base, metaclass=AnnotableMeta):
 
 
 class Immutable(Base):
+    # TODO(kszucs): consider to also implement __copy__ and __deepcopy__
+    # def __copy__(self):
+    #     return self
+
+    # def __deepcopy__(self, memo):
+    #     return self
+
     def __setattr__(self, name: str, _: Any) -> None:
         raise TypeError(
             f"Attribute {name!r} cannot be assigned to immutable instance of "
@@ -168,7 +175,7 @@ class Singleton(Base):
     __instances__ = WeakValueDictionary()
 
     @classmethod
-    def __create__(cls, *args, **kwargs) -> Singleton:
+    def __create__(cls, *args, **kwargs) -> Self:
         key = (cls, args, FrozenDict(kwargs))
         try:
             return cls.__instances__[key]

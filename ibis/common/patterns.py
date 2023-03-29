@@ -59,6 +59,7 @@ class CoercionError(Exception):
     ...
 
 
+# TODO(kszucs): consider to move this to ibis.common.typing
 class Coercible(ABC):
     """Protocol for defining coercible types.
 
@@ -71,8 +72,13 @@ class Coercible(ABC):
 
     @classmethod
     @abstractmethod
-    def __coerce__(cls, obj, *args):
+    def __coerce__(cls, value, *typevars):
         ...
+
+    # similar to __instancecheck__ but takes an instance and the type vars
+    @classmethod
+    def __verify__(cls, instance, *typevars):
+        return True
 
 
 class MatchError(Exception):
@@ -431,7 +437,13 @@ class CoercedTo(Matcher):
         super().__init__(func, origin, args)
 
     def match(self, value, context):
+        # TODO(kszucs): maybe we should let the func handle it, at least if
+        # it's a Coercible subclass
         if isinstance(value, self.origin):
+            if issubclass(self.origin, Coercible):
+                if self.args:
+                    if not self.origin.__verify__(value, *self.args):
+                        return NoMatch
             return value
 
         try:
@@ -445,6 +457,9 @@ class CoercedTo(Matcher):
             )
 
         return value
+
+    # implement validate() too ro raise coercion error
+    # def validate(self, value, context):
 
 
 class Not(Matcher):
@@ -482,11 +497,6 @@ class AllOf(Matcher):
             if value is NoMatch:
                 return NoMatch
         return value
-
-
-def NoneOf(*args) -> Pattern:
-    """Match none of the passed patterns."""
-    return Not(AnyOf(*args))
 
 
 class Length(Matcher):
@@ -767,6 +777,11 @@ class PatternMapping(Matcher):
 IsTruish = Check(lambda x: bool(x))
 IsNumber = InstanceOf(numbers.Number) & ~InstanceOf(bool)
 IsString = InstanceOf(str)
+
+
+def NoneOf(*args) -> Pattern:
+    """Match none of the passed patterns."""
+    return Not(AnyOf(*args))
 
 
 def ListOf(pattern):
