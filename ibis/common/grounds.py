@@ -134,7 +134,7 @@ class Annotable(Base, metaclass=AnnotableMeta):
         )
 
     @property
-    def __args__(self):
+    def __args__(self) -> tuple[Any, ...]:
         return tuple(getattr(self, name) for name in self.__argnames__)
 
     def copy(self, **overrides: Any) -> Annotable:

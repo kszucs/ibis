@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import Any
+from typing import Any, Optional
 
 from ibis.common.collections import DotDict
 from ibis.common.typing import evaluate_typehint
@@ -108,9 +108,9 @@ class Argument(Annotation):
 
     def __init__(
         self,
-        validator: Validator = None,
+        validator: Optional[Validator] = None,
         default: Any = EMPTY,
-        typehint: type = None,
+        typehint: Optional[type] = None,
         kind: int = POSITIONAL_OR_KEYWORD,
     ):
         super().__init__(validator, default, typehint)
