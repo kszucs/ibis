@@ -8,10 +8,9 @@ from abc import abstractmethod
 from collections.abc import Iterator, Mapping, Sequence
 from collections.abc import Set as PySet
 from numbers import Integral, Real
-from typing import Any, Iterable, Literal, NamedTuple, Optional
+from typing import Any, Generic, Iterable, Literal, NamedTuple, Optional, TypeVar
 
 import numpy as np
-import toolz
 from multipledispatch import Dispatcher
 from public import public
 from typing_extensions import get_args, get_origin, get_type_hints
@@ -44,7 +43,7 @@ def dtype_from_object(value, **kwargs) -> DataType:
             elif result := _python_dtypes.get(value):
                 return result
             elif annots := get_type_hints(value):
-                return Struct(toolz.valmap(dtype, annots))
+                return Struct({name: dtype(value) for name, value in annots.items()})
             elif issubclass(value, bytes):
                 return bytes
             elif issubclass(value, str):
@@ -703,11 +702,14 @@ class Struct(Parametric, MapSet):
         return f"<{pairs}>"
 
 
+T = TypeVar("T", bound=DataType)
+
+
 @public
-class Array(Variadic, Parametric):
+class Array(Variadic, Parametric, Generic[T]):
     """Array values."""
 
-    value_type: DataType
+    value_type: T
 
     scalar = "ArrayScalar"
     column = "ArrayColumn"
@@ -718,10 +720,10 @@ class Array(Variadic, Parametric):
 
 
 @public
-class Set(Variadic, Parametric):
+class Set(Variadic, Parametric, Generic[T]):
     """Set values."""
 
-    value_type: DataType
+    value_type: T
 
     scalar = "SetScalar"
     column = "SetColumn"
@@ -731,12 +733,16 @@ class Set(Variadic, Parametric):
         return f"<{self.value_type}>"
 
 
+K = TypeVar("K", bound=DataType)
+V = TypeVar("V", bound=DataType)
+
+
 @public
-class Map(Variadic, Parametric):
+class Map(Variadic, Parametric, Generic[K, V]):
     """Associative array values."""
 
-    key_type: DataType
-    value_type: DataType
+    key_type: K
+    value_type: V
 
     scalar = "MapScalar"
     column = "MapColumn"

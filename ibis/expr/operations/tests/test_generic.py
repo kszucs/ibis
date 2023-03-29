@@ -1,11 +1,14 @@
+from typing import TypeVar
+
 import pytest
 
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.patterns import CoercionError, CoercedTo
+from ibis.common.patterns import CoercedTo, CoercionError, ValidationError
 
 
 # TODO(kszucs): actually we should only allow datatype classes not instances
+
 
 @pytest.mark.parametrize(
     ("value", "dtype"),
@@ -35,8 +38,7 @@ def test_literal_verify_instance_dtype():
     assert instance.__verify__(dt.int16) is False
 
 
-
-def test_coerced_to():
+def test_coerced_to_literal():
     p = CoercedTo(ops.Literal)
     one = ops.Literal(1, dt.int8)
     assert p.validate(ops.Literal(1, dt.int8), {}) == one
@@ -46,5 +48,32 @@ def test_coerced_to():
     p = CoercedTo(ops.Literal[dt.int8])
     assert p.validate(ops.Literal(1, dt.int8), {}) == one
 
+    p = CoercedTo(ops.Literal[dt.int8])
+    one = ops.Literal(1, dt.int16)
+    with pytest.raises(ValidationError):
+        p.validate(ops.Literal(1, dt.int16), {})
 
-from typing import TypeVar
+    p = CoercedTo(ops.NullLiteral)
+    one = ops.Literal(1, dt.int16)
+    assert p.validate(ops.NullLiteral(), {}) == ops.NullLiteral()
+    with pytest.raises(ValidationError):
+        p.validate(one, {})
+
+
+# TODO(kszucs): test filtering for other dtypes and shapes
+def test_coerced_to_value():
+    one = ops.Literal(1, dt.int8)
+
+    p = CoercedTo(ops.Value)
+    assert p.validate(1, {}) == one
+
+    p = CoercedTo(ops.Value[dt.Int8, ...])
+    assert p.validate(1, {}) == one
+
+    # p = CoercedTo(ops.Value[dt.Int8 | dt.Int16, ...])
+    # assert p.validate(1, {}) == one
+
+
+# perhaps use Any instead of ...
+# ops.Value[dt.Int8 | dt.Int16, ...]
+# ops.Value[dt.Int8, ...] | ops.Value[dt.Int16, ...]

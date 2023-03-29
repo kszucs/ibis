@@ -86,7 +86,10 @@ class Validator(Callable):
             if annot is Any:
                 return any_
             elif isinstance(annot, TypeVar):
-                return any_
+                # TODO(kszucs): only use coerced_to if annot.__covariant__ is True
+                if annot.__bound__ is None:
+                    return any_
+                return coerced_to(annot.__bound__)
             elif issubclass(annot, Coercible):
                 return coerced_to(annot)
             else:

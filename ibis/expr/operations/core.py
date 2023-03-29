@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from public import public
 
-import ibis.expr.rules as rlz
 import ibis.expr.datatypes as dt
+import ibis.expr.rules as rlz
 from ibis import util
-from typing import TypeVar
 from ibis.common.graph import Node as Traversable
-from typing import Generic
 from ibis.common.grounds import Concrete
+from ibis.common.patterns import Coercible, CoercionError
 
 if TYPE_CHECKING:
     import ibis.expr.datatypes as dt
@@ -60,8 +59,10 @@ class Named(ABC):
 class DataShape:
     pass
 
+
 class Scalar(DataShape):
     pass
+
 
 class Columnar(DataShape):
     pass
@@ -70,11 +71,41 @@ class Columnar(DataShape):
 # T = TypeVar("T", bound=dt.DataType)
 # S = TypeVar("S", bound=rlz.Shape)
 T = TypeVar("T", bound=dt.DataType)
-S = TypeVar("S", bound=DataShape)
+S = TypeVar("S", bound=DataShape)  # or rather as constraints
 
 
 @public
-class Value(Node, Named, Generic[T, S]):
+class Value(Node, Named, Coercible, Generic[T, S]):
+    @classmethod
+    def __coerce__(cls, value, dtype=..., shape=...):
+        from ibis.expr.operations import Literal
+
+        value = Literal.__coerce__(value, dtype=dtype)
+
+        if dtype is Ellipsis:
+            return value
+        elif not isinstance(dtype, type) or not issubclass(dtype, dt.DataType):
+            raise CoercionError(
+                f"Datatype specification {dtype} is not a subclass dt.DataType"
+            )
+        elif not isinstance(value.output_dtype, dtype):
+            raise CoercionError(
+                f"f'Given argument with datatype {value.output_dtype} is not subtype of {dtype}"
+            )
+
+        if shape is Ellipsis:
+            return value
+        elif not isinstance(shape, type) or not issubclass(shape, DataShape):
+            raise CoercionError(
+                f"Shape specification {shape} is not a subclass of DataShape"
+            )
+        elif value.output_shape is not shape:
+            raise CoercionError(
+                f"Given argument with shape {value.output_shape} is not {shape}"
+            )
+
+        return value
+
     # TODO(kszucs): cover it with tests
     # TODO(kszucs): figure out how to represent not named arguments
     @property

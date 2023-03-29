@@ -8,6 +8,7 @@ import ipaddress
 import itertools
 import uuid
 from operator import attrgetter
+from typing import TypeVar
 
 import numpy as np
 from public import public
@@ -20,8 +21,7 @@ from ibis.common.collections import frozendict
 from ibis.common.exceptions import IbisInputError, IbisTypeError
 from ibis.common.grounds import Singleton
 from ibis.common.patterns import Coercible, CoercionError
-from ibis.expr.operations.core import Named, Unary, Value, Scalar, Columnar, DataShape
-from typing import TypeVar
+from ibis.expr.operations.core import Columnar, DataShape, Named, Scalar, Unary, Value
 
 
 @public
@@ -176,6 +176,7 @@ class Least(Value):
 T = TypeVar("T", bound=dt.DataType)
 S = TypeVar("S", bound=DataShape)
 
+
 @public
 class Literal(Value[T, Scalar], Coercible):
     __valid_input_types__ = (
@@ -211,17 +212,20 @@ class Literal(Value[T, Scalar], Coercible):
 
     output_shape = rlz.Shape.SCALAR
 
+    # TODO(kszucs): support ... as a placeholder for None
+    # call dtype => T to indicate typevar bound
+    # should support only dtype classes not instances
     @classmethod
-    def __coerce__(cls, value, dtype=None):
+    def __coerce__(cls, value, dtype=..., name=...):
         try:
             inferred_dtype = dt.infer(value)
-        except IbisInputError:
+        except (IbisInputError, IbisTypeError):
             # TODO(kszucs): this should be InferenceError
             has_inferred = False
         else:
             has_inferred = True
 
-        if dtype is None:
+        if dtype is Ellipsis:
             has_explicit = False
         else:
             has_explicit = True
@@ -251,6 +255,7 @@ class Literal(Value[T, Scalar], Coercible):
         value = dt.normalize(dtype, value)
         return Literal(value, dtype=dtype)
 
+    # call dtype => T to indicate typevar bound
     def __verify__(self, dtype=None):
         return self.output_dtype == dt.dtype(dtype)
 
@@ -264,7 +269,7 @@ class Literal(Value[T, Scalar], Coercible):
 
 
 @public
-class NullLiteral(Literal, Singleton):
+class NullLiteral(Literal[dt.Null], Singleton):
     """Typeless NULL literal."""
 
     value = rlz.optional(type(None), default=None)
