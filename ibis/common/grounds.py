@@ -13,6 +13,7 @@ from ibis.common.collections import FrozenDict
 # from ibis.common.patterns import Pattern
 from ibis.common.typing import evaluate_typehint
 from ibis.common.validators import Validator
+from ibis.common.patterns import Pattern
 
 
 class BaseMeta(ABCMeta):

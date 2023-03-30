@@ -25,9 +25,9 @@ from ibis.common.grounds import (
     Immutable,
     Singleton,
 )
-from ibis.common.validators import Coercible, Validator, instance_of, option, validator
+from ibis.common.validators import Coercible, Validator, instance_of, option, validator, tuple_of
 from ibis.tests.util import assert_pickle_roundtrip
-
+from typing import Optional
 is_any = instance_of(object)
 is_bool = instance_of(bool)
 is_float = instance_of(float)
@@ -1116,3 +1116,31 @@ def test_init_subclass_keyword_arguments():
         pass
 
     assert Test2.kwargs == {"something": "value", "value": "something"}
+
+
+def test_pina():
+
+
+
+    class Case1(Annotable):
+        results: Optional[tuple[int]] = ()
+        default: Optional[int]
+
+    class SimpleCase1(Case1):
+        base: int
+        cases: Optional[tuple[int]] = ()
+
+    class Case2(Annotable):
+        results = optional(tuple_of(is_int), default=())
+        default = optional(is_int)
+
+    class SimpleCase2(Case1):
+        base = is_int
+        cases = optional(tuple_of(is_int), default=())
+
+
+    print(SimpleCase2.__argnames__)
+    return
+
+
+    assert SimpleCaseBuilder.__argnames__ == ("base", "results", "default",  "cases")

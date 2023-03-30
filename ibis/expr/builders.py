@@ -8,18 +8,19 @@ import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.types as ir
 from ibis import util
+from typing import Any
 from ibis.common.annotations import annotated
 from ibis.common.exceptions import IbisInputError
 from ibis.common.grounds import Concrete
 from ibis.expr.deferred import Deferred
 
-
+from ibis.expr.operations import Value
 class Builder(Concrete):
     pass
 
 
 class CaseBuilder(Builder):
-    results = rlz.optional(rlz.tuple_of(rlz.any), default=[])
+    results: Optional[tuple[Value]] = ()
     default: Optional[ops.Value]
 
     def type(self):
@@ -57,13 +58,13 @@ class CaseBuilder(Builder):
 
 class SearchedCaseBuilder(CaseBuilder):
     __type__ = ops.SearchedCase
-    cases = rlz.optional(rlz.tuple_of(rlz.boolean), default=[])
+    cases: Optional[tuple[Value[dt.Boolean, Any]]] = ()
 
 
 class SimpleCaseBuilder(CaseBuilder):
     __type__ = ops.SimpleCase
     base: ops.Value
-    cases = rlz.optional(rlz.tuple_of(rlz.any), default=[])
+    cases: Optional[tuple[Value]] = ()
 
     def when(self, case_expr, result_expr):
         """Add a new case-result pair.

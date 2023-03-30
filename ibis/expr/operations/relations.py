@@ -192,6 +192,7 @@ class Join(TableNode):
         # currently
         import ibis.expr.analysis as an
         import ibis.expr.operations as ops
+        import ibis.expr.types as ir
 
         # TODO(kszucs): need to factor this out to appropiate join predicate
         # rules

@@ -449,6 +449,9 @@ class CoercedTo(Matcher):
 
         return value
 
+    def __repr__(self):
+        return f"CoercedTo({self.origin.__name__!r})"
+
     # implement validate() too ro raise coercion error
     # def validate(self, value, context):
 

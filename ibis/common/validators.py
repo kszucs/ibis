@@ -92,7 +92,7 @@ class Validator(Callable):
                 inners = cls.from_typehint(first)
             else:
                 inners = tuple(map(cls.from_typehint, args))
-            return tuple_of(inners, type=p.CoercedTo(origin))
+            return p.TupleOf(inners)#, type=p.CoercedTo(origin))
         elif issubclass(origin, Sequence):
             (value_inner,) = map(cls.from_typehint, args)
             return sequence_of(value_inner, type=p.CoercedTo(origin))
@@ -141,6 +141,9 @@ class Curried(toolz.curry, Validator):
 
 validator = Curried
 
+@validator
+def any_(value, **kwargs):
+    return value
 
 @validator
 def ref(key: str, *, this: Mapping[str, Any]) -> Any:
