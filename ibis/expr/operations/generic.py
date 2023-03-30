@@ -207,7 +207,7 @@ class Literal(Value[T, Scalar], Coercible):
             rlz.lazy_instance_of("shapely.geometry.BaseGeometry"),
         )
     )
-    dtype = rlz.datatype
+    dtype: dt.DataType
 
     # TODO(kszucs): it should be named actually
 
@@ -369,7 +369,7 @@ class SimpleCase(Value):
 class SearchedCase(Value):
     cases = rlz.tuple_of(rlz.boolean)
     results = rlz.tuple_of(rlz.any)
-    default = rlz.any
+    default: Value
 
     def __init__(self, cases, results, default):
         assert len(cases) == len(results)

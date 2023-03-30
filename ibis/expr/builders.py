@@ -11,6 +11,8 @@ from ibis.common.annotations import annotated
 from ibis.common.exceptions import IbisInputError
 from ibis.common.grounds import Concrete
 from ibis.expr.deferred import Deferred
+from typing import Optional
+
 
 
 class Builder(Concrete):
@@ -19,7 +21,7 @@ class Builder(Concrete):
 
 class CaseBuilder(Builder):
     results = rlz.optional(rlz.tuple_of(rlz.any), default=[])
-    default = rlz.optional(rlz.any)
+    default: Optional[ops.Value]
 
     def type(self):
         return rlz.highest_precedence_dtype(self.results)
@@ -61,7 +63,7 @@ class SearchedCaseBuilder(CaseBuilder):
 
 class SimpleCaseBuilder(CaseBuilder):
     __type__ = ops.SimpleCase
-    base = rlz.any
+    base: ops.Value
     cases = rlz.optional(rlz.tuple_of(rlz.any), default=[])
 
     def when(self, case_expr, result_expr):
@@ -75,7 +77,7 @@ class SimpleCaseBuilder(CaseBuilder):
         result_expr
             Value when the case predicate evaluates to true.
         """
-        case_expr = rlz.any(case_expr)
+        case_expr: Value(case_expr)
         if not rlz.comparable(self.base, case_expr):
             raise TypeError(
                 f'Base expression {rlz._arg_type_error_format(self.base)} and '

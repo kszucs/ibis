@@ -11,7 +11,7 @@ from ibis.expr.operations.core import Value
 @public
 class StructField(Value):
     arg = rlz.struct
-    field = rlz.instance_of(str)
+    field: str
 
     output_shape = rlz.shape_like("arg")
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from public import public
-
+from typing import Optional
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
 from ibis.common.annotations import attribute
@@ -18,7 +18,7 @@ class ShiftBase(Analytic):
     arg = rlz.column(rlz.any)
 
     offset = rlz.optional(rlz.one_of((rlz.integer, rlz.interval)))
-    default = rlz.optional(rlz.any)
+    default: Optional[Value]
 
     output_dtype = rlz.dtype_like("arg")
 

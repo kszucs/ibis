@@ -8,15 +8,15 @@ from ibis.expr import rules as rlz
 from ibis.expr.operations.analytic import Analytic
 from ibis.expr.operations.core import Value
 from ibis.expr.operations.reductions import Reduction
-
+import ibis.expr.datatypes as dt
 
 class VectorizedUDF(Value):
     func = rlz.instance_of((FunctionType, LambdaType))
     func_args = rlz.tuple_of(rlz.column(rlz.any))
     # TODO(kszucs): should rename these arguments to
     # input_dtypes and return_dtype
-    input_type = rlz.tuple_of(rlz.datatype)
-    return_type = rlz.datatype
+    input_type: tuple[dt.DataType]
+    return_type: dt.DataType
 
     @property
     def output_dtype(self):

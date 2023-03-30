@@ -151,8 +151,8 @@ class Value(Node, Named, Coercible, Generic[T, S]):
 
 @public
 class Alias(Value):
-    arg = rlz.any
-    name = rlz.instance_of(str)
+    arg: Value
+    name: str
 
     output_shape = rlz.shape_like("arg")
     output_dtype = rlz.dtype_like("arg")
@@ -162,7 +162,7 @@ class Alias(Value):
 class Unary(Value):
     """A unary operation."""
 
-    arg = rlz.any
+    arg: Value
 
     @property
     def output_shape(self):
@@ -173,8 +173,8 @@ class Unary(Value):
 class Binary(Value):
     """A binary operation."""
 
-    left = rlz.any
-    right = rlz.any
+    left: Value
+    right: Value
 
     @property
     def output_shape(self):
@@ -183,9 +183,9 @@ class Binary(Value):
 
 @public
 class Argument(Value):
-    name = rlz.instance_of(str)
+    name: str
     shape = rlz.instance_of(rlz.Shape)
-    dtype = rlz.datatype
+    dtype: dt.DataType
 
     @property
     def output_dtype(self) -> dt.DataType:

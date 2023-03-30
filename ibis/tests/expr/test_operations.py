@@ -234,7 +234,7 @@ def test_custom_table_expr():
 @pytest.fixture(scope='session')
 def dummy_op():
     class DummyOp(ops.Value):
-        arg = rlz.any
+        arg: Value
 
     return DummyOp
 

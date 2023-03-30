@@ -47,8 +47,8 @@ class Xor(LogicalBinary):
 
 @public
 class Comparison(Binary):
-    left = rlz.any
-    right = rlz.any
+    left: Value
+    right: Value
 
     output_dtype = dt.boolean
 
@@ -106,9 +106,9 @@ class IdenticalTo(Comparison):
 
 @public
 class Between(Value):
-    arg = rlz.any
-    lower_bound = rlz.any
-    upper_bound = rlz.any
+    arg: Value
+    lower_bound: Value
+    upper_bound: Value
 
     output_dtype = dt.boolean
     output_shape = rlz.shape_like("args")
@@ -130,7 +130,7 @@ class Between(Value):
 # TODO(kszucs): decompose it into at least two operations
 @public
 class Contains(Value):
-    value = rlz.any
+    value: Value
     options = rlz.one_of(
         [
             rlz.tuple_of(rlz.any),
@@ -166,8 +166,8 @@ class Where(Value):
     """
 
     bool_expr = rlz.boolean
-    true_expr = rlz.any
-    false_null_expr = rlz.any
+    true_expr: Value
+    false_null_expr: Value
 
     output_shape = rlz.shape_like("args")
 

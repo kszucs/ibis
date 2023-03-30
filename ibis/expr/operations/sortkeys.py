@@ -12,7 +12,7 @@ from ibis.expr.operations.core import Value
 class SortKey(Value):
     """A sort operation."""
 
-    expr = rlz.any
+    expr: Value
     ascending = rlz.optional(rlz.bool_, default=True)
 
     output_dtype = rlz.dtype_like("expr")

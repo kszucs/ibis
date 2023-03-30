@@ -326,7 +326,7 @@ def test_optional(validator, input):
 
 def test_base_table_of_failure_mode():
     class BrokenUseOfBaseTableOf(ops.Node):
-        arg = rlz.any
+        arg: ops.Value
         foo = rlz.function_of(rlz.base_table_of(rlz.ref("arg"), strict=True))
 
     arg = ibis.literal("abc")

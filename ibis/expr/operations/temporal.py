@@ -248,7 +248,7 @@ class TimestampFromYMDHMS(Value):
 
 @public
 class TimestampFromUNIX(Value):
-    arg = rlz.any
+    arg: Value
     unit: TimestampUnit
 
     output_dtype = dt.timestamp

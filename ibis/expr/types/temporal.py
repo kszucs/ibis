@@ -215,7 +215,7 @@ class TimeValue(_TimeComponentMixin, TemporalValue):
         """Subtract a time or an interval from a time expression."""
         import ibis.expr.rules as rlz
 
-        other = rlz.any(other)
+        other: Value(other)
 
         if other.output_dtype.is_time():
             op = ops.TimeDiff
@@ -233,7 +233,7 @@ class TimeValue(_TimeComponentMixin, TemporalValue):
         """Subtract a time or an interval from a time expression."""
         import ibis.expr.rules as rlz
 
-        other = rlz.any(other)
+        other: Value(other)
 
         if other.output_dtype.is_time():
             op = ops.TimeDiff
@@ -387,7 +387,7 @@ class TimestampValue(_DateComponentMixin, _TimeComponentMixin, TemporalValue):
         """Subtract a timestamp or an interval from a timestamp."""
         import ibis.expr.rules as rlz
 
-        right = rlz.any(other)
+        right: Value(other)
 
         if right.output_dtype.is_timestamp():
             op = ops.TimestampDiff
@@ -410,7 +410,7 @@ class TimestampValue(_DateComponentMixin, _TimeComponentMixin, TemporalValue):
         """Subtract a timestamp or an interval from a timestamp."""
         import ibis.expr.rules as rlz
 
-        right = rlz.any(other)
+        right: Value(other)
 
         if right.output_dtype.is_timestamp():
             op = ops.TimestampDiff

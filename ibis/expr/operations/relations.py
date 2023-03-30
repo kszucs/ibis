@@ -12,7 +12,6 @@ import ibis.common.exceptions as com
 import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.schema as sch
-import ibis.expr.types as ir
 from ibis import util
 from ibis.common.annotations import attribute
 from ibis.common.collections import frozendict
@@ -21,7 +20,7 @@ from ibis.expr.deferred import Deferred
 from ibis.expr.operations.core import Named, Node, Value
 from ibis.expr.operations.generic import TableColumn
 from ibis.expr.operations.logical import Equals, ExistsSubquery, NotExistsSubquery
-
+from ibis.common.typing import Coercible, CoercionError
 if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
@@ -41,6 +40,25 @@ class Backend:
 
 @public
 class TableNode(Node):
+    @classmethod
+    def __coerce__(cls, value):
+        import ibis
+        import pandas as pd
+        import ibis.expr.types as ir
+
+        if isinstance(value, pd.DataFrame):
+            value = ibis.memtable(value)
+
+        if isinstance(value, ir.Expr):
+            value = value.op()
+
+        # if not isinstance(arg, ops.TableNode):
+        #     raise com.IbisTypeError(
+        #         f'Argument is not a table; got type {type(arg).__name__}'
+        #     )
+
+        return value
+
     def order_by(self, sort_exprs):
         return Selection(self, [], sort_keys=sort_exprs)
 
@@ -594,7 +612,7 @@ class View(PhysicalTable):
     """A view created from an expression."""
 
     child = rlz.table
-    name = rlz.instance_of(str)
+    name: str
 
     @property
     def schema(self):
@@ -606,8 +624,8 @@ class SQLStringView(PhysicalTable):
     """A view created from a SQL string."""
 
     child = rlz.table
-    name = rlz.instance_of(str)
-    query = rlz.instance_of(str)
+    name: str
+    query: str
 
     @attribute.default
     def schema(self):

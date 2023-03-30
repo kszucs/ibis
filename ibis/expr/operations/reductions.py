@@ -123,7 +123,7 @@ class Mean(Filterable, Reduction):
 
 @public
 class Quantile(Filterable, Reduction):
-    arg = rlz.any
+    arg: Value
     quantile = rlz.strict_numeric
     interpolation: Optional[
         Literal['linear', 'lower', 'higher', 'midpoint', 'nearest']
@@ -134,7 +134,7 @@ class Quantile(Filterable, Reduction):
 
 @public
 class MultiQuantile(Filterable, Reduction):
-    arg = rlz.any
+    arg: Value
     quantile = rlz.value(dt.Array(dt.float64))
     interpolation: Optional[
         Literal['linear', 'lower', 'higher', 'midpoint', 'nearest']
