@@ -98,10 +98,10 @@ class Value(Node, Named, Coercible, Generic[T, S]):
                 )
 
         if S is not Ellipsis:
-            # if not issubclass(S, DataShape):
-            #     raise CoercionError(
-            #         f"Shape specification {S} is not a subclass of DataShape"
-            #     )
+            if not issubclass(S, DataShape):
+                raise TypeError(
+                    f"Shape specification {S} is not a subclass of DataShape"
+                )
             if value.output_shape is not S:
                 raise CoercionError(
                     f"Given argument with shape {value.output_shape} is not {S}"

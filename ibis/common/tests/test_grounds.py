@@ -1,7 +1,7 @@
 import copy
 import pickle
 import weakref
-from typing import Mapping, Sequence, Tuple, TypeVar
+from typing import Mapping, Optional, Sequence, Tuple, TypeVar
 
 import pytest
 
@@ -25,9 +25,16 @@ from ibis.common.grounds import (
     Immutable,
     Singleton,
 )
-from ibis.common.validators import Coercible, Validator, instance_of, option, validator, tuple_of
+from ibis.common.validators import (
+    Coercible,
+    Validator,
+    instance_of,
+    option,
+    tuple_of,
+    validator,
+)
 from ibis.tests.util import assert_pickle_roundtrip
-from typing import Optional
+
 is_any = instance_of(object)
 is_bool = instance_of(bool)
 is_float = instance_of(float)
@@ -1118,13 +1125,10 @@ def test_init_subclass_keyword_arguments():
     assert Test2.kwargs == {"something": "value", "value": "something"}
 
 
-def test_pina():
-
-
-
+def test_argument_order_using_optional_annotations():
     class Case1(Annotable):
         results: Optional[tuple[int]] = ()
-        default: Optional[int]
+        default: Optional[int] = None
 
     class SimpleCase1(Case1):
         base: int
@@ -1138,9 +1142,8 @@ def test_pina():
         base = is_int
         cases = optional(tuple_of(is_int), default=())
 
-
-    print(SimpleCase2.__argnames__)
-    return
-
-
-    assert SimpleCaseBuilder.__argnames__ == ("base", "results", "default",  "cases")
+    assert (
+        SimpleCase1.__argnames__
+        == SimpleCase2.__argnames__
+        == ("base", "cases", "results", "default")
+    )

@@ -9,11 +9,11 @@ from weakref import WeakValueDictionary
 from ibis.common.annotations import EMPTY, Argument, Attribute, Signature, attribute
 from ibis.common.caching import WeakCache
 from ibis.common.collections import FrozenDict
+from ibis.common.patterns import ValidationError
 
 # from ibis.common.patterns import Pattern
 from ibis.common.typing import evaluate_typehint
 from ibis.common.validators import Validator
-from ibis.common.patterns import Pattern
 
 
 class BaseMeta(ABCMeta):
@@ -95,7 +95,12 @@ class Annotable(Base, metaclass=AnnotableMeta):
     @classmethod
     def __create__(cls, *args, **kwargs) -> Annotable:
         # construct the instance by passing the validated keyword arguments
-        kwargs = cls.__signature__.validate(*args, **kwargs)
+        try:
+            kwargs = cls.__signature__.validate(*args, **kwargs)
+        except ValidationError as e:
+            raise ValidationError(
+                f"Failed to validate arguments when constructing {cls}: {e}"
+            ) from e  # , e.args[0]) from e
         return super().__create__(**kwargs)
 
     @classmethod
@@ -176,7 +181,7 @@ class Singleton(Base):
     __instances__ = WeakValueDictionary()
 
     @classmethod
-    def __create__(cls, *args, **kwargs) -> Self:
+    def __create__(cls, *args, **kwargs):
         key = (cls, args, FrozenDict(kwargs))
         try:
             return cls.__instances__[key]

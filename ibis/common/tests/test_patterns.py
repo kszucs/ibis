@@ -175,7 +175,8 @@ def test_coerced_to_with_typevars():
     S = TypeVar("S")
 
     class DataType:
-        ...
+        def __eq__(self, other):
+            return type(self) == type(other)
 
     class Integer(DataType):
         pass
@@ -184,7 +185,8 @@ def test_coerced_to_with_typevars():
         pass
 
     class DataShape:
-        ...
+        def __eq__(self, other):
+            return type(self) == type(other)
 
     class Scalar(DataShape):
         pass
@@ -194,11 +196,11 @@ def test_coerced_to_with_typevars():
 
     class Value(Generic[T, S], Coercible):
         @classmethod
-        def __coerce__(cls, value, dtype=DataType, shape=DataShape):
-            if dtype is String:
-                return Literal(str(value), dtype)
-            elif dtype is Integer:
-                return Literal(int(value), dtype)
+        def __coerce__(cls, value, T=..., S=...):
+            if T is String:
+                return Literal(str(value), String())
+            elif T is Integer:
+                return Literal(int(value), Integer())
             else:
                 raise CoercionError("Invalid dtype")
 
@@ -217,7 +219,7 @@ def test_coerced_to_with_typevars():
             return self.dtype
 
         def output_shape(self) -> Scalar:
-            return Scalar
+            return Scalar()
 
         def __eq__(self, other):
             return (
@@ -228,9 +230,9 @@ def test_coerced_to_with_typevars():
 
     p = CoercedTo(Literal[String])
     r = p.match("foo", context={})
-    assert r == Literal("foo", String)
-    assert r.output_dtype() == String
-    assert r.output_shape() == Scalar
+    assert r == Literal("foo", String())
+    assert r.output_dtype() == String()
+    assert r.output_shape() == Scalar()
 
 
 def test_not():

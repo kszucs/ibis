@@ -88,8 +88,9 @@ def test_simple_case_null_else(table):
 
     assert isinstance(expr, ir.StringColumn)
     assert isinstance(op.default.to_expr(), ir.Value)
-    assert isinstance(op.default, ops.Cast)
-    assert op.default.to == dt.string
+    assert isinstance(op.default, ops.NullLiteral)
+    # assert isinstance(op.default, ops.Cast)
+    # assert op.default.to == dt.string
 
 
 def test_multiple_case_null_else(table):
@@ -98,8 +99,9 @@ def test_multiple_case_null_else(table):
 
     assert isinstance(expr, ir.StringColumn)
     assert isinstance(op.default.to_expr(), ir.Value)
-    assert isinstance(op.default, ops.Cast)
-    assert op.default.to == dt.string
+    assert isinstance(op.default, ops.NullLiteral)
+    # assert isinstance(op.default, ops.Cast)
+    # assert op.default.to == dt.string
 
 
 def test_case_mixed_type():

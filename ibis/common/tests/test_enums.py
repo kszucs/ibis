@@ -1,7 +1,7 @@
 import pytest
 
 from ibis.common.enums import IntervalUnit
-from ibis.common.validators import coerced_to
+from ibis.common.patterns import CoercedTo
 
 interval_units = pytest.mark.parametrize(
     ["singular", "plural", "short"],
@@ -32,10 +32,10 @@ def test_interval_units(singular, plural, short):
 @interval_units
 def test_interval_unit_coercions(singular, plural, short):
     u = IntervalUnit[singular.upper()]
-    v = coerced_to(IntervalUnit)
-    assert v(singular) == u
-    assert v(plural) == u
-    assert v(short) == u
+    v = CoercedTo(IntervalUnit)
+    assert v.validate(singular, {}) == u
+    assert v.validate(plural, {}) == u
+    assert v.validate(short, {}) == u
 
 
 @pytest.mark.parametrize(
@@ -51,5 +51,5 @@ def test_interval_unit_coercions(singular, plural, short):
     ],
 )
 def test_interval_unit_aliases(alias, expected):
-    v = coerced_to(IntervalUnit)
-    assert v(alias) == IntervalUnit(expected)
+    v = CoercedTo(IntervalUnit)
+    assert v.validate(alias, {}) == IntervalUnit(expected)

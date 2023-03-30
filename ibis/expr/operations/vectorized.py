@@ -16,7 +16,7 @@ class VectorizedUDF(Value):
     func_args = rlz.tuple_of(rlz.column(rlz.any))
     # TODO(kszucs): should rename these arguments to
     # input_dtypes and return_dtype
-    input_type: tuple[dt.DataType]
+    input_type: tuple[dt.DataType, ...]
     return_type: dt.DataType
 
     @property

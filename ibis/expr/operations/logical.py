@@ -130,7 +130,7 @@ class Between(Value):
 # TODO(kszucs): decompose it into at least two operations
 @public
 class Contains(Value):
-    value: Value
+    value = rlz.any
     options = rlz.one_of(
         [
             rlz.tuple_of(rlz.any),

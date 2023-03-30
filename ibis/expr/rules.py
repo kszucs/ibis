@@ -476,9 +476,6 @@ def table(arg, schema=None, **kwargs):
     import ibis
     import ibis.expr.operations as ops
 
-    if schema is not None:
-        raise NotImplementedError("e")
-
     if isinstance(arg, pd.DataFrame):
         arg = ibis.memtable(arg).op()
 

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 import ibis.expr.operations as ops
 from ibis.expr.types.core import _binop
+from ibis.common.patterns import coerce
 from ibis.expr.types.generic import Column, Scalar, Value
 
 
@@ -213,10 +214,8 @@ class TimeValue(_TimeComponentMixin, TemporalValue):
         other: TimeValue | IntervalValue,
     ) -> IntervalValue | TimeValue | NotImplemented:
         """Subtract a time or an interval from a time expression."""
-        import ibis.expr.rules as rlz
 
-        other: Value(other)
-
+        other = coerce(other, ops.Value)
         if other.output_dtype.is_time():
             op = ops.TimeDiff
         else:
@@ -231,10 +230,8 @@ class TimeValue(_TimeComponentMixin, TemporalValue):
         other: TimeValue | IntervalValue,
     ) -> IntervalValue | TimeValue | NotImplemented:
         """Subtract a time or an interval from a time expression."""
-        import ibis.expr.rules as rlz
 
-        other: Value(other)
-
+        other = coerce(other, ops.Value)
         if other.output_dtype.is_time():
             op = ops.TimeDiff
         else:
@@ -385,10 +382,8 @@ class TimestampValue(_DateComponentMixin, _TimeComponentMixin, TemporalValue):
         | IntervalValue,
     ) -> IntervalValue | TimestampValue | NotImplemented:
         """Subtract a timestamp or an interval from a timestamp."""
-        import ibis.expr.rules as rlz
 
-        right: Value(other)
-
+        right = coerce(other, ops.Value)
         if right.output_dtype.is_timestamp():
             op = ops.TimestampDiff
         else:
@@ -408,10 +403,8 @@ class TimestampValue(_DateComponentMixin, _TimeComponentMixin, TemporalValue):
         | IntervalValue,
     ) -> IntervalValue | TimestampValue | NotImplemented:
         """Subtract a timestamp or an interval from a timestamp."""
-        import ibis.expr.rules as rlz
 
-        right: Value(other)
-
+        right = coerce(other, ops.Value)
         if right.output_dtype.is_timestamp():
             op = ops.TimestampDiff
         else:

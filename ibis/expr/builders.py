@@ -1,27 +1,28 @@
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import Any, Optional
 
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.types as ir
 from ibis import util
-from typing import Any
 from ibis.common.annotations import annotated
 from ibis.common.exceptions import IbisInputError
 from ibis.common.grounds import Concrete
+from ibis.common.patterns import coerce
 from ibis.expr.deferred import Deferred
-
 from ibis.expr.operations import Value
+
+
 class Builder(Concrete):
     pass
 
 
 class CaseBuilder(Builder):
-    results: Optional[tuple[Value]] = ()
-    default: Optional[ops.Value]
+    results: tuple[Value, ...] = ()
+    default: Optional[ops.Value] = None
 
     def type(self):
         return rlz.highest_precedence_dtype(self.results)
@@ -58,13 +59,13 @@ class CaseBuilder(Builder):
 
 class SearchedCaseBuilder(CaseBuilder):
     __type__ = ops.SearchedCase
-    cases: Optional[tuple[Value[dt.Boolean, Any]]] = ()
+    cases: tuple[Value[dt.Boolean, ...], ...] = ()
 
 
 class SimpleCaseBuilder(CaseBuilder):
     __type__ = ops.SimpleCase
     base: ops.Value
-    cases: Optional[tuple[Value]] = ()
+    cases: tuple[Value, ...] = ()
 
     def when(self, case_expr, result_expr):
         """Add a new case-result pair.
@@ -77,7 +78,7 @@ class SimpleCaseBuilder(CaseBuilder):
         result_expr
             Value when the case predicate evaluates to true.
         """
-        case_expr: Value(case_expr)
+        case_expr = coerce(case_expr, Value)
         if not rlz.comparable(self.base, case_expr):
             raise TypeError(
                 f'Base expression {rlz._arg_type_error_format(self.base)} and '

@@ -7,7 +7,7 @@ from typing import Any, Optional
 import ibis.common.patterns as p
 from ibis.common.collections import DotDict
 from ibis.common.typing import evaluate_typehint
-from ibis.common.validators import Validator, frozendict_of, option, tuple_of, any_
+from ibis.common.validators import Validator, any_, frozendict_of, option, tuple_of
 
 EMPTY = inspect.Parameter.empty  # marker for missing argument
 KEYWORD_ONLY = inspect.Parameter.KEYWORD_ONLY

@@ -7,8 +7,8 @@ import enum
 import ipaddress
 import itertools
 import uuid
+from typing import Any, Optional, TypeVar
 from typing import Literal as In
-from typing import Optional, TypeVar, Any
 
 import numpy as np
 from public import public
@@ -367,8 +367,8 @@ class SimpleCase(Value):
 
 @public
 class SearchedCase(Value):
-    cases: tuple[Value[dt.Boolean, Any]]
-    results: tuple[Value]
+    cases: tuple[Value[dt.Boolean, ...], ...]
+    results: tuple[Value, ...]
     default: Value
 
     def __init__(self, cases, results, default):
