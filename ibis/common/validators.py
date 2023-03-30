@@ -8,7 +8,6 @@ from typing import (
     Any,
     Callable,
     Container,
-    Generic,
     Iterable,
     Literal,
     Mapping,
@@ -16,7 +15,6 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    _GenericAlias,
 )
 
 import toolz
@@ -37,25 +35,6 @@ except ImportError:
 K = TypeVar('K')
 V = TypeVar('V')
 T = TypeVar('T')
-
-
-# have the slotted base here
-
-
-# class Coercible(ABC):
-#     """Protocol for defining coercible types.
-
-#     Coercible types define a special ``__coerce__`` method that accepts an object
-#     with an instance of the type. Used in conjunction with the ``coerced_to`` validator
-#     to coerce arguments to a specific type.
-#     """
-
-#     __slots__ = ()
-
-#     @classmethod
-#     @abstractmethod
-#     def __coerce__(cls, obj):
-#         ...
 
 
 class Validator(Callable):
@@ -97,6 +76,7 @@ class Validator(Callable):
             elif issubclass(annot, Coercible):
                 return p.CoercedTo(annot)
             else:
+                # return p.InstanceOf(annot)
                 return instance_of(annot)
         elif origin is Literal:
             return isin(args)
@@ -206,12 +186,6 @@ class Capture(Validator):
 capture = Capture
 
 
-# @validator
-# def any_(arg: Any, **kwargs: Any) -> Any:
-#     """Validator that accepts any value, basically a no-op."""
-#     return arg
-
-
 @validator
 def option(inner: Validator, arg: Any, *, default: Any = None, **kwargs) -> Any:
     """Validator that accepts `None` or a value that passes the inner validator.
@@ -274,37 +248,6 @@ def equal_to(value: T, arg: T, **kwargs: Any) -> T:
     if arg != value:
         raise IbisTypeError(f"Given argument {arg} is not equal to {value}")
     return arg
-
-
-# @validator
-# def coerced_to(klass: T, arg: Any, **kwargs: Any) -> T:
-#     """Force a value to have a particular Python type.
-
-#     If a Coercible subclass is passed, the `__coerce__` method will be used to
-#     coerce the value. Otherwise, the type will be called with the value as the
-#     only argument.
-
-#     Parameters
-#     ----------
-#     klass
-#         The type to coerce to.
-#     arg
-#         The value to coerce.
-#     kwargs
-#         Additional keyword arguments to pass to the inner validator.
-
-#     Returns
-#     -------
-#     validated
-#         The coerced value which is checked to be an instance of the given type.
-#     """
-#     if isinstance(arg, klass):
-#         return arg
-#     try:
-#         arg = klass.__coerce__(arg)
-#     except AttributeError:
-#         arg = klass(arg)
-#     return instance_of(klass, arg, **kwargs)
 
 
 class lazy_instance_of(Validator):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numbers
+from typing import Literal
 
 from public import public
 
@@ -14,10 +15,10 @@ from ibis.expr.operations.core import Value
 class Bucket(Value):
     arg = rlz.column(rlz.numeric)
     buckets = rlz.tuple_of(rlz.instance_of(numbers.Real))
-    closed = rlz.optional(rlz.isin({'left', 'right'}), default='left')
-    close_extreme = rlz.optional(rlz.instance_of(bool), default=True)
-    include_under = rlz.optional(rlz.instance_of(bool), default=False)
-    include_over = rlz.optional(rlz.instance_of(bool), default=False)
+    closed: Literal['left', 'right'] = 'left'
+    close_extreme: bool = True
+    include_under: bool = False
+    include_over: bool = False
     output_shape = rlz.Shape.COLUMNAR
 
     @attribute.default

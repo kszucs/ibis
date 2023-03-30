@@ -66,7 +66,7 @@ class NoMatch:
     """Sentinel value for when a pattern doesn't match."""
 
 
-class Pattern(Validator, Hashable):
+class Pattern(Validator):  # Hashable
     @classmethod
     def from_typehint(cls, annot: type) -> Pattern:
         """Construct a pattern from a python type annotation.
@@ -182,7 +182,7 @@ class Matcher(Pattern):
     def __init__(self, *args):
         for name, value in zip_longest(self.__slots__, args):
             object.__setattr__(self, name, value)
-        object.__setattr__(self, "__precomputed_hash__", hash(args))
+        # object.__setattr__(self, "__precomputed_hash__", hash(args))
 
     def __eq__(self, other):
         if self is other:
@@ -194,8 +194,8 @@ class Matcher(Pattern):
                 return False
         return True
 
-    def __hash__(self):
-        return self.__precomputed_hash__
+    # def __hash__(self):
+    #     return self.__precomputed_hash__
 
     def __setattr__(self, name, value):
         raise AttributeError("Can't set attributes on immutable ENode instance")

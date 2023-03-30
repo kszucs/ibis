@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal, Optional
+
 from public import public
 
 import ibis.expr.datatypes as dt
@@ -123,9 +125,9 @@ class Mean(Filterable, Reduction):
 class Quantile(Filterable, Reduction):
     arg = rlz.any
     quantile = rlz.strict_numeric
-    interpolation = rlz.optional(
-        rlz.isin({'linear', 'lower', 'higher', 'midpoint', 'nearest'})
-    )
+    interpolation: Optional[
+        Literal['linear', 'lower', 'higher', 'midpoint', 'nearest']
+    ] = None
 
     output_dtype = dt.float64
 
@@ -134,9 +136,9 @@ class Quantile(Filterable, Reduction):
 class MultiQuantile(Filterable, Reduction):
     arg = rlz.any
     quantile = rlz.value(dt.Array(dt.float64))
-    interpolation = rlz.optional(
-        rlz.isin({'linear', 'lower', 'higher', 'midpoint', 'nearest'})
-    )
+    interpolation: Optional[
+        Literal['linear', 'lower', 'higher', 'midpoint', 'nearest']
+    ] = None
 
     output_dtype = dt.Array(dt.float64)
 
@@ -170,7 +172,7 @@ class Correlation(Filterable, Reduction):
 
     left = rlz.column(rlz.numeric)
     right = rlz.column(rlz.numeric)
-    how = rlz.optional(rlz.isin({'sample', 'pop'}), default='sample')
+    how: Literal['sample', 'pop'] = 'sample'
 
     output_dtype = dt.float64
 
@@ -181,7 +183,7 @@ class Covariance(Filterable, Reduction):
 
     left = rlz.column(rlz.numeric)
     right = rlz.column(rlz.numeric)
-    how = rlz.isin({'sample', 'pop'})
+    how: Literal['sample', 'pop']
 
     output_dtype = dt.float64
 
