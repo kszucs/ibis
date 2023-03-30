@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from public import public
 from typing import Optional
+
+from public import public
+
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
 from ibis.common.annotations import attribute

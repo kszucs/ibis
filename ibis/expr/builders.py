@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from typing import Optional
 
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
@@ -11,8 +12,6 @@ from ibis.common.annotations import annotated
 from ibis.common.exceptions import IbisInputError
 from ibis.common.grounds import Concrete
 from ibis.expr.deferred import Deferred
-from typing import Optional
-
 
 
 class Builder(Concrete):

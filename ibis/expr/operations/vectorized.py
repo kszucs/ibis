@@ -4,11 +4,12 @@ from types import FunctionType, LambdaType
 
 from public import public
 
+import ibis.expr.datatypes as dt
 from ibis.expr import rules as rlz
 from ibis.expr.operations.analytic import Analytic
 from ibis.expr.operations.core import Value
 from ibis.expr.operations.reductions import Reduction
-import ibis.expr.datatypes as dt
+
 
 class VectorizedUDF(Value):
     func = rlz.instance_of((FunctionType, LambdaType))

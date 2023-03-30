@@ -16,11 +16,12 @@ from ibis import util
 from ibis.common.annotations import attribute
 from ibis.common.collections import frozendict
 from ibis.common.grounds import Immutable
+from ibis.common.typing import Coercible, CoercionError
 from ibis.expr.deferred import Deferred
 from ibis.expr.operations.core import Named, Node, Value
 from ibis.expr.operations.generic import TableColumn
 from ibis.expr.operations.logical import Equals, ExistsSubquery, NotExistsSubquery
-from ibis.common.typing import Coercible, CoercionError
+
 if TYPE_CHECKING:
     import pandas as pd
     import pyarrow as pa
@@ -42,8 +43,9 @@ class Backend:
 class TableNode(Node):
     @classmethod
     def __coerce__(cls, value):
-        import ibis
         import pandas as pd
+
+        import ibis
         import ibis.expr.types as ir
 
         if isinstance(value, pd.DataFrame):
