@@ -443,7 +443,7 @@ class _FileIOHandler:
                 writer.write_batch(batch)
 
 
-class BaseBackend(abc.ABC, _FileIOHandler):
+class BaseBackend(ops.Backend, abc.ABC, _FileIOHandler):
     """Base backend class.
 
     All Ibis backends must subclass this class and implement all the

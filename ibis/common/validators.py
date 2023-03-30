@@ -8,6 +8,7 @@ from typing import (
     Any,
     Callable,
     Container,
+    Generic,
     Iterable,
     Literal,
     Mapping,
@@ -15,11 +16,13 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    _GenericAlias,
 )
 
 import toolz
 from typing_extensions import Annotated, get_args, get_origin
 
+import ibis.common.patterns as p
 from ibis.common.collections import FrozenDict
 from ibis.common.dispatch import lazy_singledispatch
 from ibis.common.exceptions import IbisTypeError
@@ -85,14 +88,14 @@ class Validator(Callable):
 
         if origin is None:
             if annot is Any:
-                return any_
+                return p.Any()
             elif isinstance(annot, TypeVar):
                 # TODO(kszucs): only use coerced_to if annot.__covariant__ is True
                 if annot.__bound__ is None:
-                    return any_
-                return coerced_to(annot.__bound__)
+                    return p.Any()
+                return p.CoercedTo(annot.__bound__)
             elif issubclass(annot, Coercible):
-                return coerced_to(annot)
+                return p.CoercedTo(annot)
             else:
                 return instance_of(annot)
         elif origin is Literal:
@@ -109,13 +112,13 @@ class Validator(Callable):
                 inners = cls.from_typehint(first)
             else:
                 inners = tuple(map(cls.from_typehint, args))
-            return tuple_of(inners, type=coerced_to(origin))
+            return tuple_of(inners, type=p.CoercedTo(origin))
         elif issubclass(origin, Sequence):
             (value_inner,) = map(cls.from_typehint, args)
-            return sequence_of(value_inner, type=coerced_to(origin))
+            return sequence_of(value_inner, type=p.CoercedTo(origin))
         elif issubclass(origin, Mapping):
             key_inner, value_inner = map(cls.from_typehint, args)
-            return mapping_of(key_inner, value_inner, type=coerced_to(origin))
+            return mapping_of(key_inner, value_inner, type=p.CoercedTo(origin))
         elif issubclass(origin, Callable):
             if args:
                 arg_inners = tuple(map(cls.from_typehint, args[0]))
@@ -123,6 +126,8 @@ class Validator(Callable):
                 return callable_with(arg_inners, return_inner)
             else:
                 return instance_of(Callable)
+        elif issubclass(origin, Coercible):
+            return p.CoercedTo(annot)
         else:
             raise NotImplementedError(
                 f"Cannot create validator from annotation {annot} {origin}"
@@ -201,10 +206,10 @@ class Capture(Validator):
 capture = Capture
 
 
-@validator
-def any_(arg: Any, **kwargs: Any) -> Any:
-    """Validator that accepts any value, basically a no-op."""
-    return arg
+# @validator
+# def any_(arg: Any, **kwargs: Any) -> Any:
+#     """Validator that accepts any value, basically a no-op."""
+#     return arg
 
 
 @validator
@@ -271,35 +276,35 @@ def equal_to(value: T, arg: T, **kwargs: Any) -> T:
     return arg
 
 
-@validator
-def coerced_to(klass: T, arg: Any, **kwargs: Any) -> T:
-    """Force a value to have a particular Python type.
+# @validator
+# def coerced_to(klass: T, arg: Any, **kwargs: Any) -> T:
+#     """Force a value to have a particular Python type.
 
-    If a Coercible subclass is passed, the `__coerce__` method will be used to
-    coerce the value. Otherwise, the type will be called with the value as the
-    only argument.
+#     If a Coercible subclass is passed, the `__coerce__` method will be used to
+#     coerce the value. Otherwise, the type will be called with the value as the
+#     only argument.
 
-    Parameters
-    ----------
-    klass
-        The type to coerce to.
-    arg
-        The value to coerce.
-    kwargs
-        Additional keyword arguments to pass to the inner validator.
+#     Parameters
+#     ----------
+#     klass
+#         The type to coerce to.
+#     arg
+#         The value to coerce.
+#     kwargs
+#         Additional keyword arguments to pass to the inner validator.
 
-    Returns
-    -------
-    validated
-        The coerced value which is checked to be an instance of the given type.
-    """
-    if isinstance(arg, klass):
-        return arg
-    try:
-        arg = klass.__coerce__(arg)
-    except AttributeError:
-        arg = klass(arg)
-    return instance_of(klass, arg, **kwargs)
+#     Returns
+#     -------
+#     validated
+#         The coerced value which is checked to be an instance of the given type.
+#     """
+#     if isinstance(arg, klass):
+#         return arg
+#     try:
+#         arg = klass.__coerce__(arg)
+#     except AttributeError:
+#         arg = klass(arg)
+#     return instance_of(klass, arg, **kwargs)
 
 
 class lazy_instance_of(Validator):

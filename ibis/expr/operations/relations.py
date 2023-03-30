@@ -35,6 +35,11 @@ def genname():
 
 
 @public
+class Backend:
+    pass
+
+
+@public
 class TableNode(Node):
     def order_by(self, sort_exprs):
         return Selection(self, [], sort_keys=sort_exprs)
@@ -57,24 +62,24 @@ class PhysicalTable(TableNode, Named):
 
 @public
 class UnboundTable(PhysicalTable):
-    schema = rlz.coerced_to(sch.Schema)
+    schema: sch.Schema
     name = rlz.optional(rlz.instance_of(str), default=genname)
 
 
 @public
 class DatabaseTable(PhysicalTable):
-    name = rlz.instance_of(str)
-    schema = rlz.instance_of(sch.Schema)
-    source = rlz.client
+    name: str
+    schema: sch.Schema
+    source: Backend
 
 
 @public
 class SQLQueryResult(TableNode):
     """A table sourced from the result set of a select query."""
 
-    query = rlz.instance_of(str)
-    schema = rlz.instance_of(sch.Schema)
-    source = rlz.client
+    query: str
+    schema: sch.Schema
+    source: Backend
 
 
 class TableProxy(Immutable):
@@ -102,9 +107,9 @@ class TableProxy(Immutable):
 
 @public
 class InMemoryTable(PhysicalTable):
-    name = rlz.instance_of(str)
-    schema = rlz.instance_of(sch.Schema)
-    data = rlz.instance_of(TableProxy)
+    name: str
+    schema: sch.Schema
+    data: TableProxy
 
 
 # TODO(kszucs): desperately need to clean this up, the majority of this

@@ -53,8 +53,9 @@ class Validator(ABC):
     def validate(self, value, context):
         ...
 
-    def __call__(self, value, context):
-        return self.validate(value, context)
+    def __call__(self, value, this=None):
+        this = this or {}
+        return self.validate(value, this)
 
 
 class MatchError(Exception):

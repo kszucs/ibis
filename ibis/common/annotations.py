@@ -4,9 +4,10 @@ import functools
 import inspect
 from typing import Any, Optional
 
+import ibis.common.patterns as p
 from ibis.common.collections import DotDict
 from ibis.common.typing import evaluate_typehint
-from ibis.common.validators import Validator, any_, frozendict_of, option, tuple_of
+from ibis.common.validators import Validator, frozendict_of, option, tuple_of
 
 EMPTY = inspect.Parameter.empty  # marker for missing argument
 KEYWORD_ONLY = inspect.Parameter.KEYWORD_ONLY
@@ -130,7 +131,7 @@ class Argument(Annotation):
     def optional(cls, validator=None, default=None, **kwargs):
         """Annotation to allow and treat `None` values as missing arguments."""
         if validator is None:
-            validator = option(any_, default=default)
+            validator = option(p.Any(), default=default)
         else:
             validator = option(validator, default=default)
         return cls(validator, default=None, **kwargs)
@@ -352,8 +353,10 @@ class Signature(inspect.Signature):
 
         this = DotDict()
         for name, value in bound.arguments.items():
+            # print(name, value)
             param = self.parameters[name]
             # TODO(kszucs): provide more error context on failure
+
             this[name] = param.annotation.validate(value, this=this)
         return this
 

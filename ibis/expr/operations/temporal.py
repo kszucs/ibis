@@ -79,7 +79,7 @@ _time_units = {
 @public
 class TimestampTruncate(Value):
     arg = rlz.timestamp
-    unit = rlz.coerced_to(IntervalUnit)
+    unit: IntervalUnit
 
     output_shape = rlz.shape_like("arg")
     output_dtype = dt.timestamp
@@ -88,7 +88,7 @@ class TimestampTruncate(Value):
 @public
 class DateTruncate(Value):
     arg = rlz.date
-    unit = rlz.coerced_to(DateUnit)
+    unit: DateUnit
 
     output_shape = rlz.shape_like("arg")
     output_dtype = dt.date
@@ -97,7 +97,7 @@ class DateTruncate(Value):
 @public
 class TimeTruncate(Value):
     arg = rlz.time
-    unit = rlz.coerced_to(TimeUnit)
+    unit: TimeUnit
 
     output_shape = rlz.shape_like("arg")
     output_dtype = dt.time
@@ -249,7 +249,7 @@ class TimestampFromYMDHMS(Value):
 @public
 class TimestampFromUNIX(Value):
     arg = rlz.any
-    unit = rlz.coerced_to(TimestampUnit)
+    unit: TimestampUnit
 
     output_dtype = dt.timestamp
     output_shape = rlz.shape_like('arg')
@@ -325,7 +325,7 @@ class TimestampDiff(Binary):
 @public
 class ToIntervalUnit(Value):
     arg = rlz.interval
-    unit = rlz.coerced_to(IntervalUnit)
+    unit: IntervalUnit
 
     output_shape = rlz.shape_like("arg")
 
@@ -389,7 +389,7 @@ class IntervalFloorDivide(IntervalBinary):
 @public
 class IntervalFromInteger(Value):
     arg = rlz.integer
-    unit = rlz.coerced_to(IntervalUnit)
+    unit: IntervalUnit
 
     output_shape = rlz.shape_like("arg")
 

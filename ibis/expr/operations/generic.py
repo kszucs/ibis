@@ -7,6 +7,7 @@ import enum
 import ipaddress
 import itertools
 import uuid
+from typing import Literal as In
 from typing import Optional, TypeVar
 
 import numpy as np
@@ -29,7 +30,7 @@ class TableColumn(Value, Named):
     """Selects a column from a `Table`."""
 
     table = rlz.table
-    name = rlz.instance_of((str, int))
+    name: str | int
 
     output_shape = rlz.Shape.COLUMNAR
 
@@ -82,7 +83,7 @@ class TableArrayView(Value, Named):
 class Cast(Value):
     """Explicitly cast value to a specific data type."""
 
-    arg: Value  # rlz.any
+    arg: Value
     to: dt.DataType
 
     output_shape = rlz.shape_like("arg")
@@ -136,8 +137,8 @@ class ZeroIfNull(Unary):
 class IfNull(Value):
     """Set values to ifnull_expr if they are equal to NULL."""
 
-    arg = rlz.any
-    ifnull_expr = rlz.any
+    arg: Value
+    ifnull_expr: Value
     output_dtype = rlz.dtype_like("args")
     output_shape = rlz.shape_like("args")
 
@@ -146,29 +147,29 @@ class IfNull(Value):
 class NullIf(Value):
     """Set values to NULL if they equal the null_if_expr."""
 
-    arg = rlz.any
-    null_if_expr = rlz.any
+    arg: Value
+    null_if_expr: Value
     output_dtype = rlz.dtype_like("args")
     output_shape = rlz.shape_like("args")
 
 
 @public
 class Coalesce(Value):
-    arg = rlz.tuple_of(rlz.any)
+    arg: tuple[Value, ...]
     output_shape = rlz.shape_like('arg')
     output_dtype = rlz.dtype_like('arg')
 
 
 @public
 class Greatest(Value):
-    arg = rlz.tuple_of(rlz.any)
+    arg: tuple[Value, ...]
     output_shape = rlz.shape_like('arg')
     output_dtype = rlz.dtype_like('arg')
 
 
 @public
 class Least(Value):
-    arg = rlz.tuple_of(rlz.any)
+    arg: tuple[Value, ...]
     output_shape = rlz.shape_like('arg')
     output_dtype = rlz.dtype_like('arg')
 
@@ -228,7 +229,7 @@ class Literal(Value[T, Scalar], Coercible):
         else:
             has_inferred = True
 
-        if T is Ellipsis:
+        if T is Ellipsis:  # or any
             has_explicit = False
         else:
             has_explicit = True
@@ -237,6 +238,8 @@ class Literal(Value[T, Scalar], Coercible):
         if has_explicit and has_inferred:
             # ensure type correctness: check that the inferred dtype is
             # implicitly castable to the explicitly given dtype and value
+            # TODO(kszucs): this could be added to Dtype.__coerce__ then
+            # T could be a coercer/matcher instead of a type
             if not dt.castable(inferred_dtype, explicit_dtype, value=value):
                 raise CoercionError(
                     f"Value {value!r} cannot be safely coerced to `{explicit_dtype}`"
@@ -322,8 +325,8 @@ class Pi(Constant):
 
 @public
 class Hash(Value):
-    arg = rlz.any
-    how = rlz.isin({'fnv', 'farm_fingerprint'})
+    arg: Value
+    how: In['fnv', 'farm_fingerprint']
 
     output_dtype = dt.int64
     output_shape = rlz.shape_like("arg")
@@ -332,7 +335,9 @@ class Hash(Value):
 @public
 class HashBytes(Value):
     arg = rlz.one_of({rlz.value(dt.string), rlz.value(dt.binary)})
-    how = rlz.isin({'md5', 'sha1', 'sha256', 'sha512'})
+    # arg: Value[dt.String, ...] | Value[dt.Binary, ...]
+    # arg: Value[dt.String | dt.Binary, ...]
+    how: In['md5', 'sha1', 'sha256', 'sha512']
 
     output_dtype = dt.binary
     output_shape = rlz.shape_like("arg")
@@ -343,10 +348,10 @@ class HashBytes(Value):
 # api.py
 @public
 class SimpleCase(Value):
-    base = rlz.any
-    cases = rlz.tuple_of(rlz.any)
-    results = rlz.tuple_of(rlz.any)
-    default = rlz.any
+    base: Value
+    cases: tuple[Value, ...]
+    results: tuple[Value, ...]
+    default: Value
 
     output_shape = rlz.shape_like("base")
 

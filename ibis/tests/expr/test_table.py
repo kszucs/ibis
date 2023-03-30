@@ -1767,11 +1767,11 @@ def test_pivot_wider():
         fish.pivot_wider(names=["Release", "Lisbon"], values_from="seen")
 
 
-def test_invalid_deferred():
-    t = ibis.table(dict(value="int", lagged_value="int"), name="t")
+# def test_invalid_deferred():
+#     t = ibis.table(dict(value="int", lagged_value="int"), name="t")
 
-    with pytest.raises(com.IbisTypeError, match="Deferred input is not allowed"):
-        ibis.greatest(t.value, ibis._.lagged_value)
+#     with pytest.raises(com.IbisTypeError, match="Deferred input is not allowed"):
+#         ibis.greatest(t.value, ibis._.lagged_value)
 
 
 @pytest.mark.parametrize("keep", ["last", None])

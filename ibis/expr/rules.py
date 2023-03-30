@@ -15,7 +15,6 @@ from ibis.common.annotations import attribute, optional
 from ibis.common.validators import (
     bool_,
     callable_with,  # noqa: F401
-    coerced_to,  # noqa: F401
     equal_to,  # noqa: F401
     instance_of,
     isin,
@@ -335,12 +334,12 @@ def interval(arg, units=None, **kwargs):
     return arg
 
 
-@public
-@rule
-def client(arg, **kwargs):
-    from ibis.backends.base import BaseBackend
+# @public
+# @rule
+# def client(arg, **kwargs):
+#     from ibis.backends.base import BaseBackend
 
-    return instance_of(BaseBackend, arg)
+#     return instance_of(BaseBackend, arg)
 
 
 # ---------------------------------------------------------------------
