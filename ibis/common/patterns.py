@@ -28,12 +28,12 @@ from typing import (
     TypeVar,
     Union,
 )
-from ibis.common.typing import get_type_hints
+
 from typing_extensions import Annotated, get_args, get_origin
 
 from ibis.common.collections import RewindableIterator, frozendict
 from ibis.common.dispatch import lazy_singledispatch
-from ibis.common.typing import Coercible, CoercionError
+from ibis.common.typing import Coercible, CoercionError, get_type_hints
 from ibis.util import is_function, is_iterable, promote_tuple
 
 try:
@@ -138,10 +138,9 @@ class Pattern(Validator, Hashable):
         elif isinstance(origin, type) and args:
             names = (p.__name__ for p in getattr(origin, "__parameters__", ()))
             params = frozendict(zip(names, args))
-            typehints = get_type_hints(origin)
 
             fields = {}
-            for name, typehint in typehints.items():
+            for name, typehint in get_type_hints(origin).items():
                 if isinstance(typehint, TypeVar):
                     param = params[typehint.__name__]
                     fields[name] = cls.from_typehint(param)

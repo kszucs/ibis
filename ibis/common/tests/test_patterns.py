@@ -56,7 +56,6 @@ from ibis.common.patterns import (
     TypeOf,
     ValidationError,
     match,
-    pattern,
 )
 
 
