@@ -12,9 +12,8 @@ from ibis.common.collections import FrozenDict
 from ibis.common.patterns import ValidationError
 
 # from ibis.common.patterns import Pattern
-from ibis.common.typing import evaluate_typehint, evaluate_annotations
+from ibis.common.typing import evaluate_annotations
 from ibis.common.validators import Validator
-
 
 
 class BaseMeta(ABCMeta):
@@ -52,10 +51,7 @@ class AnnotableMeta(BaseMeta):
         module_name = dct.get('__module__')
         annotations = dct.get('__annotations__', {})
         typehints = evaluate_annotations(annotations, module_name)
-        print(annotations)
-        print(typehints)
         for name, typehint in typehints.items():
-            print(typehint)
             validator = Validator.from_typehint(typehint)
             if name in dct:
                 dct[name] = Argument.default(dct[name], validator, typehint=typehint)

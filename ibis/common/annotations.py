@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 import ibis.common.patterns as p
 from ibis.common.collections import DotDict
-from ibis.common.typing import evaluate_typehint
+from ibis.common.typing import get_type_hints
 from ibis.common.validators import Validator, any_, frozendict_of, option, tuple_of
 
 EMPTY = inspect.Parameter.empty  # marker for missing argument
@@ -248,6 +248,7 @@ class Signature(inspect.Signature):
         Signature
         """
         sig = super().from_callable(fn)
+        typehints = get_type_hints(fn)
 
         if validators is None:
             validators = {}
@@ -264,12 +265,11 @@ class Signature(inspect.Signature):
             name = param.name
             kind = param.kind
             default = param.default
-            typehint = param.annotation
+            typehint = typehints.get(name)
 
             if name in validators:
                 validator = validators[name]
-            elif typehint is not EMPTY:
-                typehint = evaluate_typehint(typehint, fn.__module__)
+            elif typehint is not None:
                 validator = Validator.from_typehint(typehint)
             else:
                 validator = None
@@ -289,9 +289,8 @@ class Signature(inspect.Signature):
 
         if return_validator is not None:
             return_annotation = return_validator
-        elif sig.return_annotation is not EMPTY:
-            typehint = evaluate_typehint(sig.return_annotation, fn.__module__)
-            return_annotation = Validator.from_typehint(typehint)
+        elif "return" in typehints:
+            return_annotation = Validator.from_typehint(typehints["return"])
         else:
             return_annotation = EMPTY
 

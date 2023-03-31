@@ -28,7 +28,7 @@ from typing import (
     TypeVar,
     Union,
 )
-
+from ibis.common.typing import get_type_hints
 from typing_extensions import Annotated, get_args, get_origin
 
 from ibis.common.collections import RewindableIterator, frozendict
@@ -136,18 +136,15 @@ class Pattern(Validator, Hashable):
             else:
                 return InstanceOf(Callable)
         elif isinstance(origin, type) and args:
-            from ibis.common.typing import evaluate_typehint
-
             names = (p.__name__ for p in getattr(origin, "__parameters__", ()))
             params = frozendict(zip(names, args))
+            typehints = get_type_hints(origin)
 
             fields = {}
-            # TODO(kszucs): could use get_annotations backport here
-            for k, v in origin.__annotations__.items():
-                typehint = evaluate_typehint(v, origin.__module__)
+            for name, typehint in typehints.items():
                 if isinstance(typehint, TypeVar):
                     param = params[typehint.__name__]
-                    fields[k] = cls.from_typehint(param)
+                    fields[name] = cls.from_typehint(param)
 
             return GenericInstanceOf(origin, frozendict(fields))
         else:

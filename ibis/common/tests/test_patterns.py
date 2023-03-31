@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+from dataclasses import dataclass
 from typing import (
     Callable,
     Dict,
@@ -744,9 +745,6 @@ def test_pattern_coercible_sequence_type():
     )
 
 
-from dataclasses import dataclass
-from typing import Generic, TypeVar
-
 T = TypeVar("T")
 S = TypeVar("S")
 
@@ -766,13 +764,3 @@ def test_generic_instance_of():
     assert match(My[int, int], My(1, 2, "3"), context={}) == {}
     assert match(My[int, float], My(1, 2, "3"), context={}) is NoMatch
     assert match(My[int, float], My(1, 2.0, "3"), context={}) == {}
-
-
-def test_e():
-    import typing
-
-    from ibis.common.typing import get_class_annotations
-
-
-
-    print(get_class_annotations(My))

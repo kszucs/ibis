@@ -1,17 +1,42 @@
 import io
 import typing
-from typing import Optional, Union
+from typing import Generic, Optional, TypeVar, Union
 
-from ibis.common.typing import evaluate_typehint
+from ibis.common.typing import get_type_hints
+
+T = TypeVar("T")
+S = TypeVar("S")
+
+
+class My(Generic[T, S]):
+    a: T
+    b: S
+    c: str
+
+
+def example(a: int, b: str) -> str:
+    ...
 
 
 # TODO(kszucs): rename it to evaluate()
-def test_evaluate_typehint():
-    hint = evaluate_typehint("Union[int, str]", module_name=__name__)
-    assert hint == Union[int, str]
+# def test_evaluate_typehint():
+#     hint = evaluate_typehint("Union[int, str]", module_name=__name__)
+#     assert hint == Union[int, str]
 
-    hint = evaluate_typehint(Optional[str], module_name=__name__)
-    assert hint == Optional[str]
+#     hint = evaluate_typehint(Optional[str], module_name=__name__)
+#     assert hint == Optional[str]
+
+
+# def test_evaluate_annotations():
+#     pass
+
+
+def test_get_type_hints():
+    hints = get_type_hints(My)
+    assert hints == {"a": T, "b": S, "c": str}
+
+    hints = get_type_hints(example)
+    assert hints == {"a": int, "b": str, "return": str}
 
 
 # def test_issubtype():

@@ -22,35 +22,35 @@ from typing_extensions import get_args, get_origin
 
 # TODO(kszucs): try to use inspect.get_annotations() backport instead
 
-if sys.version_info >= (3, 9):
+# if sys.version_info >= (3, 9):
 
-    @toolz.memoize
-    def evaluate_typehint(hint, module_name=None) -> Any:
-        if isinstance(hint, str):
-            hint = ForwardRef(hint)
-        if isinstance(hint, ForwardRef):
-            if module_name is None:
-                globalns = {}
-            else:
-                globalns = sys.modules[module_name].__dict__
-            return hint._evaluate(globalns, locals(), frozenset())
-        else:
-            return hint
+#     @toolz.memoize
+#     def evaluate_typehint(hint, module_name=None) -> Any:
+#         if isinstance(hint, str):
+#             hint = ForwardRef(hint)
+#         if isinstance(hint, ForwardRef):
+#             if module_name is None:
+#                 globalns = {}
+#             else:
+#                 globalns = sys.modules[module_name].__dict__
+#             return hint._evaluate(globalns, locals(), frozenset())
+#         else:
+#             return hint
 
-else:
+# else:
 
-    @toolz.memoize
-    def evaluate_typehint(hint, module_name) -> Any:
-        if isinstance(hint, str):
-            hint = ForwardRef(hint)
-        if isinstance(hint, ForwardRef):
-            if module_name is None:
-                globalns = {}
-            else:
-                globalns = sys.modules[module_name].__dict__
-            return hint._evaluate(globalns, locals())
-        else:
-            return hint
+#     @toolz.memoize
+#     def evaluate_typehint(hint, module_name) -> Any:
+#         if isinstance(hint, str):
+#             hint = ForwardRef(hint)
+#         if isinstance(hint, ForwardRef):
+#             if module_name is None:
+#                 globalns = {}
+#             else:
+#                 globalns = sys.modules[module_name].__dict__
+#             return hint._evaluate(globalns, locals())
+#         else:
+#             return hint
 
 
 if TYPE_CHECKING:
@@ -65,10 +65,16 @@ if TYPE_CHECKING:
     )
 
 
-def get_class_annotations(obj):
+def get_type_hints(obj):
     annotations = getattr(obj, '__annotations__', {})
     module_name = getattr(obj, '__module__', None)
     return evaluate_annotations(annotations, module_name, localns=vars(obj))
+
+
+# def evaluate_annotation(annot, module_name):
+#     module = sys.modules.get(module_name, None)
+#     globalns = getattr(module, '__dict__', None)
+#     return eval(annot, globalns) if isinstance(annot, str) else annot
 
 
 def evaluate_annotations(annots, module_name, localns=None):
