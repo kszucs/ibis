@@ -54,7 +54,6 @@ class Shape(enum.IntEnum):
 
 
 class DataShape:
-
     def __init__(self):
         raise TypeError('Cannot instantiate DataShape')
 
@@ -67,6 +66,7 @@ class DataShape:
 
 class Scalar(DataShape):
     ndim = 0
+
 
 class Columnar(DataShape):
     ndim = 1

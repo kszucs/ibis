@@ -68,6 +68,8 @@ class Validator(Callable):
         if origin is None:
             if annot is Any:
                 return p.Any()
+            elif annot is None:
+                return p.Is(None)
             elif isinstance(annot, TypeVar):
                 # TODO(kszucs): only use coerced_to if annot.__covariant__ is True
                 if annot.__bound__ is None:

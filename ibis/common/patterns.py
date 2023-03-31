@@ -86,12 +86,16 @@ class Pattern(Validator, Hashable):
         pattern
             A pattern that matches the given type annotation.
         """
+        # use evaluate_typehint here
+
         # TODO(kszucs): cache the result of this function
         origin, args = get_origin(annot), get_args(annot)
 
         if origin is None:
             if annot is Ellipsis:  # TODO(kszucs): test this
                 return Any()
+            elif annot is None:
+                return Is(None)
             elif annot is AnyType:
                 return Any()
             elif isinstance(annot, TypeVar):
@@ -131,6 +135,21 @@ class Pattern(Validator, Hashable):
                 return CallableWith(arg_inners, return_inner)
             else:
                 return InstanceOf(Callable)
+        elif isinstance(origin, type) and args:
+            from ibis.common.typing import evaluate_typehint
+
+            names = (p.__name__ for p in getattr(origin, "__parameters__", ()))
+            params = frozendict(zip(names, args))
+
+            fields = {}
+            # TODO(kszucs): could use get_annotations backport here
+            for k, v in origin.__annotations__.items():
+                typehint = evaluate_typehint(v, origin.__module__)
+                if isinstance(typehint, TypeVar):
+                    param = params[typehint.__name__]
+                    fields[k] = cls.from_typehint(param)
+
+            return GenericInstanceOf(origin, frozendict(fields))
         else:
             raise NotImplementedError(
                 f"Cannot create validator from annotation {annot} {origin}"
@@ -208,6 +227,24 @@ class Matcher(Pattern):
     def __rich_repr__(self):
         for name in self.__slots__:
             yield name, getattr(self, name)
+
+
+class Is(Matcher):
+    """Pattern that matches a value against a reference value.
+
+    Parameters
+    ----------
+    value
+        The reference value to match against.
+    """
+
+    __slots__ = ("value",)
+
+    def match(self, value, context):
+        if value is self.value:
+            return value
+        else:
+            return NoMatch
 
 
 class Any(Matcher):
@@ -352,6 +389,11 @@ class SubclassOf(Matcher):
             return NoMatch
 
 
+# InstanceOf(dt.Array[dt.String])
+# TypedAs(dt.Array[dt.String])
+# TypedAs(ops.Value[dt.String, ...])
+
+
 class InstanceOf(Matcher):
     """Pattern that matches a value that is an instance of a given type.
 
@@ -361,13 +403,29 @@ class InstanceOf(Matcher):
         The type to check against.
     """
 
-    __slots__ = ("types",)
+    __slots__ = ("type",)
 
+    # first try to support Generic types here
     def match(self, value, context):
-        if isinstance(value, self.types):
+        if isinstance(value, self.type):
             return value
         else:
             return NoMatch
+
+
+class GenericInstanceOf(Matcher):
+    __slots__ = ("origin", "fields")
+
+    def match(self, value, context):
+        if not isinstance(value, self.origin):
+            return NoMatch
+
+        for field, pattern in self.fields.items():
+            attr = getattr(value, field)
+            if pattern.match(attr, context) is NoMatch:
+                return NoMatch
+
+        return value
 
 
 class LazyInstanceOf(Matcher):
@@ -429,7 +487,7 @@ class CoercedTo(Matcher):
         if issubclass(origin, Coercible):
             func = origin.__coerce__
             names = [p.__name__ for p in getattr(origin, "__parameters__", [])]
-            params = frozendict(zip(names, args))
+            params = frozendict(zip(names, args))  # , fillvalue=object))
         else:
             func = type
             params = frozendict()
@@ -437,7 +495,6 @@ class CoercedTo(Matcher):
         super().__init__(func, origin, params)
 
     def match(self, value, context):
-        # print(value, self.func, self.params)
         try:
             value = self.func(value, **self.params)
         except CoercionError:
@@ -793,14 +850,18 @@ def FrozenDictOf(key_pattern, value_pattern):
 
 def pattern(obj):
     """Create a pattern from an object."""
-    if isinstance(obj, Pattern):
+    if obj is Ellipsis:
+        return Any()
+    elif isinstance(obj, Pattern):
         return obj
     elif isinstance(obj, Mapping):
         return PatternMapping(obj)
+    elif isinstance(obj, type):
+        return InstanceOf(obj)
+    elif get_origin(obj):
+        return Pattern.from_typehint(obj)
     elif is_iterable(obj):
         return PatternSequence(obj)
-    elif obj is Ellipsis:
-        return Any()
     else:
         return EqualTo(obj)
 

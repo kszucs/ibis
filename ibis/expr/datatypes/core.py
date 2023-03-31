@@ -19,7 +19,7 @@ from ibis.common.annotations import attribute
 from ibis.common.collections import FrozenDict, MapSet
 from ibis.common.enums import IntervalUnit
 from ibis.common.grounds import Concrete, Singleton
-from ibis.common.typing import Coercible
+from ibis.common.typing import Coercible, CoercionError
 
 # TODO(kszucs): we don't support union types yet
 
@@ -301,8 +301,8 @@ class Variadic(DataType):
 class Parametric(DataType):
     """Types that can be parameterized."""
 
-    def __class_getitem__(cls, params):
-        return cls(*params) if isinstance(params, tuple) else cls(params)
+    # def __class_getitem__(cls, params):
+    #     return cls(*params) if isinstance(params, tuple) else cls(params)
 
 
 @public
@@ -399,6 +399,7 @@ class Time(Temporal, Primitive):
     column = "TimeColumn"
 
 
+# LiteralString?
 @public
 class Timestamp(Temporal, Parametric):
     """Timestamp values."""
@@ -651,8 +652,8 @@ class Struct(Parametric, MapSet):
     scalar = "StructScalar"
     column = "StructColumn"
 
-    def __class_getitem__(cls, fields):
-        return cls({slice_.start: slice_.stop for slice_ in fields})
+    # def __class_getitem__(cls, fields):
+    #     return cls({slice_.start: slice_.stop for slice_ in fields})
 
     @classmethod
     def from_tuples(
@@ -713,6 +714,17 @@ class Array(Variadic, Parametric, Generic[T]):
 
     scalar = "ArrayScalar"
     column = "ArrayColumn"
+
+    @classmethod
+    def __coerce__(cls, value):
+        value = dtype(value)
+
+    def __match__(self, pattern):
+        if not isinstance(value, Array):
+            raise CoercionError("PIII1")
+        if not isinstance(value.value_type, T):
+            raise CoercionError("PIII2")
+        return value
 
     @property
     def _pretty_piece(self) -> str:

@@ -55,6 +55,7 @@ from ibis.common.patterns import (
     TypeOf,
     ValidationError,
     match,
+    pattern,
 )
 
 
@@ -741,3 +742,37 @@ def test_pattern_coercible_sequence_type():
     assert s.match([1, 2, 3], context={}) == DoubledList(
         [PlusOne(2), PlusOne(3), PlusOne(4), PlusOne(2), PlusOne(3), PlusOne(4)]
     )
+
+
+from dataclasses import dataclass
+from typing import Generic, TypeVar
+
+T = TypeVar("T")
+S = TypeVar("S")
+
+
+@dataclass
+class My(Generic[T, S]):
+    a: T
+    b: S
+    c: str
+
+
+def test_generic_instance_of():
+    p = Pattern.from_typehint(My[int, ...])
+    assert p.match(My(1, 2, "3"), context={}) == My(1, 2, "3")
+
+    assert match(My[int, ...], My(1, 2, "3"), context={}) == {}
+    assert match(My[int, int], My(1, 2, "3"), context={}) == {}
+    assert match(My[int, float], My(1, 2, "3"), context={}) is NoMatch
+    assert match(My[int, float], My(1, 2.0, "3"), context={}) == {}
+
+
+def test_e():
+    import typing
+
+    from ibis.common.typing import get_class_annotations
+
+
+
+    print(get_class_annotations(My))

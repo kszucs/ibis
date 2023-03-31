@@ -7,7 +7,7 @@ import enum
 import ipaddress
 import itertools
 import uuid
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, Tuple, TypeVar, Union
 from typing import Literal as In
 
 import numpy as np
@@ -30,7 +30,7 @@ class TableColumn(Value, Named):
     """Selects a column from a `Table`."""
 
     table = rlz.table
-    name: str | int
+    name: Union[str, int]
 
     output_shape = rlz.Shape.COLUMNAR
 

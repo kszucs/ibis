@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import FunctionType, LambdaType
+from typing import Tuple, Union
 
 from public import public
 
@@ -12,7 +13,7 @@ from ibis.expr.operations.reductions import Reduction
 
 
 class VectorizedUDF(Value):
-    func: FunctionType | LambdaType
+    func: Union[FunctionType, LambdaType]
     func_args = rlz.tuple_of(rlz.column(rlz.any))
     # TODO(kszucs): should rename these arguments to
     # input_dtypes and return_dtype

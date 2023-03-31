@@ -150,7 +150,7 @@ class FrozenDict(Mapping[K, V], Hashable):
         return str(self.__view__)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.__view__!r})"
+        return f"{self.__class__.__name__}({dict(self.__view__)!r})"
 
     def __setattr__(self, name: str, _: Any) -> None:
         raise TypeError(f"Attribute {name!r} cannot be assigned to frozendict")
