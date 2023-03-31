@@ -12,7 +12,7 @@ from ibis.expr.operations.reductions import Reduction
 
 
 class VectorizedUDF(Value):
-    func = rlz.instance_of((FunctionType, LambdaType))
+    func: FunctionType | LambdaType
     func_args = rlz.tuple_of(rlz.column(rlz.any))
     # TODO(kszucs): should rename these arguments to
     # input_dtypes and return_dtype
