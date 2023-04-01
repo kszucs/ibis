@@ -22,7 +22,6 @@ from itertools import chain, zip_longest
 from typing import Any as AnyType
 from typing import (
     Callable,
-    Generic,
     Literal,
     Tuple,
     TypeVar,
@@ -33,7 +32,7 @@ from typing_extensions import Annotated, get_args, get_origin
 
 from ibis.common.collections import RewindableIterator, frozendict
 from ibis.common.dispatch import lazy_singledispatch
-from ibis.common.typing import Coercible, CoercionError, bind_typevars, get_type_hints
+from ibis.common.typing import Coercible, CoercionError, bind_typevars
 from ibis.util import is_function, is_iterable, promote_tuple
 
 try:
@@ -102,6 +101,7 @@ class Pattern(Validator, Hashable):
                     return Any()
                 return CoercedTo(annot.__bound__)
             elif issubclass(annot, Coercible):
+                # CoercedTo(annot) & InstanceOf(annot)
                 return CoercedTo(annot)
             else:
                 return InstanceOf(annot)
@@ -135,8 +135,11 @@ class Pattern(Validator, Hashable):
             key_inner, value_inner = map(cls.from_typehint, args)
             return MappingOf(key_inner, value_inner, type=origin)
         elif issubclass(origin, Coercible) and args:
+            # would be nice to pass the typevars as kwargs to __coerce__
+            # so the coercible can do various things with them
             fields = bind_typevars(origin, args)
             field_inners = {k: cls.from_typehint(v) for k, v in fields.items()}
+            # CoercedTo(origin) & GenericInstanceOf(origin, field_inners)
             return GenericCoercedTo(origin, frozendict(field_inners))
         elif isinstance(origin, type) and args:
             fields = bind_typevars(origin, args)
@@ -493,10 +496,6 @@ class CoercedTo(Matcher):
 
         if self.checker.match(value, context) is NoMatch:
             return NoMatch
-        # if not isinstance(value, self.origin):
-        #     raise MatchError(
-        #         f"Coercion failed: the coercion's result {value!r} is not a {self.origin!r}"
-        #     )
 
         return value
 

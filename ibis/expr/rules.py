@@ -44,32 +44,6 @@ class Shape(enum.IntEnum):
     def is_columnar(self):
         return self is Shape.COLUMNAR
 
-    def to_datashape(self):
-        if self.is_scalar():
-            return Scalar
-        elif self.is_columnar():
-            return Columnar
-        else:
-            raise NotImplementedError
-
-
-class DataShape:
-    def __init__(self):
-        raise TypeError('Cannot instantiate DataShape')
-
-    # def is_scalar(self):
-    #     return isinstance(self, Scalar)
-
-    # def is_columnar(self):
-    #     return isinstance(self, Columnar)
-
-
-class Scalar(DataShape):
-    ndim = 0
-
-
-class Columnar(DataShape):
-    ndim = 1
 
 
 @public

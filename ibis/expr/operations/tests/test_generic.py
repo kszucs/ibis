@@ -4,8 +4,9 @@ import pytest
 
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.patterns import CoercedTo, ValidationError, coerce
+from ibis.common.patterns import CoercedTo, ValidationError, coerce, GenericCoercedTo, Pattern, InstanceOf
 from ibis.common.typing import CoercionError
+from ibis.common.collections import frozendict
 
 
 # TODO(kszucs): actually we should only allow datatype classes not instances
@@ -49,7 +50,9 @@ def test_coerced_to_literal():
     p = CoercedTo(ops.Literal[dt.Int8])
     assert p.validate(ops.Literal(1, dt.int8), {}) == one
 
-    p = CoercedTo(ops.Literal[dt.Int8])
+    p = Pattern.from_typehint(ops.Literal[dt.Int8])
+    assert p == GenericCoercedTo(ops.Literal, frozendict({"dtype": CoercedTo(dt.Int8)}))
+
     one = ops.Literal(1, dt.int16)
     with pytest.raises(ValidationError):
         p.validate(ops.Literal(1, dt.int16), {})

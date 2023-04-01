@@ -62,13 +62,13 @@ def dtype_from_object(value, **kwargs) -> DataType:
             raise TypeError(
                 f"Cannot construct an ibis datatype from python value `{value!r}`"
             )
-    elif issubclass(origin_type, Sequence):
+    elif issubclass(origin_type, (Sequence, Array)):
         (value_type,) = map(dtype, get_args(value))
         return Array(value_type)
-    elif issubclass(origin_type, Mapping):
+    elif issubclass(origin_type, (Mapping, Map)):
         key_type, value_type = map(dtype, get_args(value))
         return Map(key_type, value_type)
-    elif issubclass(origin_type, PySet):
+    elif issubclass(origin_type, (PySet, Set)):
         (value_type,) = map(dtype, get_args(value))
         return Set(value_type)
     else:

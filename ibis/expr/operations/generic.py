@@ -207,7 +207,7 @@ class Literal(Value[T, Scalar], Coercible):
             rlz.lazy_instance_of("shapely.geometry.BaseGeometry"),
         )
     )
-    dtype: dt.DataType
+    dtype: T
 
     # TODO(kszucs): it should be named actually
 
@@ -219,7 +219,9 @@ class Literal(Value[T, Scalar], Coercible):
     @classmethod
     def __coerce__(cls, value, T=...):
         if isinstance(value, cls):
-            return coerce(value, Value[T, ...])
+            return value
+            # raise ValueError("Cannot coerce a Literal")
+            # return coerce(value, Value[T, ...])
 
         try:
             inferred_dtype = dt.infer(value)

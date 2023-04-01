@@ -3,7 +3,8 @@ from enum import Enum, EnumMeta
 
 from public import public
 
-from ibis.common.validators import Coercible
+from ibis.common.typing import Coercible, CoercionError
+
 
 
 class ABCEnumMeta(EnumMeta, ABCMeta):
@@ -13,6 +14,12 @@ class ABCEnumMeta(EnumMeta, ABCMeta):
 class Unit(Coercible, Enum, metaclass=ABCEnumMeta):
     @classmethod
     def __coerce__(cls, value):
+        if isinstance(value, cls):
+            return value
+
+        if not isinstance(value, str):
+            raise CoercionError(f"Unable to coerce {value} to {cls.__name__}")
+
         # first look for aliases
         value = cls.aliases().get(value, value)
 
@@ -28,7 +35,7 @@ class Unit(Coercible, Enum, metaclass=ABCEnumMeta):
         try:
             return cls[value.upper()]
         except KeyError:
-            raise ValueError(f"Unable to coerce {value} to {cls.__name__}")
+            raise CoercionError(f"Unable to coerce {value} to {cls.__name__}")
 
     @classmethod
     def aliases(cls):

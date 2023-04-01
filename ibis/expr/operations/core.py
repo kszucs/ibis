@@ -7,6 +7,7 @@ from public import public
 
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
+
 from ibis import util
 from ibis.common.graph import Node as Traversable
 from ibis.common.grounds import Concrete
@@ -70,7 +71,7 @@ class Columnar(DataShape):
 
 
 T = TypeVar("T", bound=dt.DataType)
-S = TypeVar("S", bound=DataShape)  # or rather as constraints
+S = TypeVar("S", bound=rlz.Shape)
 
 
 @public
