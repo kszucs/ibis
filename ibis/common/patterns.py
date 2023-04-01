@@ -113,6 +113,14 @@ class Pattern(Validator, Hashable):
         elif origin is Annotated:
             annot, *extras = args
             return AllOf(InstanceOf(annot), *extras)
+        elif origin is Callable:
+            # issubclass(origin, Callable):
+            if args:
+                arg_inners = tuple(map(cls.from_typehint, args[0]))
+                return_inner = cls.from_typehint(args[1])
+                return CallableWith(arg_inners, return_inner)
+            else:
+                return InstanceOf(Callable)
         elif issubclass(origin, Tuple):
             first, *rest = args
             if rest == [Ellipsis]:
@@ -126,13 +134,10 @@ class Pattern(Validator, Hashable):
         elif issubclass(origin, Mapping):
             key_inner, value_inner = map(cls.from_typehint, args)
             return MappingOf(key_inner, value_inner, type=origin)
-        elif issubclass(origin, Callable):
-            if args:
-                arg_inners = tuple(map(cls.from_typehint, args[0]))
-                return_inner = cls.from_typehint(args[1])
-                return CallableWith(arg_inners, return_inner)
-            else:
-                return InstanceOf(Callable)
+        elif issubclass(origin, Coercible) and args:
+            fields = bind_typevars(origin, args)
+            field_inners = {k: cls.from_typehint(v) for k, v in fields.items()}
+            return GenericCoercedTo(origin, frozendict(field_inners))
         elif isinstance(origin, type) and args:
             fields = bind_typevars(origin, args)
             field_inners = {k: cls.from_typehint(v) for k, v in fields.items()}
@@ -401,13 +406,13 @@ class InstanceOf(Matcher):
 
 
 class GenericInstanceOf(Matcher):
-    __slots__ = ("origin", "fields")
+    __slots__ = ("origin", "field_patterns")
 
     def match(self, value, context):
         if not isinstance(value, self.origin):
             return NoMatch
 
-        for field, pattern in self.fields.items():
+        for field, pattern in self.field_patterns.items():
             attr = getattr(value, field)
             if pattern.match(attr, context) is NoMatch:
                 return NoMatch
@@ -464,7 +469,7 @@ class CoercedTo(Matcher):
         The type to coerce to.
     """
 
-    __slots__ = ("func", "origin")
+    __slots__ = ("func", "origin", "checker")
 
     def __init__(self, type):
         origin = get_origin(type)
@@ -476,7 +481,9 @@ class CoercedTo(Matcher):
         else:
             func = type
 
-        super().__init__(func, origin)
+        checker = InstanceOf(origin)
+
+        super().__init__(func, origin, checker)
 
     def match(self, value, context):
         try:
@@ -484,15 +491,42 @@ class CoercedTo(Matcher):
         except CoercionError:
             return NoMatch
 
-        if not isinstance(value, self.origin):
-            raise MatchError(
-                f"Coercion failed: the coercion's result {value!r} is not a {self.origin!r}"
-            )
+        if self.checker.match(value, context) is NoMatch:
+            return NoMatch
+        # if not isinstance(value, self.origin):
+        #     raise MatchError(
+        #         f"Coercion failed: the coercion's result {value!r} is not a {self.origin!r}"
+        #     )
 
         return value
 
     def __repr__(self):
         return f"CoercedTo({self.origin.__name__!r})"
+
+
+class GenericCoercedTo(Matcher):
+    __slots__ = ("origin", "field_patterns", "checker")
+
+    def __init__(self, origin, field_patterns):
+        checker = GenericInstanceOf(origin, field_patterns)
+        super().__init__(origin, field_patterns, checker)
+
+    def match(self, value, context):
+        # plain coercion here
+        try:
+            value = self.origin.__coerce__(value)
+        except CoercionError:
+            return NoMatch
+
+        # for field, pattern in self.field_patterns.items():
+        #     attr = getattr(value, field)
+        #     if pattern.match(attr, context) is NoMatch:
+        #         return NoMatch
+
+        if self.checker.match(value, context) is NoMatch:
+            return NoMatch
+
+        return value
 
 
 class Not(Matcher):

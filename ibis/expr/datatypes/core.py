@@ -97,7 +97,10 @@ class DataType(Concrete, Coercible):
 
     @classmethod
     def __coerce__(cls, value):
-        return dtype(value)
+        try:
+            return dtype(value)
+        except TypeError as e:
+            raise CoercionError("Unable to coerce to a DataType") from e
 
     def __call__(self, **kwargs):
         return self.copy(**kwargs)
@@ -301,8 +304,8 @@ class Variadic(DataType):
 class Parametric(DataType):
     """Types that can be parameterized."""
 
-    def __class_getitem__(cls, params):
-        return cls(*params) if isinstance(params, tuple) else cls(params)
+    # def __class_getitem__(cls, params):
+    #     return cls(*params) if isinstance(params, tuple) else cls(params)
 
 
 @public
@@ -652,8 +655,8 @@ class Struct(Parametric, MapSet):
     scalar = "StructScalar"
     column = "StructColumn"
 
-    def __class_getitem__(cls, fields):
-        return cls({slice_.start: slice_.stop for slice_ in fields})
+    # def __class_getitem__(cls, fields):
+    #     return cls({slice_.start: slice_.stop for slice_ in fields})
 
     @classmethod
     def from_tuples(

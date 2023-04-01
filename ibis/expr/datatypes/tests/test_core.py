@@ -10,7 +10,7 @@ from typing import Dict, List, NamedTuple, Set, Tuple
 import pytest
 
 import ibis.expr.datatypes as dt
-from ibis.common.patterns import coerce
+from ibis.common.patterns import MatchError, NoMatch, Pattern, coerce
 from ibis.common.typing import CoercionError
 
 
@@ -125,13 +125,13 @@ class BarStruct:
     m: dt.Date
     n: dt.Time
     o: dt.Timestamp
-    oa: dt.Timestamp['UTC']  # noqa: F821
-    ob: dt.Timestamp['UTC', 6]  # noqa: F821
+    # oa: dt.Timestamp['UTC']  # noqa: F821
+    # ob: dt.Timestamp['UTC', 6]  # noqa: F821
     p: dt.Interval
-    pa: dt.Interval['s']
-    pb: dt.Interval['s', dt.Int16]
+    # pa: dt.Interval['s']
+    # pb: dt.Interval['s', dt.Int16]
     q: dt.Decimal
-    qa: dt.Decimal[12, 2]
+    # qa: dt.Decimal[12, 2]
     r: dt.Array[dt.Int16]
     s: dt.Map[dt.String, dt.Int16]
     t: dt.Set[dt.Int16]
@@ -302,11 +302,11 @@ class FooDataClass:
         (dt.Array[dt.Null], dt.Array(dt.Null())),
         (dt.Set[dt.Null], dt.Set(dt.Null())),
         (dt.Map[dt.Null, dt.Null], dt.Map(dt.Null(), dt.Null())),
-        (dt.Timestamp['UTC'], dt.Timestamp(timezone='UTC')),
-        (dt.Timestamp['UTC', 6], dt.Timestamp(timezone='UTC', scale=6)),
-        (dt.Interval['s'], dt.Interval('s')),
-        (dt.Interval['s', dt.Int16], dt.Interval('s', dt.Int16())),
-        (dt.Decimal[12, 2], dt.Decimal(12, 2)),
+        # (dt.Timestamp['UTC'], dt.Timestamp(timezone='UTC')),
+        # (dt.Timestamp['UTC', 6], dt.Timestamp(timezone='UTC', scale=6)),
+        # (dt.Interval['s'], dt.Interval('s')),
+        # (dt.Interval['s', dt.Int16], dt.Interval('s', dt.Int16())),
+        # (dt.Decimal[12, 2], dt.Decimal(12, 2)),
         (
             dt.Struct['a' : dt.Int16, 'b' : dt.Int32],
             dt.Struct({'a': dt.Int16(), 'b': dt.Int32()}),
@@ -634,3 +634,36 @@ def test_is_temporal():
 
 #     print("==============")
 #     print(coerce(dt.int8, dt.Array))
+
+
+def test_type_coercion():
+    p = Pattern.from_typehint(dt.DataType)
+    assert p.match(dt.int8, {}) == dt.int8
+    assert p.match('int8', {}) == dt.int8
+    assert p.match(dt.string, {}) == dt.string
+    assert p.match('string', {}) == dt.string
+    assert p.match(3, {}) is NoMatch
+
+    p = Pattern.from_typehint(dt.Primitive)
+    assert p.match(dt.int8, {}) == dt.int8
+    assert p.match('int8', {}) == dt.int8
+    assert p.match(dt.boolean, {}) == dt.boolean
+    assert p.match('boolean', {}) == dt.boolean
+    assert p.match(dt.Array(dt.int8), {}) is NoMatch
+    assert p.match('array<int8>', {}) is NoMatch
+
+    p = Pattern.from_typehint(dt.Integer)
+    assert p.match(dt.int8, {}) == dt.int8
+    assert p.match('int8', {}) == dt.int8
+    assert p.match(dt.uint8, {}) == dt.uint8
+    assert p.match('uint8', {}) == dt.uint8
+    assert p.match(dt.boolean, {}) is NoMatch
+    assert p.match('boolean', {}) is NoMatch
+
+    p = Pattern.from_typehint(dt.Array[dt.Integer])
+    assert p.match(dt.Array(dt.int8), {}) == dt.Array(dt.int8)
+    assert p.match('array<int8>', {}) == dt.Array(dt.int8)
+    assert p.match(dt.Array(dt.uint8), {}) == dt.Array(dt.uint8)
+    assert p.match('array<uint8>', {}) == dt.Array(dt.uint8)
+    assert p.match(dt.Array(dt.boolean), {}) is NoMatch
+    assert p.match('array<boolean>', {}) is NoMatch
