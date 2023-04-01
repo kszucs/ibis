@@ -13,7 +13,7 @@ In addition to those the new approach has the following advantages:
 - Support structural pattern matching for sequences, mappings and objects.
 """
 from __future__ import annotations
-
+from enum import Enum
 import numbers
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Mapping, Sequence
@@ -89,6 +89,7 @@ class Pattern(Validator, Hashable):
         origin, args = get_origin(annot), get_args(annot)
 
         if origin is None:
+            print(annot)
             if annot is Ellipsis:  # TODO(kszucs): test this
                 return Any()
             elif annot is None:
@@ -100,6 +101,8 @@ class Pattern(Validator, Hashable):
                 if annot.__bound__ is None:
                     return Any()
                 return CoercedTo(annot.__bound__)
+            elif isinstance(annot, Enum):
+                return EqualTo(annot)
             elif issubclass(annot, Coercible):
                 # CoercedTo(annot) & InstanceOf(annot)
                 return CoercedTo(annot)

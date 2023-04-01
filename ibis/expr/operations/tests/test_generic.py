@@ -8,7 +8,7 @@ from ibis.common.patterns import CoercedTo, ValidationError, coerce, GenericCoer
 from ibis.common.typing import CoercionError
 from ibis.common.collections import frozendict
 
-
+from ibis.expr.rules import Shape
 # TODO(kszucs): actually we should only allow datatype classes not instances
 
 
@@ -68,11 +68,19 @@ def test_coerced_to_literal():
 def test_coerced_to_value():
     one = ops.Literal(1, dt.int8)
 
-    p = CoercedTo(ops.Value)
+    p = Pattern.from_typehint(ops.Value)
     assert p.validate(1, {}) == one
 
-    p = CoercedTo(ops.Value[dt.Int8, ...])
+    p = Pattern.from_typehint(ops.Value[dt.Int8, ...])
     assert p.validate(1, {}) == one
+
+    p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.SCALAR])
+    assert p.validate(1, {}) == one
+
+    p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.COLUMNAR])
+    with pytest.raises(ValidationError):
+        p.validate(1, {})
+
 
     # p = CoercedTo(ops.Value[dt.Int8 | dt.Int16, ...])
     # assert p.validate(1, {}) == one

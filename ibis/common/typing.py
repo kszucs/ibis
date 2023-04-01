@@ -20,13 +20,29 @@ def evaluate_annotations(annots, module_name, localns=None):
     }
 
 
+def discover_typehints(obj):
+    annotations = {}
+    for name in dir(obj):
+        attr = getattr(obj, name)
+        if isinstance(attr, property):
+            if annot := attr.fget.__annotations__.get("return"):
+                annotations[name] = annot
+
+    module_name = getattr(obj, '__module__', None)
+    return evaluate_annotations(annotations, module_name, localns=vars(obj))
+
+# raise is parameter cannot be identified (missing type annotation from the discovery)
 def bind_typevars(origin, args):
     names = (p.__name__ for p in getattr(origin, "__parameters__", ()))
     params = dict(zip(names, args))
+
     typehints = get_type_hints(origin)
+    extrahints = discover_typehints(origin)
+
+    allhints = {**typehints, **extrahints}
 
     fields = {}
-    for name, typehint in typehints.items():
+    for name, typehint in allhints.items():
         if isinstance(typehint, TypeVar):
             fields[name] = params[typehint.__name__]
     return fields
