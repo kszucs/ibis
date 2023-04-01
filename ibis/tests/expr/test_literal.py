@@ -6,6 +6,7 @@ import pytest
 import ibis
 import ibis.expr.datatypes as dt
 from ibis.common.collections import frozendict
+from ibis.common.patterns import CoercionError
 from ibis.expr.operations import Literal
 from ibis.tests.util import assert_pickle_roundtrip
 
@@ -119,7 +120,7 @@ def test_struct_literal(value):
 )
 def test_struct_literal_non_castable(value):
     typestr = "struct<field1: string, field2: float64>"
-    with pytest.raises((KeyError, TypeError, ibis.common.exceptions.IbisTypeError)):
+    with pytest.raises((KeyError, CoercionError)):
         ibis.struct(value, type=typestr)
 
 
@@ -156,7 +157,7 @@ def test_map_literal_non_castable(value):
 
 def test_literal_mixed_type_fails():
     data = [1, 'a']
-    with pytest.raises(TypeError):
+    with pytest.raises(CoercionError):
         ibis.literal(data)
 
 

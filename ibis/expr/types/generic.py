@@ -1164,12 +1164,9 @@ def literal(value: Any, type: dt.DataType | str | None = None) -> Scalar:
       ...
     TypeError: Value 'foobar' cannot be safely coerced to int64
     """
-    import ibis.expr.rules as rlz
-
     if isinstance(value, Expr):
         value = value.op()
-
-    return rlz.literal(type, value).to_expr()
+    return ops.value(value, type).to_expr()
 
 
 public(

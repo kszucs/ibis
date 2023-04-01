@@ -110,10 +110,6 @@ class Value(Node, Named, Coercible, Generic[T, S]):
         dt.DataType
         """
 
-    # @attribute.default
-    # def output_dtype()
-
-    # it must use -> S
     @property
     @abstractmethod
     def output_shape(self) -> S:
@@ -208,7 +204,7 @@ def value(obj, dtype=None, shape=None):
         try:
             # ensure type correctness: check that the inferred dtype is
             # implicitly castable to the explicitly given dtype and value
-            dtype = dt.cast(inferred_dtype, target=explicit_dtype, value=value)
+            dtype = dt.cast(inferred_dtype, target=explicit_dtype, value=obj)
         except IbisTypeError:
             raise CoercionError(
                 f'Value {value!r} cannot be safely coerced to `{explicit_dtype}`'
@@ -220,7 +216,7 @@ def value(obj, dtype=None, shape=None):
     else:
         raise CoercionError(
             'The datatype of value {!r} cannot be inferred, try '
-            'passing it explicitly with the `type` keyword.'.format(value)
+            'passing it explicitly with the `type` keyword.'.format(obj)
         )
 
     if dtype.is_null():
