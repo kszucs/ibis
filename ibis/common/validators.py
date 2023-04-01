@@ -115,18 +115,6 @@ class Validator(Callable):
                 f"Cannot create validator from annotation {annot} {origin}"
             )
 
-    def __rshift__(self, name):
-        return capture(self, name)
-
-    def __rmatmul__(self, name):
-        return capture(self, name)
-
-    def __and__(self, other):
-        return all_of((self, other))
-
-    def __or__(self, other):
-        return any_of((self, other))
-
 
 # TODO(kszucs): in order to cache valiadator instances we could subclass
 # grounds.Singleton, but the imports would need to be reorganized
@@ -170,27 +158,6 @@ def ref(key: str, *, this: Mapping[str, Any]) -> Any:
         return this[key]
     except KeyError:
         raise IbisTypeError(f"Could not get `{key}` from {this}")
-
-
-class Capture(Validator):
-    def __init__(self, inner, name):
-        self.inner = inner
-        self.name = name
-
-    def __call__(self, arg, *, this):
-        arg = self.inner(arg, this=this)
-        this[self.name] = arg
-        return arg
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, Capture)
-            and self.inner == other.inner
-            and self.name == other.name
-        )
-
-
-capture = Capture
 
 
 @validator

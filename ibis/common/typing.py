@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from abc import ABC, abstractmethod
+from typing import TypeVar
 
 
 def get_type_hints(obj):
@@ -17,6 +18,18 @@ def evaluate_annotations(annots, module_name, localns=None):
         k: eval(v, globalns, localns) if isinstance(v, str) else v
         for k, v in annots.items()
     }
+
+
+def bind_typevars(origin, args):
+    names = (p.__name__ for p in getattr(origin, "__parameters__", ()))
+    params = dict(zip(names, args))
+    typehints = get_type_hints(origin)
+
+    fields = {}
+    for name, typehint in typehints.items():
+        if isinstance(typehint, TypeVar):
+            fields[name] = params[typehint.__name__]
+    return fields
 
 
 class CoercionError(Exception):

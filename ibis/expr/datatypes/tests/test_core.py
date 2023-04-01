@@ -614,26 +614,23 @@ def test_is_temporal():
     assert not dt.Array(dt.Map(dt.string, dt.string)).is_temporal()
 
 
-from ibis.common.patterns import MatchError
+# def test_type_coercion():
+#     # assert coerce("int8", dt.DataType) == dt.int8
+#     # assert coerce("int8", dt.Int8) == dt.int8
 
+#     # assert coerce(dt.int8, dt.Integer) == dt.int8
+#     # assert coerce(dt.int8, dt.Primitive) == dt.int8
+#     # assert coerce(dt.int8, dt.DataType) == dt.int8
 
-def test_type_coercion():
-    # assert coerce("int8", dt.DataType) == dt.int8
-    # assert coerce("int8", dt.Int8) == dt.int8
+#     # with pytest.raises(MatchError):
+#     #     coerce(dt.int8, dt.Float32)
 
-    # assert coerce(dt.int8, dt.Integer) == dt.int8
-    # assert coerce(dt.int8, dt.Primitive) == dt.int8
-    # assert coerce(dt.int8, dt.DataType) == dt.int8
+#     # coerce(dt.Array(dt.int64), dt.Array[dt.Integer]) == dt.Array(dt.int64)
+#     assert dt.Array.__coerce__(dt.Array(dt.int64), dt.Integer) == dt.Array(dt.int64)
+#     assert dt.Array.__coerce__(dt.Array(dt.int64), dt.Primitive) == dt.Array(dt.int64)
 
-    # with pytest.raises(MatchError):
-    #     coerce(dt.int8, dt.Float32)
+#     with pytest.raises(CoercionError):
+#         dt.Array.__coerce__(dt.Array(dt.int64), dt.Float32)
 
-    # coerce(dt.Array(dt.int64), dt.Array[dt.Integer]) == dt.Array(dt.int64)
-    assert dt.Array.__coerce__(dt.Array(dt.int64), dt.Integer) == dt.Array(dt.int64)
-    assert dt.Array.__coerce__(dt.Array(dt.int64), dt.Primitive) == dt.Array(dt.int64)
-
-    with pytest.raises(CoercionError):
-        dt.Array.__coerce__(dt.Array(dt.int64), dt.Float32)
-
-    print("==============")
-    print(coerce(dt.int8, dt.Array))
+#     print("==============")
+#     print(coerce(dt.int8, dt.Array))

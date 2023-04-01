@@ -301,8 +301,8 @@ class Variadic(DataType):
 class Parametric(DataType):
     """Types that can be parameterized."""
 
-    # def __class_getitem__(cls, params):
-    #     return cls(*params) if isinstance(params, tuple) else cls(params)
+    def __class_getitem__(cls, params):
+        return cls(*params) if isinstance(params, tuple) else cls(params)
 
 
 @public
@@ -652,8 +652,8 @@ class Struct(Parametric, MapSet):
     scalar = "StructScalar"
     column = "StructColumn"
 
-    # def __class_getitem__(cls, fields):
-    #     return cls({slice_.start: slice_.stop for slice_ in fields})
+    def __class_getitem__(cls, fields):
+        return cls({slice_.start: slice_.stop for slice_ in fields})
 
     @classmethod
     def from_tuples(
@@ -714,17 +714,6 @@ class Array(Variadic, Parametric, Generic[T]):
 
     scalar = "ArrayScalar"
     column = "ArrayColumn"
-
-    @classmethod
-    def __coerce__(cls, value):
-        value = dtype(value)
-
-    def __match__(self, pattern):
-        if not isinstance(value, Array):
-            raise CoercionError("PIII1")
-        if not isinstance(value.value_type, T):
-            raise CoercionError("PIII2")
-        return value
 
     @property
     def _pretty_piece(self) -> str:

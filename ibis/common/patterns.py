@@ -33,7 +33,7 @@ from typing_extensions import Annotated, get_args, get_origin
 
 from ibis.common.collections import RewindableIterator, frozendict
 from ibis.common.dispatch import lazy_singledispatch
-from ibis.common.typing import Coercible, CoercionError, get_type_hints
+from ibis.common.typing import Coercible, CoercionError, bind_typevars, get_type_hints
 from ibis.util import is_function, is_iterable, promote_tuple
 
 try:
@@ -86,8 +86,6 @@ class Pattern(Validator, Hashable):
         pattern
             A pattern that matches the given type annotation.
         """
-        # use evaluate_typehint here
-
         # TODO(kszucs): cache the result of this function
         origin, args = get_origin(annot), get_args(annot)
 
@@ -136,16 +134,9 @@ class Pattern(Validator, Hashable):
             else:
                 return InstanceOf(Callable)
         elif isinstance(origin, type) and args:
-            names = (p.__name__ for p in getattr(origin, "__parameters__", ()))
-            params = frozendict(zip(names, args))
-
-            fields = {}
-            for name, typehint in get_type_hints(origin).items():
-                if isinstance(typehint, TypeVar):
-                    param = params[typehint.__name__]
-                    fields[name] = cls.from_typehint(param)
-
-            return GenericInstanceOf(origin, frozendict(fields))
+            fields = bind_typevars(origin, args)
+            field_inners = {k: cls.from_typehint(v) for k, v in fields.items()}
+            return GenericInstanceOf(origin, frozendict(field_inners))
         else:
             raise NotImplementedError(
                 f"Cannot create validator from annotation {annot} {origin}"
@@ -473,26 +464,23 @@ class CoercedTo(Matcher):
         The type to coerce to.
     """
 
-    __slots__ = ("func", "origin", "params")
+    __slots__ = ("func", "origin")
 
     def __init__(self, type):
-        origin, args = get_origin(type), get_args(type)
+        origin = get_origin(type)
         if origin is None:
             origin = type
 
         if issubclass(origin, Coercible):
             func = origin.__coerce__
-            names = [p.__name__ for p in getattr(origin, "__parameters__", [])]
-            params = frozendict(zip(names, args))  # , fillvalue=object))
         else:
             func = type
-            params = frozendict()
 
-        super().__init__(func, origin, params)
+        super().__init__(func, origin)
 
     def match(self, value, context):
         try:
-            value = self.func(value, **self.params)
+            value = self.func(value)
         except CoercionError:
             return NoMatch
 
@@ -505,9 +493,6 @@ class CoercedTo(Matcher):
 
     def __repr__(self):
         return f"CoercedTo({self.origin.__name__!r})"
-
-    # implement validate() too ro raise coercion error
-    # def validate(self, value, context):
 
 
 class Not(Matcher):
