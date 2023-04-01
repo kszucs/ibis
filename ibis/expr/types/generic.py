@@ -1110,6 +1110,7 @@ def null():
     return ops.NullLiteral().to_expr()
 
 
+# use annotated decorator here
 @public
 def literal(value: Any, type: dt.DataType | str | None = None) -> Scalar:
     """Create a scalar expression from a Python value.

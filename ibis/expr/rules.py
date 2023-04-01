@@ -12,6 +12,7 @@ import ibis.expr.schema as sch
 import ibis.expr.types as ir
 from ibis import util
 from ibis.common.annotations import attribute, optional
+from ibis.common.patterns import coerce
 from ibis.common.validators import (
     bool_,
     callable_with,  # noqa: F401
@@ -158,56 +159,59 @@ def sort_key_from(table_ref, key, **kwargs):
 
 @rule
 def datatype(arg, **kwargs):
-    return dt.dtype(arg)
+    return coerce(arg, dt.DataType)
 
 
-# TODO(kszucs): make type argument the first and mandatory, similarly to the
-# value rule, move out the type inference to `ir.literal()` method
-# TODO(kszucs): may not make sense to support an explicit datatype here, we
-# could do the coercion in the API function ibis.literal()
 @rule
 def literal(dtype, value, **kwargs):
     import ibis.expr.operations as ops
 
-    if isinstance(value, ops.Literal):
-        return value
-
-    try:
-        inferred_dtype = dt.infer(value)
-    except com.InputTypeError:
-        has_inferred = False
-    else:
-        has_inferred = True
-
     if dtype is None:
-        has_explicit = False
+        return coerce(value, ops.Literal)
     else:
-        has_explicit = True
-        # TODO(kszucs): handle class-like dtype definitions here explicitly
-        explicit_dtype = dt.dtype(dtype)
+        dtype = dt.dtype(dtype)
+        hint = ops.Literal[type(dtype)]
+        return coerce(value, hint)
 
-    if has_explicit and has_inferred:
-        try:
-            # ensure type correctness: check that the inferred dtype is
-            # implicitly castable to the explicitly given dtype and value
-            dtype = dt.cast(inferred_dtype, target=explicit_dtype, value=value)
-        except com.IbisTypeError:
-            raise TypeError(f'Value {value!r} cannot be safely coerced to `{dtype}`')
-    elif has_explicit:
-        dtype = explicit_dtype
-    elif has_inferred:
-        dtype = inferred_dtype
-    else:
-        raise com.IbisTypeError(
-            'The datatype of value {!r} cannot be inferred, try '
-            'passing it explicitly with the `type` keyword.'.format(value)
-        )
+    # if isinstance(value, ops.Literal):
+    #     return value
 
-    if dtype.is_null():
-        return ops.NullLiteral()
+    # try:
+    #     inferred_dtype = dt.infer(value)
+    # except com.InputTypeError:
+    #     has_inferred = False
+    # else:
+    #     has_inferred = True
 
-    value = dt.normalize(dtype, value)
-    return ops.Literal(value, dtype=dtype)
+    # if dtype is None:
+    #     has_explicit = False
+    # else:
+    #     has_explicit = True
+    #     # TODO(kszucs): handle class-like dtype definitions here explicitly
+    #     explicit_dtype = dt.dtype(dtype)
+
+    # if has_explicit and has_inferred:
+    #     try:
+    #         # ensure type correctness: check that the inferred dtype is
+    #         # implicitly castable to the explicitly given dtype and value
+    #         dtype = dt.cast(inferred_dtype, target=explicit_dtype, value=value)
+    #     except com.IbisTypeError:
+    #         raise TypeError(f'Value {value!r} cannot be safely coerced to `{dtype}`')
+    # elif has_explicit:
+    #     dtype = explicit_dtype
+    # elif has_inferred:
+    #     dtype = inferred_dtype
+    # else:
+    #     raise com.IbisTypeError(
+    #         'The datatype of value {!r} cannot be inferred, try '
+    #         'passing it explicitly with the `type` keyword.'.format(value)
+    #     )
+
+    # if dtype.is_null():
+    #     return ops.NullLiteral()
+
+    # value = dt.normalize(dtype, value)
+    # return ops.Literal(value, dtype=dtype)
 
 
 @rule

@@ -10,6 +10,7 @@ from typing import Dict, List, NamedTuple, Set, Tuple
 import pytest
 
 import ibis.expr.datatypes as dt
+from ibis.common.enums import IntervalUnit
 from ibis.common.patterns import MatchError, NoMatch, Pattern, ValidationError, coerce
 from ibis.common.typing import CoercionError
 
@@ -653,3 +654,11 @@ def test_type_coercion():
     assert p.match('map<string, uint8>', {}) == dt.Map(dt.string, dt.uint8)
     assert p.match(dt.Map(dt.string, dt.boolean), {}) is NoMatch
     assert p.match('map<string, boolean>', {}) is NoMatch
+
+    p = Pattern.from_typehint(dt.Interval[IntervalUnit.SECOND, ...])
+    assert p.match(dt.Interval('s'), {}) == dt.Interval('s')
+    assert p.match(dt.Interval('s', dt.int8), {}) == dt.Interval('s', dt.int8)
+
+    p = Pattern.from_typehint(dt.Interval[IntervalUnit.NANOSECOND, dt.Int32])
+    assert p.match(dt.Interval('ns'), {}) == dt.Interval('ns')
+    assert p.match(dt.Interval('ns', dt.int64), {}) is NoMatch

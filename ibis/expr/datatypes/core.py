@@ -18,6 +18,7 @@ from typing_extensions import get_args, get_origin, get_type_hints
 from ibis.common.annotations import attribute
 from ibis.common.collections import FrozenDict, MapSet
 from ibis.common.enums import IntervalUnit
+from ibis.common.exceptions import IbisTypeError
 from ibis.common.grounds import Concrete, Singleton
 from ibis.common.typing import Coercible, CoercionError
 
@@ -55,11 +56,11 @@ def dtype_from_object(value, **kwargs) -> DataType:
             elif value is type(None):
                 return null
             else:
-                raise TypeError(
+                raise IbisTypeError(
                     f"Cannot construct an ibis datatype from python type `{value!r}`"
                 )
         else:
-            raise TypeError(
+            raise IbisTypeError(
                 f"Cannot construct an ibis datatype from python value `{value!r}`"
             )
     elif issubclass(origin_type, (Sequence, Array)):
@@ -96,7 +97,7 @@ class DataType(Concrete, Coercible):
         return self.__class__.__name__
 
     @classmethod
-    def __coerce__(cls, value):
+    def __coerce__(cls, value, **kwargs):
         try:
             return dtype(value)
         except TypeError as e:
@@ -616,14 +617,18 @@ class Decimal(Numeric, Parametric):
         return f"({', '.join(args)})"
 
 
+U = TypeVar("U", bound=IntervalUnit)
+V = TypeVar("V", bound=Integer)
+
+
 @public
-class Interval(Parametric):
+class Interval(Parametric, Generic[U, V]):
     """Interval values."""
 
-    unit: IntervalUnit = IntervalUnit('s')
+    unit: U = IntervalUnit('s')
     """The time unit of the interval."""
 
-    value_type: Integer = Int32()
+    value_type: V = Int32()
     """The underlying type of the stored values."""
 
     scalar = "IntervalScalar"

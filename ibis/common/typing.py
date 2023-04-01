@@ -20,6 +20,7 @@ def evaluate_annotations(annots, module_name, localns=None):
     }
 
 
+# TODO(kszucs): rename this mess
 def discover_typehints(obj):
     annotations = {}
     for name in dir(obj):
@@ -32,11 +33,15 @@ def discover_typehints(obj):
     return evaluate_annotations(annotations, module_name, localns=vars(obj))
 
 
-# raise is parameter cannot be identified (missing type annotation from the discovery)
-def bind_typevars(origin, args):
+def get_parameters(origin, args):
     names = (p.__name__ for p in getattr(origin, "__parameters__", ()))
     params = dict(zip(names, args))
+    return params
 
+
+# raise is parameter cannot be identified (missing type annotation from the discovery)
+def bind_typevars(origin, args):
+    params = get_parameters(origin, args)
     typehints = get_type_hints(origin)
     extrahints = discover_typehints(origin)
 

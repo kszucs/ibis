@@ -59,7 +59,11 @@ def test_coerced_to_literal():
     assert p.validate(ops.Literal(1, dt.int8), {}) == one
 
     p = Pattern.from_typehint(ops.Literal[dt.Int8])
-    assert p == GenericCoercedTo(ops.Literal, frozendict({"dtype": CoercedTo(dt.Int8)}))
+    assert p == GenericCoercedTo(
+        ops.Literal,
+        frozendict({'T': dt.Int8}),
+        frozendict({"dtype": CoercedTo(dt.Int8)}),
+    )
 
     one = ops.Literal(1, dt.int16)
     with pytest.raises(ValidationError):
@@ -76,23 +80,34 @@ def test_coerced_to_literal():
 def test_coerced_to_value():
     one = ops.Literal(1, dt.int8)
 
-    p = Pattern.from_typehint(ops.Value)
-    assert p.validate(1, {}) == one
-
-    p = Pattern.from_typehint(ops.Value[dt.Int8, ...])
-    assert p.validate(1, {}) == one
-
-    p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.SCALAR])
-    assert p.validate(1, {}) == one
-
-    p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.COLUMNAR])
-    with pytest.raises(ValidationError):
-        p.validate(1, {})
-
-    # p = CoercedTo(ops.Value[dt.Int8 | dt.Int16, ...])
+    # p = Pattern.from_typehint(ops.Value)
     # assert p.validate(1, {}) == one
 
+    # p = Pattern.from_typehint(ops.Value[dt.Int8, ...])
+    # assert p.validate(1, {}) == one
 
-# perhaps use Any instead of ...
-# ops.Value[dt.Int8 | dt.Int16, ...]
-# ops.Value[dt.Int8, ...] | ops.Value[dt.Int16, ...]
+    # p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.SCALAR])
+    # assert p.validate(1, {}) == one
+
+    # p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.COLUMNAR])
+    # with pytest.raises(ValidationError):
+    #     p.validate(1, {})
+
+    # # dt.Integer is not instantiable so it will be only used for checking
+    # # that the produced literal has any integer datatype
+    # p = Pattern.from_typehint(ops.Value[dt.Integer, ...])
+    # assert p.validate(1, {}) == one
+
+    # # same applies here, the coercion itself will use only the inferred datatype
+    # # but then the result is checked against the given typehint
+    # p = Pattern.from_typehint(ops.Value[dt.Int8 | dt.Int16, ...])
+    # assert p.validate(1, {}) == one
+    # assert p.validate(128, {}) == ops.Literal(128, dt.int16)
+
+    p1 = Pattern.from_typehint(ops.Value[dt.Int8, ...])
+    p2 = Pattern.from_typehint(ops.Value[dt.Int16, Shape.SCALAR])
+    assert p1.validate(1, {}) == one
+    assert p2.validate(1, {}) == ops.Literal(1, dt.int16)
+
+    p = p1 | p2
+    print(p.validate(1, {}))

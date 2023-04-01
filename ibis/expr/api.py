@@ -797,9 +797,9 @@ def interval(
         unit, value = defined_units[0]
 
     value_type = literal(value).type()
-    type = dt.Interval(unit, value_type=value_type)
+    dtype = dt.Interval(unit, value_type=value_type)
 
-    return literal(value, type=type)
+    return ops.value(value, dtype=dtype).to_expr()
 
 
 def case() -> bl.SearchedCaseBuilder:

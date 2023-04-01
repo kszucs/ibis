@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from public import public
 
 import ibis.expr.datatypes as dt
+import ibis.expr.patterns as pn
 import ibis.expr.rules as rlz
 from ibis import util
 from ibis.common.annotations import attribute
-from ibis.common.exceptions import IbisInputError, IbisTypeError
+from ibis.common.exceptions import IbisInputError, IbisTypeError, InputTypeError
 from ibis.common.graph import Node as Traversable
 from ibis.common.grounds import Concrete
 from ibis.common.patterns import coerce
@@ -78,22 +79,18 @@ S = TypeVar("S", bound=rlz.Shape)
 @public
 class Value(Node, Named, Coercible, Generic[T, S]):
     @classmethod
-    def __coerce__(cls, value):
-        from ibis.expr.operations import Literal, NullLiteral
+    def __coerce__(cls, obj, T=None, S=None):
         from ibis.expr.types import Expr
 
-        if isinstance(value, Expr):
-            value = value.op()
+        if isinstance(obj, Expr):
+            obj = obj.op()
 
-        if isinstance(value, Value):
-            return value
+        try:
+            dtype = dt.dtype(T)
+        except TypeError:
+            dtype = None
 
-        dtype = dt.infer(value)
-        if dtype.is_null():
-            return NullLiteral()
-
-        value = dt.normalize(dtype, value)
-        return Literal(value, dtype=dtype)
+        return value(obj, dtype=dtype, shape=S)
 
     # TODO(kszucs): cover it with tests
     # TODO(kszucs): figure out how to represent not named arguments
@@ -185,6 +182,52 @@ class Argument(Value):
     @property
     def output_shape(self) -> rlz.Shape:
         return self.shape
+
+
+@public
+def value(obj, dtype=None, shape=None):
+    from ibis.expr.operations import Literal, NullLiteral
+
+    if isinstance(obj, Value):
+        return obj
+
+    try:
+        inferred_dtype = dt.infer(obj)
+    except TypeError:
+        has_inferred = False
+    else:
+        has_inferred = True
+
+    if dtype is None:
+        has_explicit = False
+    else:
+        has_explicit = True
+        explicit_dtype = dt.dtype(dtype)
+
+    if has_explicit and has_inferred:
+        try:
+            # ensure type correctness: check that the inferred dtype is
+            # implicitly castable to the explicitly given dtype and value
+            dtype = dt.cast(inferred_dtype, target=explicit_dtype, value=value)
+        except IbisTypeError:
+            raise CoercionError(
+                f'Value {value!r} cannot be safely coerced to `{explicit_dtype}`'
+            )
+    elif has_explicit:
+        dtype = explicit_dtype
+    elif has_inferred:
+        dtype = inferred_dtype
+    else:
+        raise CoercionError(
+            'The datatype of value {!r} cannot be inferred, try '
+            'passing it explicitly with the `type` keyword.'.format(value)
+        )
+
+    if dtype.is_null():
+        return NullLiteral()
+
+    obj = dt.normalize(dtype, obj)
+    return Literal(obj, dtype=dtype)
 
 
 public(ValueOp=Value, UnaryOp=Unary, BinaryOp=Binary)

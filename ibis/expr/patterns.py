@@ -2,9 +2,26 @@ from typing import Optional
 
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.exceptions import InputTypeError
+from ibis.common.exceptions import IbisTypeError, InputTypeError
 from ibis.common.grounds import Concrete
-from ibis.common.patterns import MatchError, NoMatch, Pattern
+from ibis.common.patterns import CoercionError, Matcher, MatchError, NoMatch, Pattern
+
+# USE THESE FROM the __coerce__ methods
+# class DataType(Pattern):
+#     def match(self, value, context):
+#         if not isinstance(value, dt.DataType):
+#             return NoMatch
+#         return value
+
+# extend concrete in the future
+# class Value(Matcher):
+#     __slots__ = ("dtype", "shape")
+
+#     def __init__(self, dtype=None, shape=None):
+#         self.dtype = dt.dtype(dtype) if dtype is not None else None
+#         self.shape = shape
+
+#     def match(self, value, context):
 
 
 # class Literal(Concrete, Pattern):

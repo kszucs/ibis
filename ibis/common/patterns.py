@@ -33,7 +33,7 @@ from typing_extensions import Annotated, get_args, get_origin
 
 from ibis.common.collections import RewindableIterator, frozendict
 from ibis.common.dispatch import lazy_singledispatch
-from ibis.common.typing import Coercible, CoercionError, bind_typevars
+from ibis.common.typing import Coercible, CoercionError, bind_typevars, get_parameters
 from ibis.util import is_function, is_iterable, promote_tuple
 
 try:
@@ -90,7 +90,6 @@ class Pattern(Validator, Hashable):
         origin, args = get_origin(annot), get_args(annot)
 
         if origin is None:
-            print(annot)
             if annot is Ellipsis:  # TODO(kszucs): test this
                 return Any()
             elif annot is None:
@@ -141,10 +140,13 @@ class Pattern(Validator, Hashable):
         elif issubclass(origin, Coercible) and args:
             # would be nice to pass the typevars as kwargs to __coerce__
             # so the coercible can do various things with them
+            params = get_parameters(origin, args)
             fields = bind_typevars(origin, args)
             field_inners = {k: cls.from_typehint(v) for k, v in fields.items()}
             # CoercedTo(origin) & GenericInstanceOf(origin, field_inners)
-            return GenericCoercedTo(origin, frozendict(field_inners))
+            return GenericCoercedTo(
+                origin, frozendict(params), frozendict(field_inners)
+            )
         elif isinstance(origin, type) and args:
             fields = bind_typevars(origin, args)
             field_inners = {k: cls.from_typehint(v) for k, v in fields.items()}
@@ -457,7 +459,8 @@ class LazyInstanceOf(Matcher):
 def coerce(value, type):
     if type is Ellipsis:
         return value
-    result = CoercedTo(type).match(value, {})
+    p = Pattern.from_typehint(type)
+    result = p.match(value, {})
     if result is NoMatch:
         raise CoercionError(f"Unable to coerce {value} to {type}")
     return result
@@ -508,16 +511,16 @@ class CoercedTo(Matcher):
 
 
 class GenericCoercedTo(Matcher):
-    __slots__ = ("origin", "field_patterns", "checker")
+    __slots__ = ("origin", "params", "field_patterns", "checker")
 
-    def __init__(self, origin, field_patterns):
+    def __init__(self, origin, params, field_patterns):
         checker = GenericInstanceOf(origin, field_patterns)
-        super().__init__(origin, field_patterns, checker)
+        super().__init__(origin, params, field_patterns, checker)
 
     def match(self, value, context):
         # plain coercion here
         try:
-            value = self.origin.__coerce__(value)
+            value = self.origin.__coerce__(value, **self.params)
         except CoercionError:
             return NoMatch
 
@@ -548,10 +551,11 @@ class AnyOf(Matcher):
     def __init__(self, *patterns):
         super().__init__(patterns)
 
-    def match(self, value, *, context):
+    def match(self, value, context):
         for pattern in self.patterns:
-            if pattern.match(value, context=context) is not NoMatch:
-                return value
+            result = pattern.match(value, context=context)
+            if result is not NoMatch:
+                return result
         return NoMatch
 
 
@@ -561,7 +565,7 @@ class AllOf(Matcher):
     def __init__(self, *patterns):
         super().__init__(patterns)
 
-    def match(self, value, *, context):
+    def match(self, value, context):
         for pattern in self.patterns:
             value = pattern.match(value, context=context)
             if value is NoMatch:
@@ -592,7 +596,7 @@ class Length(Matcher):
 class Contains(Matcher):
     __slots__ = ("needle",)
 
-    def match(self, value, *, context):
+    def match(self, value, context):
         if self.needle in value:
             return value
         else:
@@ -605,7 +609,7 @@ class IsIn(Matcher):
     def __init__(self, haystack):
         super().__init__(frozenset(haystack))
 
-    def match(self, value, *, context):
+    def match(self, value, context):
         if value in self.haystack:
             return value
         else:
@@ -621,7 +625,7 @@ class SequenceOf(Matcher):
         length_pattern = Length(at_least=at_least, at_most=at_most)
         super().__init__(item_pattern, type_pattern, length_pattern)
 
-    def match(self, values, *, context):
+    def match(self, values, context):
         if not is_iterable(values):
             return NoMatch
 
@@ -648,7 +652,7 @@ class TupleOf(Matcher):
         else:
             return SequenceOf(patterns, tuple)
 
-    def match(self, values, *, context):
+    def match(self, values, context):
         if not is_iterable(values):
             return NoMatch
 
@@ -714,7 +718,7 @@ class CallableWith(Matcher):
     def __init__(self, arg_patterns, return_pattern=None):
         super().__init__(tuple(arg_patterns), return_pattern or Any())
 
-    def match(self, value, *, context):
+    def match(self, value, context):
         from ibis.common.annotations import annotated
 
         if not callable(value):
@@ -761,7 +765,7 @@ class PatternSequence(Matcher):
     def first_pattern(self):
         return self.pattern_window[0][0]
 
-    def match(self, value, *, context):
+    def match(self, value, context):
         it = RewindableIterator(value)
         result = []
 
@@ -829,7 +833,7 @@ class PatternMapping(Matcher):
         values_pattern = PatternSequence(list(map(pattern, patterns.values())))
         super().__init__(keys_pattern, values_pattern)
 
-    def match(self, value, *, context):
+    def match(self, value, context):
         if not isinstance(value, Mapping):
             return NoMatch
 
