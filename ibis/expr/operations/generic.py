@@ -213,55 +213,15 @@ class Literal(Value[T, Scalar], Coercible):
 
     output_shape = rlz.Shape.SCALAR
 
-    # TODO(kszucs): support ... as a placeholder for None
-    # call dtype => T to indicate typevar bound
-    # should support only dtype classes not instances
-    @classmethod
-    def __coerce__(cls, value, T=...):
-        if isinstance(value, cls):
-            return value
-            # raise ValueError("Cannot coerce a Literal")
-            # return coerce(value, Value[T, ...])
-
-        try:
-            inferred_dtype = dt.infer(value)
-        except (IbisInputError, IbisTypeError):
-            # TODO(kszucs): this should be InferenceError
-            has_inferred = False
-        else:
-            has_inferred = True
-
-        if T is Ellipsis:  # or any
-            has_explicit = False
-        else:
-            has_explicit = True
-            explicit_dtype = dt.dtype(T)
-
-        if has_explicit and has_inferred:
-            # ensure type correctness: check that the inferred dtype is
-            # implicitly castable to the explicitly given dtype and value
-            # TODO(kszucs): this could be added to Dtype.__coerce__ then
-            # T could be a coercer/matcher instead of a type
-            if not dt.castable(inferred_dtype, explicit_dtype, value=value):
-                raise CoercionError(
-                    f"Value {value!r} cannot be safely coerced to `{explicit_dtype}`"
-                )
-            dtype = explicit_dtype
-        elif has_explicit:
-            dtype = explicit_dtype
-        elif has_inferred:
-            dtype = inferred_dtype
-        else:
-            raise CoercionError(
-                f"The datatype of value {value!r} cannot be inferred, try "
-                "passing it explicitly with the `type` keyword."
-            )
-
-        if dtype.is_null():
-            return NullLiteral()
-
-        value = dt.normalize(dtype, value)
-        return Literal(value, dtype=dtype)
+    # # TODO(kszucs): support ... as a placeholder for None
+    # # call dtype => T to indicate typevar bound
+    # # should support only dtype classes not instances
+    # @classmethod
+    # def __coerce__(cls, value, T=...):
+    #     if isinstance(value, cls):
+    #         return value
+    #         # raise ValueError("Cannot coerce a Literal")
+    #         # return coerce(value, Value[T, ...])
 
     @property
     def name(self):
@@ -272,6 +232,7 @@ class Literal(Value[T, Scalar], Coercible):
         return self.dtype
 
 
+# TODO(kszucs): consider to remove this
 @public
 class NullLiteral(Literal[dt.Null], Singleton):
     """Typeless NULL literal."""

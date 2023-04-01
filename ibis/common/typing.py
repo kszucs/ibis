@@ -31,6 +31,7 @@ def discover_typehints(obj):
     module_name = getattr(obj, '__module__', None)
     return evaluate_annotations(annotations, module_name, localns=vars(obj))
 
+
 # raise is parameter cannot be identified (missing type annotation from the discovery)
 def bind_typevars(origin, args):
     names = (p.__name__ for p in getattr(origin, "__parameters__", ()))

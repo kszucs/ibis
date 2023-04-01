@@ -10,7 +10,7 @@ from typing import Dict, List, NamedTuple, Set, Tuple
 import pytest
 
 import ibis.expr.datatypes as dt
-from ibis.common.patterns import MatchError, NoMatch, Pattern, coerce, ValidationError
+from ibis.common.patterns import MatchError, NoMatch, Pattern, ValidationError, coerce
 from ibis.common.typing import CoercionError
 
 

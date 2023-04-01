@@ -7,12 +7,12 @@ from public import public
 
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-
 from ibis import util
+from ibis.common.annotations import attribute
+from ibis.common.exceptions import IbisInputError, IbisTypeError
 from ibis.common.graph import Node as Traversable
 from ibis.common.grounds import Concrete
 from ibis.common.patterns import coerce
-from ibis.common.annotations import attribute
 from ibis.common.typing import Coercible, CoercionError
 
 if TYPE_CHECKING:
@@ -78,9 +78,8 @@ S = TypeVar("S", bound=rlz.Shape)
 @public
 class Value(Node, Named, Coercible, Generic[T, S]):
     @classmethod
-    def __coerce__(cls, value, T=..., S=...):
-        # should move the Literal.__coerce__ implementation here
-        from ibis.expr.operations import Literal
+    def __coerce__(cls, value):
+        from ibis.expr.operations import Literal, NullLiteral
         from ibis.expr.types import Expr
 
         if isinstance(value, Expr):
@@ -88,33 +87,13 @@ class Value(Node, Named, Coercible, Generic[T, S]):
 
         if isinstance(value, Value):
             return value
-            # raise ValueError("EEEEE")
-            # value = coerce(value, Literal[T])
 
-        value = coerce(value, Literal)
+        dtype = dt.infer(value)
+        if dtype.is_null():
+            return NullLiteral()
 
-
-        # if T is not Ellipsis:
-        #     dtype = dt.dtype(T)
-        #     # retrieve literal values for implicit cast check
-        #     pyval = getattr(value, 'value', None)
-        #     if not dt.castable(value.output_dtype, dtype, value=pyval):
-        #         raise CoercionError(
-        #             f'Given argument with datatype {value.output_dtype} is not '
-        #             f'implicitly castable to {dtype}'
-        #         )
-
-        # if S is not Ellipsis:
-        #     if not issubclass(S, DataShape):
-        #         raise TypeError(
-        #             f"Shape specification {S} is not a subclass of DataShape"
-        #         )
-        #     if value.output_shape is not S:
-        #         raise CoercionError(
-        #             f"Given argument with shape {value.output_shape} is not {S}"
-        #         )
-
-        return value
+        value = dt.normalize(dtype, value)
+        return Literal(value, dtype=dtype)
 
     # TODO(kszucs): cover it with tests
     # TODO(kszucs): figure out how to represent not named arguments
@@ -122,7 +101,6 @@ class Value(Node, Named, Coercible, Generic[T, S]):
     def name(self) -> str:
         args = ", ".join(arg.name for arg in self.__args__ if isinstance(arg, Named))
         return f"{self.__class__.__name__}({args})"
-
 
     # it mut use -> T
     @property
@@ -134,6 +112,7 @@ class Value(Node, Named, Coercible, Generic[T, S]):
         -------
         dt.DataType
         """
+
     # @attribute.default
     # def output_dtype()
 
@@ -159,8 +138,6 @@ class Value(Node, Named, Coercible, Generic[T, S]):
             typename = self.output_dtype.scalar
 
         return getattr(ir, typename)(self)
-
-
 
 
 @public

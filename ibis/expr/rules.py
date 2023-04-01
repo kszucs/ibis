@@ -45,7 +45,6 @@ class Shape(enum.IntEnum):
         return self is Shape.COLUMNAR
 
 
-
 @public
 def highest_precedence_shape(nodes):
     return max(node.output_shape for node in nodes)

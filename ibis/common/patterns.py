@@ -13,10 +13,11 @@ In addition to those the new approach has the following advantages:
 - Support structural pattern matching for sequences, mappings and objects.
 """
 from __future__ import annotations
-from enum import Enum
+
 import numbers
 from abc import ABC, abstractmethod
 from collections.abc import Hashable, Mapping, Sequence
+from enum import Enum
 from inspect import Parameter
 from itertools import chain, zip_longest
 from typing import Any as AnyType

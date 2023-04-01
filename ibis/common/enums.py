@@ -6,7 +6,6 @@ from public import public
 from ibis.common.typing import Coercible, CoercionError
 
 
-
 class ABCEnumMeta(EnumMeta, ABCMeta):
     pass
 
