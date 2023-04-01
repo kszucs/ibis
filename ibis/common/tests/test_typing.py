@@ -1,5 +1,3 @@
-import io
-import typing
 from typing import Generic, Optional, TypeVar, Union
 
 from ibis.common.typing import evaluate_annotations, get_type_hints

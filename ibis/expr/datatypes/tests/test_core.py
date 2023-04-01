@@ -11,8 +11,7 @@ import pytest
 
 import ibis.expr.datatypes as dt
 from ibis.common.enums import IntervalUnit
-from ibis.common.patterns import MatchError, NoMatch, Pattern, ValidationError, coerce
-from ibis.common.typing import CoercionError
+from ibis.common.patterns import NoMatch, Pattern, ValidationError
 
 
 def test_validate_type():

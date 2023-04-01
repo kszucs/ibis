@@ -8,12 +8,9 @@ from ibis.common.collections import frozendict
 from ibis.common.patterns import (
     CoercedTo,
     GenericCoercedTo,
-    InstanceOf,
     Pattern,
     ValidationError,
-    coerce,
 )
-from ibis.common.typing import CoercionError
 from ibis.expr.rules import Shape
 
 
@@ -34,18 +31,6 @@ from ibis.expr.rules import Shape
 def test_literal_coercion_type_inference(value, dtype):
     assert ops.Literal.__coerce__(value) == ops.Literal(value, dtype)
     assert ops.Literal.__coerce__(value, dtype) == ops.Literal(value, dtype)
-
-
-# def test_literal_coercion_not_castable():
-#     msg = "Value 1 cannot be safely coerced to `string`"
-#     with pytest.raises(CoercionError, match=msg):
-#         ops.Literal.__coerce__(1, dt.string)
-
-
-# def test_literal_verify_instance_dtype():
-#     instance = ops.Literal(1, dt.int8)
-#     assert instance.__verify__(dt.int8) is True
-#     assert instance.__matches__(dt.int16) is False
 
 
 def test_coerced_to_literal():
@@ -76,33 +61,32 @@ def test_coerced_to_literal():
         p.validate(one, {})
 
 
-# TODO(kszucs): test filtering for other dtypes and shapes
 def test_coerced_to_value():
     one = ops.Literal(1, dt.int8)
 
-    # p = Pattern.from_typehint(ops.Value)
-    # assert p.validate(1, {}) == one
+    p = Pattern.from_typehint(ops.Value)
+    assert p.validate(1, {}) == one
 
-    # p = Pattern.from_typehint(ops.Value[dt.Int8, ...])
-    # assert p.validate(1, {}) == one
+    p = Pattern.from_typehint(ops.Value[dt.Int8, ...])
+    assert p.validate(1, {}) == one
 
-    # p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.SCALAR])
-    # assert p.validate(1, {}) == one
+    p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.SCALAR])
+    assert p.validate(1, {}) == one
 
-    # p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.COLUMNAR])
-    # with pytest.raises(ValidationError):
-    #     p.validate(1, {})
+    p = Pattern.from_typehint(ops.Value[dt.Int8, Shape.COLUMNAR])
+    with pytest.raises(ValidationError):
+        p.validate(1, {})
 
-    # # dt.Integer is not instantiable so it will be only used for checking
-    # # that the produced literal has any integer datatype
-    # p = Pattern.from_typehint(ops.Value[dt.Integer, ...])
-    # assert p.validate(1, {}) == one
+    # dt.Integer is not instantiable so it will be only used for checking
+    # that the produced literal has any integer datatype
+    p = Pattern.from_typehint(ops.Value[dt.Integer, ...])
+    assert p.validate(1, {}) == one
 
-    # # same applies here, the coercion itself will use only the inferred datatype
-    # # but then the result is checked against the given typehint
-    # p = Pattern.from_typehint(ops.Value[dt.Int8 | dt.Int16, ...])
-    # assert p.validate(1, {}) == one
-    # assert p.validate(128, {}) == ops.Literal(128, dt.int16)
+    # same applies here, the coercion itself will use only the inferred datatype
+    # but then the result is checked against the given typehint
+    p = Pattern.from_typehint(ops.Value[dt.Int8 | dt.Int16, ...])
+    assert p.validate(1, {}) == one
+    assert p.validate(128, {}) == ops.Literal(128, dt.int16)
 
     p1 = Pattern.from_typehint(ops.Value[dt.Int8, ...])
     p2 = Pattern.from_typehint(ops.Value[dt.Int16, Shape.SCALAR])
@@ -110,4 +94,4 @@ def test_coerced_to_value():
     assert p2.validate(1, {}) == ops.Literal(1, dt.int16)
 
     p = p1 | p2
-    print(p.validate(1, {}))
+    assert p.validate(1, {}) == one

@@ -6,14 +6,11 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 from public import public
 
 import ibis.expr.datatypes as dt
-import ibis.expr.patterns as pn
 import ibis.expr.rules as rlz
 from ibis import util
-from ibis.common.annotations import attribute
-from ibis.common.exceptions import IbisInputError, IbisTypeError, InputTypeError
+from ibis.common.exceptions import IbisTypeError
 from ibis.common.graph import Node as Traversable
 from ibis.common.grounds import Concrete
-from ibis.common.patterns import coerce
 from ibis.common.typing import Coercible, CoercionError
 
 if TYPE_CHECKING:
@@ -58,18 +55,6 @@ class Named(ABC):
         -------
         str
         """
-
-
-class DataShape:
-    pass
-
-
-class Scalar(DataShape):
-    pass
-
-
-class Columnar(DataShape):
-    pass
 
 
 T = TypeVar("T", bound=dt.DataType)
@@ -168,7 +153,7 @@ class Binary(Value):
 @public
 class Argument(Value):
     name: str
-    shape = rlz.instance_of(rlz.Shape)
+    shape: rlz.Shape
     dtype: dt.DataType
 
     @property

@@ -7,8 +7,8 @@ import enum
 import ipaddress
 import itertools
 import uuid
-from typing import Any, Optional, Tuple, TypeVar, Union
 from typing import Literal as In
+from typing import Optional, TypeVar, Union
 
 import numpy as np
 from public import public
@@ -18,11 +18,9 @@ import ibis.expr.rules as rlz
 from ibis.common import exceptions as com
 from ibis.common.annotations import attribute
 from ibis.common.collections import frozendict
-from ibis.common.exceptions import IbisInputError, IbisTypeError
 from ibis.common.grounds import Singleton
-from ibis.common.patterns import coerce
-from ibis.common.typing import Coercible, CoercionError
-from ibis.expr.operations.core import Columnar, DataShape, Named, Scalar, Unary, Value
+from ibis.common.typing import Coercible
+from ibis.expr.operations.core import Named, Unary, Value
 
 
 @public
@@ -175,11 +173,10 @@ class Least(Value):
 
 
 T = TypeVar("T", bound=dt.DataType)
-S = TypeVar("S", bound=DataShape)
 
 
 @public
-class Literal(Value[T, Scalar], Coercible):
+class Literal(Value[T, rlz.Shape.SCALAR], Coercible):
     __valid_input_types__ = (
         bytes,
         datetime.date,
