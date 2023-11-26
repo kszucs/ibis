@@ -1461,15 +1461,11 @@ class Backend(BaseBackend, CanCreateSchema):
             else:
                 table = data.to_pyarrow(schema)
 
-            # register creates a transaction, and we can't nest transactions so
-            # we create a function to encapsulate the whole shebang
-            def _register(name, table):
-                self.con.register(name, table)
-
+            table = getattr(table, "obj", table)
             try:
-                _register(name, table)
+                self.con.register(name, table)
             except duckdb.NotImplementedException:
-                _register(name, data.to_pyarrow(schema))
+                self.con.register(name, data.to_pyarrow(schema))
 
     def _get_temp_view_definition(self, name: str, definition) -> str:
         yield f"CREATE OR REPLACE TEMPORARY VIEW {name} AS {definition}"
