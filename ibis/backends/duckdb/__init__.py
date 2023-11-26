@@ -1446,6 +1446,7 @@ class Backend(BaseBackend, CanCreateSchema):
 
             if isinstance(data := op.data, PandasDataFrameProxy):
                 table = data.to_frame()
+                table = getattr(table, "obj", table)
 
                 # convert to object string dtypes because duckdb is either
                 # 1. extremely slow to register DataFrames with not-pyarrow
@@ -1453,7 +1454,7 @@ class Backend(BaseBackend, CanCreateSchema):
                 # 2. broken for string[pyarrow] dtypes (segfault)
                 if conversions := {
                     colname: "str"
-                    for colname, col in getattr(table, "obj", table).items()
+                    for colname, col in table.items()
                     if isinstance(col.dtype, pd.StringDtype)
                 }:
                     table = table.astype(conversions)
@@ -1463,7 +1464,7 @@ class Backend(BaseBackend, CanCreateSchema):
             # register creates a transaction, and we can't nest transactions so
             # we create a function to encapsulate the whole shebang
             def _register(name, table):
-                self.con.register(name, getattr(table, "obj", table))
+                self.con.register(name, table)
 
             try:
                 _register(name, table)
