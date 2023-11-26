@@ -1467,7 +1467,7 @@ class Backend(BaseBackend, CanCreateSchema):
                 # 2. broken for string[pyarrow] dtypes (segfault)
                 if conversions := {
                     colname: "str"
-                    for colname, col in table.items()
+                    for colname, col in getattr(table, "obj", table).items()
                     if isinstance(col.dtype, pd.StringDtype)
                 }:
                     table = table.astype(conversions)
@@ -1477,7 +1477,7 @@ class Backend(BaseBackend, CanCreateSchema):
             # register creates a transaction, and we can't nest transactions so
             # we create a function to encapsulate the whole shebang
             def _register(name, table):
-                self.con.register(name, table)
+                self.con.register(name, getattr(table, "obj", table))
 
             try:
                 _register(name, table)
