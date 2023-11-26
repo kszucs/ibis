@@ -16,7 +16,6 @@ from pytest import param
 import ibis
 import ibis.common.exceptions as com
 import ibis.expr.datatypes as dt
-from ibis.backends.pandas.execution.temporal import day_name
 from ibis.common.annotations import ValidationError
 
 try:
@@ -1941,7 +1940,7 @@ def test_day_of_week_column(backend, alltypes, df):
     backend.assert_series_equal(result_index, expected_index, check_names=False)
 
     result_day = expr.full_name().name("tmp").execute()
-    expected_day = day_name(df.timestamp_col.dt)
+    expected_day = df.timestamp_col.dt.day_name()
 
     backend.assert_series_equal(result_day, expected_day, check_names=False)
 
@@ -1956,7 +1955,7 @@ def test_day_of_week_column(backend, alltypes, df):
         ),
         param(
             lambda t: t.timestamp_col.day_of_week.full_name().length().sum(),
-            lambda s: day_name(s.dt).str.len().sum(),
+            lambda s: s.dt.day_name().str.len().sum(),
             id="day_of_week_full_name",
             marks=[
                 pytest.mark.notimpl(
