@@ -22,9 +22,7 @@ FROM (
         t1.n_comment AS n_comment
       FROM "supplier" AS t0
       INNER JOIN "nation" AS t1
-        ON (
-          t0.s_nationkey = t1.n_nationkey
-        )
+        ON t0.s_nationkey = t1.n_nationkey
     ) AS t8
     WHERE
       (

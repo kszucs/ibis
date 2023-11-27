@@ -53,9 +53,7 @@ FROM (
         t1.l_comment AS l_comment
       FROM "orders" AS t0
       INNER JOIN "lineitem" AS t1
-        ON (
-          t0.o_orderkey = t1.l_orderkey
-        )
+        ON t0.o_orderkey = t1.l_orderkey
     ) AS t3
     WHERE
       t3.l_shipmode IN ('MAIL', 'SHIP')

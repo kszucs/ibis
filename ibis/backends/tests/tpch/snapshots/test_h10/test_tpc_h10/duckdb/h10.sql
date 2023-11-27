@@ -22,10 +22,8 @@ FROM (
         t8.c_address AS c_address,
         t8.c_phone AS c_phone,
         t8.c_comment AS c_comment,
-        SUM((
-          t8.l_extendedprice * (
-            CAST(1 AS TINYINT) - t8.l_discount
-          )
+        SUM(t8.l_extendedprice * (
+          CAST(1 AS TINYINT) - t8.l_discount
         )) AS revenue
       FROM (
         SELECT
@@ -71,17 +69,11 @@ FROM (
             t3.n_comment AS n_comment
           FROM "customer" AS t0
           INNER JOIN "orders" AS t1
-            ON (
-              t0.c_custkey = t1.o_custkey
-            )
+            ON t0.c_custkey = t1.o_custkey
           INNER JOIN "lineitem" AS t2
-            ON (
-              t2.l_orderkey = t1.o_orderkey
-            )
+            ON t2.l_orderkey = t1.o_orderkey
           INNER JOIN "nation" AS t3
-            ON (
-              t0.c_nationkey = t3.n_nationkey
-            )
+            ON t0.c_nationkey = t3.n_nationkey
         ) AS t7
         WHERE
           (

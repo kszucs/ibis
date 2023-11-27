@@ -1,23 +1,17 @@
 SELECT
   (
-    (
-      SUM(
-        CASE
-          WHEN t4.p_type LIKE 'PROMO%'
-          THEN (
-            t4.l_extendedprice * (
-              CAST(1 AS TINYINT) - t4.l_discount
-            )
-          )
-          ELSE CAST(0 AS TINYINT)
-        END
-      ) * CAST(100 AS TINYINT)
-    ) / SUM((
-      t4.l_extendedprice * (
-        CAST(1 AS TINYINT) - t4.l_discount
-      )
-    ))
-  ) AS promo_revenue
+    SUM(
+      CASE
+        WHEN t4.p_type LIKE 'PROMO%'
+        THEN t4.l_extendedprice * (
+          CAST(1 AS TINYINT) - t4.l_discount
+        )
+        ELSE CAST(0 AS TINYINT)
+      END
+    ) * CAST(100 AS TINYINT)
+  ) / SUM(t4.l_extendedprice * (
+    CAST(1 AS TINYINT) - t4.l_discount
+  )) AS promo_revenue
 FROM (
   SELECT
     *
@@ -50,9 +44,7 @@ FROM (
       t1.p_comment AS p_comment
     FROM "lineitem" AS t0
     INNER JOIN "part" AS t1
-      ON (
-        t0.l_partkey = t1.p_partkey
-      )
+      ON t0.l_partkey = t1.p_partkey
   ) AS t3
   WHERE
     (

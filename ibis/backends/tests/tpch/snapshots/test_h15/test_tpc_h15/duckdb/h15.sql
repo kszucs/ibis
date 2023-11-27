@@ -25,10 +25,8 @@ FROM (
       INNER JOIN (
         SELECT
           t2.l_suppkey AS l_suppkey,
-          SUM((
-            t2.l_extendedprice * (
-              CAST(1 AS TINYINT) - t2.l_discount
-            )
+          SUM(t2.l_extendedprice * (
+            CAST(1 AS TINYINT) - t2.l_discount
           )) AS total_revenue
         FROM (
           SELECT
@@ -45,9 +43,7 @@ FROM (
         GROUP BY
           1
       ) AS t3
-        ON (
-          t0.s_suppkey = t3.l_suppkey
-        )
+        ON t0.s_suppkey = t3.l_suppkey
     ) AS t5
     WHERE
       (
@@ -69,10 +65,8 @@ FROM (
             INNER JOIN (
               SELECT
                 t2.l_suppkey AS l_suppkey,
-                SUM((
-                  t2.l_extendedprice * (
-                    CAST(1 AS TINYINT) - t2.l_discount
-                  )
+                SUM(t2.l_extendedprice * (
+                  CAST(1 AS TINYINT) - t2.l_discount
                 )) AS total_revenue
               FROM (
                 SELECT
@@ -89,9 +83,7 @@ FROM (
               GROUP BY
                 1
             ) AS t3
-              ON (
-                t0.s_suppkey = t3.l_suppkey
-              )
+              ON t0.s_suppkey = t3.l_suppkey
           ) AS t5
         )
       )

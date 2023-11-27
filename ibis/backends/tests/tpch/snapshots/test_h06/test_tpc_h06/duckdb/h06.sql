@@ -1,7 +1,5 @@
 SELECT
-  SUM((
-    t1.l_extendedprice * t1.l_discount
-  )) AS revenue
+  SUM(t1.l_extendedprice * t1.l_discount) AS revenue
 FROM (
   SELECT
     *

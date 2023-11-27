@@ -17,32 +17,20 @@ FROM (
         t1.l_extendedprice AS l_extendedprice,
         t1.l_discount AS l_discount,
         EXTRACT('year' FROM t1.l_shipdate) AS l_year,
-        (
-          t1.l_extendedprice * (
-            CAST(1 AS TINYINT) - t1.l_discount
-          )
+        t1.l_extendedprice * (
+          CAST(1 AS TINYINT) - t1.l_discount
         ) AS volume
       FROM "supplier" AS t0
       INNER JOIN "lineitem" AS t1
-        ON (
-          t0.s_suppkey = t1.l_suppkey
-        )
+        ON t0.s_suppkey = t1.l_suppkey
       INNER JOIN "orders" AS t2
-        ON (
-          t2.o_orderkey = t1.l_orderkey
-        )
+        ON t2.o_orderkey = t1.l_orderkey
       INNER JOIN "customer" AS t3
-        ON (
-          t3.c_custkey = t2.o_custkey
-        )
+        ON t3.c_custkey = t2.o_custkey
       INNER JOIN "nation" AS t4
-        ON (
-          t0.s_nationkey = t4.n_nationkey
-        )
+        ON t0.s_nationkey = t4.n_nationkey
       INNER JOIN "nation" AS t5
-        ON (
-          t3.c_nationkey = t5.n_nationkey
-        )
+        ON t3.c_nationkey = t5.n_nationkey
     ) AS t11
     WHERE
       (

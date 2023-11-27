@@ -14,10 +14,8 @@ FROM (
         t6.l_orderkey AS l_orderkey,
         t6.o_orderdate AS o_orderdate,
         t6.o_shippriority AS o_shippriority,
-        SUM((
-          t6.l_extendedprice * (
-            CAST(1 AS TINYINT) - t6.l_discount
-          )
+        SUM(t6.l_extendedprice * (
+          CAST(1 AS TINYINT) - t6.l_discount
         )) AS revenue
       FROM (
         SELECT
@@ -59,13 +57,9 @@ FROM (
             t2.l_comment AS l_comment
           FROM "customer" AS t0
           INNER JOIN "orders" AS t1
-            ON (
-              t0.c_custkey = t1.o_custkey
-            )
+            ON t0.c_custkey = t1.o_custkey
           INNER JOIN "lineitem" AS t2
-            ON (
-              t2.l_orderkey = t1.o_orderkey
-            )
+            ON t2.l_orderkey = t1.o_orderkey
         ) AS t5
         WHERE
           (

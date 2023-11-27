@@ -6,20 +6,16 @@ FROM (
     t1.l_linestatus AS l_linestatus,
     SUM(t1.l_quantity) AS sum_qty,
     SUM(t1.l_extendedprice) AS sum_base_price,
-    SUM((
-      t1.l_extendedprice * (
-        CAST(1 AS TINYINT) - t1.l_discount
-      )
+    SUM(t1.l_extendedprice * (
+      CAST(1 AS TINYINT) - t1.l_discount
     )) AS sum_disc_price,
     SUM(
       (
-        (
-          t1.l_extendedprice * (
-            CAST(1 AS TINYINT) - t1.l_discount
-          )
-        ) * (
-          t1.l_tax + CAST(1 AS TINYINT)
+        t1.l_extendedprice * (
+          CAST(1 AS TINYINT) - t1.l_discount
         )
+      ) * (
+        t1.l_tax + CAST(1 AS TINYINT)
       )
     ) AS sum_charge,
     AVG(t1.l_quantity) AS avg_qty,

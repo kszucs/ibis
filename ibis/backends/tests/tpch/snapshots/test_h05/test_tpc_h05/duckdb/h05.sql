@@ -3,10 +3,8 @@ SELECT
 FROM (
   SELECT
     t12.n_name AS n_name,
-    SUM((
-      t12.l_extendedprice * (
-        CAST(1 AS TINYINT) - t12.l_discount
-      )
+    SUM(t12.l_extendedprice * (
+      CAST(1 AS TINYINT) - t12.l_discount
     )) AS revenue
   FROM (
     SELECT
@@ -62,27 +60,15 @@ FROM (
         t5.r_comment AS r_comment
       FROM "customer" AS t0
       INNER JOIN "orders" AS t1
-        ON (
-          t0.c_custkey = t1.o_custkey
-        )
+        ON t0.c_custkey = t1.o_custkey
       INNER JOIN "lineitem" AS t2
-        ON (
-          t2.l_orderkey = t1.o_orderkey
-        )
+        ON t2.l_orderkey = t1.o_orderkey
       INNER JOIN "supplier" AS t3
-        ON (
-          t2.l_suppkey = t3.s_suppkey
-        )
+        ON t2.l_suppkey = t3.s_suppkey
       INNER JOIN "nation" AS t4
-        ON (
-          t0.c_nationkey = t3.s_nationkey
-        ) AND (
-          t3.s_nationkey = t4.n_nationkey
-        )
+        ON t0.c_nationkey = t3.s_nationkey AND t3.s_nationkey = t4.n_nationkey
       INNER JOIN "region" AS t5
-        ON (
-          t4.n_regionkey = t5.r_regionkey
-        )
+        ON t4.n_regionkey = t5.r_regionkey
     ) AS t11
     WHERE
       (
