@@ -602,7 +602,7 @@ def test_array_filter(backend, con, input, output):
 
 @builtin_array
 @pytest.mark.notimpl(
-    ["mssql", "pandas", "polars", "postgres"],
+    ["mssql", "polars", "postgres"],
     raises=com.OperationNotDefinedError,
 )
 @pytest.mark.notimpl(["dask"], raises=com.OperationNotDefinedError)
