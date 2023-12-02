@@ -1035,7 +1035,6 @@ timestamp_value = pd.Timestamp("2018-01-01 18:18:18")
                         "dask",
                         "impala",
                         "mysql",
-                        "pandas",
                         "postgres",
                         "snowflake",
                         "sqlite",
@@ -1621,12 +1620,6 @@ def test_interval_add_cast_column(backend, alltypes, df):
             ),
             "%Y%m%d",
             marks=[
-                pytest.mark.notimpl(
-                    [
-                        "pandas",
-                    ],
-                    raises=com.OperationNotDefinedError,
-                ),
                 pytest.mark.notimpl(
                     [
                         "pyspark",
@@ -2243,9 +2236,7 @@ def test_time_literal(con, backend):
 @pytest.mark.broken(
     ["sqlite"], raises=AssertionError, reason="SQLite returns Timedelta from execution"
 )
-@pytest.mark.notimpl(
-    ["dask", "datafusion", "pandas"], raises=com.OperationNotDefinedError
-)
+@pytest.mark.notimpl(["dask", "datafusion"], raises=com.OperationNotDefinedError)
 @pytest.mark.notyet(["oracle"], raises=sa.exc.DatabaseError)
 @pytest.mark.parametrize(
     "microsecond",
