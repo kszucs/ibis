@@ -9,10 +9,10 @@ import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.types as ir
 from ibis import util
-from ibis.common.annotations import annotated, attribute
-from ibis.common.deferred import Deferred, Resolver, deferrable
+from koerce import annotated, attribute, Deferred, Builder as Resolver, Annotable
+from ibis.common.deferred import deferrable
 from ibis.common.exceptions import IbisInputError
-from ibis.common.grounds import Concrete
+
 from ibis.common.selectors import Selector  # noqa: TCH001
 from ibis.common.typing import VarTuple  # noqa: TCH001
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-class Builder(Concrete):
+class Builder(Annotable, immutable=True, hashable=True):
     pass
 
 

@@ -9,16 +9,14 @@ from typing_extensions import Any, Self, TypeVar
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-from ibis.common.annotations import attribute
-from ibis.common.graph import Node as Traversable
-from ibis.common.grounds import Concrete
-from ibis.common.patterns import Coercible, CoercionError
+from koerce import attribute
+from ibis.common.graph import Node as GraphNode
 from ibis.common.typing import DefaultTypeVars
 from ibis.util import is_iterable
 
 
 @public
-class Node(Concrete, Traversable):
+class Node(GraphNode):
     def equals(self, other) -> bool:
         if not isinstance(other, Node):
             raise TypeError(
@@ -40,7 +38,7 @@ S = TypeVar("S", bound=ds.DataShape, default=ds.Any, covariant=True)
 
 
 @public
-class Value(Node, Coercible, DefaultTypeVars, Generic[T, S]):
+class Value(Node, DefaultTypeVars, Generic[T, S]):
     @classmethod
     def __coerce__(
         cls, value: Any, T: Optional[type] = None, S: Optional[type] = None

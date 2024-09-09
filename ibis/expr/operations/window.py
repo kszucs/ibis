@@ -12,7 +12,7 @@ import ibis.common.exceptions as com
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-from ibis.common.patterns import CoercionError
+
 from ibis.common.typing import VarTuple  # noqa: TCH001
 from ibis.expr.operations.analytic import Analytic  # noqa: TCH001
 from ibis.expr.operations.core import Column, Value

@@ -6,8 +6,7 @@ from itertools import tee
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from public import public
-
-from ibis.common.bases import Abstract, Hashable
+from koerce import Annotable as Abstract
 from ibis.common.exceptions import ConflictingValuesError
 
 if TYPE_CHECKING:
@@ -277,9 +276,10 @@ class MapSet(Mapping[K, V]):
 
 
 @public
-class FrozenDict(dict, Mapping[K, V], Hashable):
+class FrozenDict(dict[K, V]):#, Mapping[K, V]):
     __slots__ = ("__precomputed_hash__",)
-    __precomputed_hash__: int
+    # TODO(kszucs): Annotable is the base class, so traditional typehint is not allowed
+    # __precomputed_hash__: int
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -318,51 +318,6 @@ class FrozenOrderedDict(FrozenDict[K, V]):
 
     def __ne__(self, other: Any) -> bool:
         return not self == other
-
-
-class RewindableIterator(Iterator[V]):
-    """Iterator that can be rewound to a checkpoint.
-
-    Examples
-    --------
-    >>> it = RewindableIterator(range(5))
-    >>> next(it)
-    0
-    >>> next(it)
-    1
-    >>> it.checkpoint()
-    >>> next(it)
-    2
-    >>> next(it)
-    3
-    >>> it.rewind()
-    >>> next(it)
-    2
-    >>> next(it)
-    3
-    >>> next(it)
-    4
-
-    """
-
-    __slots__ = ("_iterator", "_checkpoint")
-
-    def __init__(self, iterable):
-        self._iterator = iter(iterable)
-        self._checkpoint = None
-
-    def __next__(self):
-        return next(self._iterator)
-
-    def rewind(self):
-        """Rewind the iterator to the last checkpoint."""
-        if self._checkpoint is None:
-            raise ValueError("No checkpoint to rewind to.")
-        self._iterator, self._checkpoint = tee(self._checkpoint)
-
-    def checkpoint(self):
-        """Create a checkpoint of the current iterator state."""
-        self._iterator, self._checkpoint = tee(self._iterator)
 
 
 # Need to provide type hint as else a static type checker does not recognize

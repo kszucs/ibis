@@ -6,8 +6,9 @@ from public import public
 
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-from ibis.common.annotations import attribute
+from koerce import attribute
 from ibis.expr.operations.core import Unary, Value
+from typing import Optional
 
 
 @public
@@ -41,7 +42,7 @@ class MapGet(Value):
 
     arg: Value[dt.Map]
     key: Value
-    default: Value = None
+    default: Optional[Value] = None
 
     shape = rlz.shape_like("args")
 

@@ -8,9 +8,9 @@ from public import public
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 from ibis import util
-from ibis.common.annotations import attribute
-from ibis.common.grounds import Concrete
-from ibis.common.patterns import CoercionError, NoMatch, Pattern
+
+from koerce import attribute, pattern
+
 from ibis.common.temporal import IntervalUnit
 
 
@@ -138,7 +138,7 @@ def arg_type_error_format(op: ops.Value) -> str:
         return f"{op.name}:{op.dtype}"
 
 
-class ValueOf(Concrete, Pattern):
+class ValueOf:
     """Match a value of a specific type **instance**.
 
     This is different from the Value[T] annotations which construct
@@ -152,15 +152,17 @@ class ValueOf(Concrete, Pattern):
 
     """
 
-    dtype: Optional[dt.DataType] = None
+    __slots__ = ("dtype",)
 
-    def match(self, value, context):
-        try:
-            value = ops.Value.__coerce__(value, self.dtype)
-        except CoercionError:
-            return NoMatch
+    dtype: Optional[dt.DataType]
+
+    def __init__(self, dtype=None):
+        self.dtype = dtype
+
+    def __call__(self, value, context):
+        value = ops.Value.__coerce__(value, self.dtype)
 
         if self.dtype and not value.dtype.castable(self.dtype):
-            return NoMatch
+            raise ValueError("Expected value implicitly castable to {self.dtype}")
 
         return value

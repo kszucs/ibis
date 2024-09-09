@@ -4,11 +4,10 @@ from typing import Any
 
 from public import public
 
-from ibis.common.grounds import Singleton
 
-
+# TODO(kszucs): it was a subclass of Singleton
 @public
-class DataShape(Singleton):
+class DataShape:
     ndim: int
     SCALAR: Scalar
     COLUMNAR: Columnar

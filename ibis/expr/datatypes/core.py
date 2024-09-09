@@ -23,11 +23,9 @@ import toolz
 from public import public
 from typing_extensions import Self
 
-from ibis.common.annotations import attribute
+from koerce import attribute, Annotable
 from ibis.common.collections import FrozenOrderedDict, MapSet
 from ibis.common.dispatch import lazy_singledispatch
-from ibis.common.grounds import Concrete, Singleton
-from ibis.common.patterns import Coercible, CoercionError
 from ibis.common.temporal import IntervalUnit, TimestampUnit
 
 
@@ -102,7 +100,7 @@ del dtype.register
 
 
 @public
-class DataType(Concrete, Coercible):
+class DataType(Annotable, immutable=True, hashable=True):
     """Base class for all data types.
 
     Instances are immutable.
@@ -463,7 +461,7 @@ class DataType(Concrete, Coercible):
 
 
 @public
-class Unknown(DataType, Singleton):
+class Unknown(DataType):
     """An unknown type."""
 
     scalar = "UnknownScalar"
@@ -471,7 +469,7 @@ class Unknown(DataType, Singleton):
 
 
 @public
-class Primitive(DataType, Singleton):
+class Primitive(DataType):
     """Values with known size."""
 
 
@@ -532,7 +530,7 @@ class Integer(Primitive, Numeric):
 
 
 @public
-class String(Variadic, Singleton):
+class String(Variadic):
     """A type representing a string.
 
     Notes
@@ -547,7 +545,7 @@ class String(Variadic, Singleton):
 
 
 @public
-class Binary(Variadic, Singleton):
+class Binary(Variadic):
     """A type representing a sequence of bytes.
 
     Notes

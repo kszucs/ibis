@@ -6,7 +6,7 @@ from public import public
 
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-from ibis.common.annotations import attribute
+from koerce import attribute
 from ibis.expr.operations import Value
 
 

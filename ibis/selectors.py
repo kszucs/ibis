@@ -66,8 +66,8 @@ import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import util
 from ibis.common.collections import frozendict  # noqa: TCH001
-from ibis.common.deferred import Deferred, Resolver
-from ibis.common.grounds import Concrete, Singleton
+from ibis.common.deferred import Deferred, Builder as Resolver
+
 from ibis.common.selectors import All, Any, Expandable, Selector
 from ibis.common.typing import VarTuple  # noqa: TCH001
 
@@ -387,7 +387,7 @@ def c(*names: str | ir.Column) -> Selector:
     return Cols(names)
 
 
-class Across(Concrete, Expandable):
+class Across(Expandable):
     selector: Selector
     funcs: Union[
         Resolver,
@@ -485,7 +485,7 @@ def across(
     return Across(selector=selector, funcs=funcs, names=names)
 
 
-class IfAnyAll(Concrete, Expandable):
+class IfAnyAll(Expandable):
     selector: Selector
     predicate: Union[Resolver, Callable[[ir.Value], ir.BooleanValue]]
     summarizer: Callable[[ir.BooleanValue, ir.BooleanValue], ir.BooleanValue]
@@ -597,7 +597,7 @@ def if_all(selector: Selector, predicate: Deferred | Callable) -> IfAnyAll:
     return IfAnyAll(selector=selector, predicate=predicate, summarizer=operator.and_)
 
 
-class Slice(Concrete):
+class Slice:
     """Hashable and smaller-scoped slice object versus the builtin one."""
 
     start: int | str | None = None
@@ -639,7 +639,7 @@ class ColumnSlice(Selector):
         return frozenset(iterable)
 
 
-class Sliceable(Singleton):
+class Sliceable:
     def __getitem__(self, key: str | int | slice | Iterable[int | str]):
         if isinstance(key, slice):
             key = Slice(key.start, key.stop, key.step)
@@ -650,7 +650,7 @@ r = Sliceable()
 """Ranges of columns."""
 
 
-class First(Singleton, Selector):
+class First(Selector):
     def expand(self, table: ir.Table) -> Sequence[ir.Value]:
         return [table[0]]
 
@@ -664,7 +664,7 @@ def first() -> Selector:
     return First()
 
 
-class Last(Singleton, Selector):
+class Last(Selector):
     def expand(self, table: ir.Table) -> Sequence[ir.Value]:
         return [table[-1]]
 
@@ -678,7 +678,7 @@ def last() -> Selector:
     return Last()
 
 
-class AllColumns(Singleton, Selector):
+class AllColumns(Selector):
     def expand(self, table: ir.Table) -> Sequence[ir.Value]:
         return list(map(table.__getitem__, table.columns))
 
@@ -692,7 +692,7 @@ def all() -> Selector:
     return AllColumns()
 
 
-class NoColumns(Singleton, Selector):
+class NoColumns(Selector):
     def expand(self, table: ir.Table) -> Sequence[ir.Value]:
         return []
 

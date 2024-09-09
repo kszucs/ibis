@@ -9,7 +9,7 @@ import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 from ibis import util
-from ibis.common.annotations import annotated
+from koerce import annotated
 from ibis.common.temporal import IntervalUnit
 from ibis.expr.types.core import _binop
 from ibis.expr.types.generic import Column, Scalar, Value

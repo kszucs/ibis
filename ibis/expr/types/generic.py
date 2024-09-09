@@ -10,8 +10,9 @@ import ibis.common.exceptions as com
 import ibis.expr.builders as bl
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.deferred import Deferred, _, deferrable
-from ibis.common.grounds import Singleton
+from koerce import Deferred, _
+from ibis.common.deferred import deferrable
+
 from ibis.expr.rewrites import rewrite_window_input
 from ibis.expr.types.core import Expr, _binop, _FixedTextJupyterMixin, _is_null_literal
 from ibis.util import deprecated, promote_list, warn_deprecated
@@ -2416,7 +2417,7 @@ class NullValue(Value):
 
 
 @public
-class NullScalar(Scalar, NullValue, Singleton):
+class NullScalar(Scalar, NullValue):
     pass
 
 

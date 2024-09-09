@@ -10,8 +10,8 @@ import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.types as ir
-from ibis.common.annotations import ValidationError
-from ibis.common.patterns import EqualTo
+
+from koerce import Eq
 
 t = ibis.table([("a", "int64")], name="t")
 
@@ -96,8 +96,8 @@ def test_node_substitution():
 
     ketto = Aliased(one, "ketto")
 
-    first_rule = EqualTo(Name("one")) >> Name("zero")
-    second_rule = EqualTo(two) >> ketto
+    first_rule = Eq(Name("one")) >> Name("zero")
+    second_rule = Eq(two) >> ketto
 
     new_values = values.replace(first_rule | second_rule)
     expected = Values((NamedValue(value=1, name=Name("zero")), ketto, three))

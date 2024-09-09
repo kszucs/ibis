@@ -8,25 +8,33 @@ import toolz
 
 import ibis.expr.operations as ops
 from ibis.common.collections import FrozenDict  # noqa: TCH001
-from ibis.common.deferred import Item, _, deferred, var
+
+from koerce import _, var, namespace, Item, Annotable, Replace, If
 from ibis.common.exceptions import ExpressionError, IbisInputError
-from ibis.common.graph import Node as Traversable
+
+# from ibis.common.graph import Node as Traversable
 from ibis.common.graph import traverse
-from ibis.common.grounds import Concrete
-from ibis.common.patterns import Check, pattern, replace
+
+# from ibis.common.patterns import Check, pattern, replace
 from ibis.common.typing import VarTuple  # noqa: TCH001
 from ibis.util import Namespace, promote_list
 
-p = Namespace(pattern, module=ops)
-d = Namespace(deferred, module=ops)
-
+p, d = namespace(ops)
 
 x = var("x")
 y = var("y")
 name = var("name")
 
 
-class DerefMap(Concrete, Traversable):
+def replace(pattern):
+    def decorator(func):
+        return Replace(pattern, func)
+
+    return decorator
+
+
+# class DerefMap(Concrete, Traversable):
+class DerefMap(Annotable, immutable=True, hashable=True):
     """Trace and replace fields from earlier relations in the hierarchy.
 
     In order to provide a nice user experience, we need to allow expressions
@@ -335,7 +343,7 @@ def rewrite_window_input(value, window):
 
 # TODO(kszucs): schema comparison should be updated to not distinguish between
 # different column order
-@replace(p.Project(y @ p.Relation) & Check(_.schema == y.schema))
+@replace(p.Project(y @ p.Relation) & If(_.schema == y.schema))
 def complete_reprojection(_, y):
     # TODO(kszucs): this could be moved to the pattern itself but not sure how
     # to express it, especially in a shorter way then the following check

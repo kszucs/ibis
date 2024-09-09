@@ -8,7 +8,7 @@ import ibis.common.exceptions as com
 import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis.common.collections import FrozenOrderedDict  # noqa: TCH001
-from ibis.common.grounds import Concrete
+from koerce import Annotable
 from ibis.expr.operations.relations import Unaliased  # noqa: TCH001
 from ibis.expr.types.relations import unwrap_aliases
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 @public
-class WindowedTable(Concrete):
+class WindowedTable(Annotable, immutable=True, hashable=True):
     """An intermediate table expression to hold windowing information."""
 
     parent: ir.Table

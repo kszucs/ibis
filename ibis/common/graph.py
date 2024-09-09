@@ -8,8 +8,8 @@ from collections import deque
 from collections.abc import Callable, Iterable, Iterator, KeysView, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Optional, TypeVar, Union
 
-from ibis.common.bases import Hashable
-from ibis.common.patterns import NoMatch, Pattern
+from koerce import Annotable, Pattern, MatchError
+
 from ibis.common.typing import _ClassInfo
 from ibis.util import experimental, promote_list
 
@@ -187,7 +187,12 @@ def _coerce_finder(obj: FinderLike, context: Optional[dict] = None) -> Finder:
         ctx = context or {}
 
         def fn(node):
-            return obj.match(node, ctx) is not NoMatch
+            try:
+                obj.apply(node, ctx)
+            except MatchError:
+                return False
+            else:
+                return True
     elif isinstance(obj, (tuple, type)):
 
         def fn(node):
@@ -245,23 +250,11 @@ def _coerce_replacer(obj: ReplacerLike, context: Optional[dict] = None) -> Repla
     return fn
 
 
-class Node(Hashable):
-    __slots__ = ()
-
+class Node(Annotable, immutable=True, hashable=True):
     @classmethod
     def __recreate__(cls, kwargs: Any) -> Self:
         """Reconstruct the node from the given arguments."""
         return cls(**kwargs)
-
-    @property
-    @abstractmethod
-    def __args__(self) -> tuple[Any, ...]:
-        """Sequence of arguments to traverse."""
-
-    @property
-    @abstractmethod
-    def __argnames__(self) -> tuple[str, ...]:
-        """Sequence of argument names."""
 
     @property
     def __children__(self) -> tuple[Node, ...]:

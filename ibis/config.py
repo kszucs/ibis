@@ -7,10 +7,17 @@ from typing import Annotated, Any, Optional
 from public import public
 
 import ibis.common.exceptions as com
-from ibis.common.grounds import Annotable
-from ibis.common.patterns import Between
+from koerce import Annotable, pattern
 
-PosInt = Annotated[int, Between(lower=0)]
+
+@pattern
+def is_positive(value, **ctx):
+    if value < 0:
+        raise ValueError(f"{value} must be positive")
+    return value
+
+
+PosInt = Annotated[int, is_positive]
 
 
 class Config(Annotable):

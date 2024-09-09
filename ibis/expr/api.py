@@ -18,10 +18,11 @@ import ibis.expr.schema as sch
 import ibis.expr.types as ir
 from ibis import selectors, util
 from ibis.backends import BaseBackend, connect
-from ibis.common.deferred import Deferred, _, deferrable
+from ibis.common.deferred import deferrable
+from koerce import Deferred, _, Annotable
 from ibis.common.dispatch import lazy_singledispatch
 from ibis.common.exceptions import IbisInputError
-from ibis.common.grounds import Concrete
+
 from ibis.common.temporal import normalize_datetime, normalize_timezone
 from ibis.expr.decompile import decompile
 from ibis.expr.schema import Schema
@@ -2063,7 +2064,7 @@ def difference(table: ir.Table, *rest: ir.Table, distinct: bool = True) -> ir.Ta
     return table.difference(*rest, distinct=distinct) if rest else table
 
 
-class Watermark(Concrete):
+class Watermark(Annotable, immutable=True, hashable=True):
     time_col: str
     allowed_delay: ir.IntervalScalar
 
