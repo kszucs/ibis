@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import product, starmap
 from typing import Optional
 
-from koerce import attribute, pattern
+from koerce import Annotable, attribute, pattern
 from public import public
 
 import ibis.expr.datatypes as dt
@@ -136,7 +136,7 @@ def arg_type_error_format(op: ops.Value) -> str:
         return f"{op.name}:{op.dtype}"
 
 
-class ValueOf:
+class ValueOf(Annotable, immutable=True):
     """Match a value of a specific type **instance**.
 
     This is different from the Value[T] annotations which construct
@@ -150,12 +150,7 @@ class ValueOf:
 
     """
 
-    __slots__ = ("dtype",)
-
-    dtype: Optional[dt.DataType]
-
-    def __init__(self, dtype=None):
-        self.dtype = dtype
+    dtype: Optional[dt.DataType] = None
 
     def __call__(self, value, **ctx):
         value = ops.Value.__coerce__(value, self.dtype)

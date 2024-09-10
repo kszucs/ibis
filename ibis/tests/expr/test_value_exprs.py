@@ -12,6 +12,7 @@ from operator import attrgetter, methodcaller
 import pytest
 import pytz
 import toolz
+from koerce import resolve
 from pytest import param
 
 import ibis
@@ -23,10 +24,10 @@ import ibis.expr.types as ir
 from ibis import _, literal
 from ibis.common.collections import frozendict
 from ibis.common.exceptions import IbisTypeError
+from ibis.common.grounds import ValidationError
 from ibis.expr import api
 from ibis.tests.util import assert_equal
 
-from koerce import resolve
 
 def test_null():
     assert ibis.literal(None).equals(ibis.null())
@@ -717,7 +718,7 @@ def test_binop_string_type_error(table, operation, left, right):
     a = table[left]
     b = table[right]
 
-    with pytest.raises((TypeError, ValidationError)):
+    with pytest.raises(ValidationError):
         operation(a, b)
 
 

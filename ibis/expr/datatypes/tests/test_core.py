@@ -11,6 +11,7 @@ from koerce import As, Pattern
 from pytest import param
 
 import ibis.expr.datatypes as dt
+from ibis.common.grounds import ValidationError
 from ibis.common.temporal import TimestampUnit, TimeUnit
 from ibis.util import get_subclasses
 

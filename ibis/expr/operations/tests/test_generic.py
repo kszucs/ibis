@@ -9,6 +9,7 @@ from koerce import NoMatch, Pattern
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
+from ibis.common.grounds import ValidationError
 
 one = ops.Literal(1, dt.int8)
 

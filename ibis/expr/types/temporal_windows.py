@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 from ibis.common.grounds import Concrete
 
+
 @public
 class WindowedTable(Concrete):
     """An intermediate table expression to hold windowing information."""

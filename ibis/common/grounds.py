@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 
-from koerce import Annotable
+from koerce import Annotable, MatchError
 from typing_extensions import Self
 
 
@@ -63,3 +63,6 @@ class Concrete(Annotable, immutable=True, hashable=True):
     @property
     def argnames(self):
         return self.__argnames__
+
+
+ValidationError = SignatureValidationError = (MatchError, ValueError, TypeError)

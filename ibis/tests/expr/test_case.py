@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import pytest
+from koerce import resolve
 
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import _
+from ibis.common.grounds import SignatureValidationError
 from ibis.tests.util import assert_equal, assert_pickle_roundtrip
 
 
@@ -114,7 +116,7 @@ def test_multiple_case_expr(table):
     )
 
     # deferred cases
-    deferred = (
+    def2 = (
         ibis.case()
         .when(_.a == 5, table.f)
         .when(_.b == 128, table.b * 2)
@@ -122,31 +124,31 @@ def test_multiple_case_expr(table):
         .else_(table.d)
         .end()
     )
-    expr2 = deferred.resolve(table)
+    expr2 = resolve(def2, {"_": table})
 
     # deferred results
-    expr3 = (
+    def3 = (
         ibis.case()
         .when(table.a == 5, _.f)
         .when(table.b == 128, _.b * 2)
         .when(table.c == 1000, _.e)
         .else_(table.d)
         .end()
-        .resolve(table)
     )
+    expr3 = resolve(def3, {"_": table})
 
     # deferred default
-    expr4 = (
+    def4 = (
         ibis.case()
         .when(table.a == 5, table.f)
         .when(table.b == 128, table.b * 2)
         .when(table.c == 1000, table.e)
         .else_(_.d)
         .end()
-        .resolve(table)
     )
+    expr4 = resolve(def4, {"_": table})
 
-    assert repr(deferred) == "<case>"
+    assert repr(def2) == "<case>"
     assert expr.equals(expr2)
     assert expr.equals(expr3)
     assert expr.equals(expr4)
@@ -192,7 +194,8 @@ def test_simple_case_null_else(table):
 
 def test_multiple_case_null_else(table):
     expr = ibis.case().when(table.g == "foo", "bar").end()
-    expr2 = ibis.case().when(table.g == "foo", _).end().resolve("bar")
+    def2 = ibis.case().when(table.g == "foo", _).end()
+    expr2 = resolve(def2, {"_": "bar"})
 
     assert expr.equals(expr2)
 

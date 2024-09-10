@@ -5,7 +5,7 @@ import inspect
 from collections.abc import Callable
 from typing import Any, TypeVar, overload
 
-from koerce import Builder, Deferred, _, Call
+from koerce import Builder, Call, Deferred, Var, _
 
 
 def _contains_deferred(obj: Any) -> bool:
@@ -61,7 +61,7 @@ def deferrable(func=None, *, repr=None):
                 # immediately if the function was called incorrectly
                 sig.bind(*args, **kwargs)
                 builder = Call(func, *args, **kwargs)
-                return Deferred(builder)#, repr=repr)
+                return Deferred(builder)  # , repr=repr)
             return func(*args, **kwargs)
 
         return inner  # type: ignore
@@ -69,5 +69,10 @@ def deferrable(func=None, *, repr=None):
     return wrapper if func is None else wrapper(func)
 
 
+class _Variable(Var):
+    def __repr__(self):
+        return self.name
+
+
 # reserved variable name for the value being matched
-# _ = var("_")
+_ = Deferred(_Variable("_"))

@@ -5,6 +5,7 @@ import os
 import webbrowser
 from typing import TYPE_CHECKING, Any, NoReturn
 
+from koerce import MatchError
 from public import public
 
 import ibis
@@ -129,7 +130,7 @@ class Expr:
         elif isinstance(value, ops.Node):
             return value.to_expr()
         else:
-            raise CoercionError("Unable to coerce value to an expression")
+            raise ValueError("Unable to coerce value to an expression")
 
     def __reduce__(self):
         return (self.__class__, (self._arg,))
@@ -763,8 +764,7 @@ def _binop(op_class: type[ops.Binary], left: ir.Value, right: ir.Value) -> ir.Va
     """
     try:
         node = op_class(left, right)
-    # except (ValidationError, NotImplementedError):
-    except NotImplementedError:
+    except (MatchError, NotImplementedError):
         return NotImplemented
     else:
         return node.to_expr()

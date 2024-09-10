@@ -105,10 +105,8 @@ def bind(table: Table, value) -> Iterator[ir.Value]:
     elif isinstance(value, Table):
         for name in value.columns:
             yield ops.Field(value, name).to_expr()
-    elif isinstance(value, Deferred):
+    elif isinstance(value, (Deferred, Builder)):
         yield resolve(value, {"_": table})
-    # elif isinstance(value, Builder):
-    #     yield value.resolve({"_": table})
     elif isinstance(value, Expandable):
         yield from value.expand(table)
     elif callable(value):
@@ -276,6 +274,7 @@ class Table(Expr, _FixedTextJupyterMixin):
             A tuple of bound values
         """
         values = self._fast_bind(*args, **kwargs)
+
         # dereference the values to `self`
         dm = DerefMap.from_targets(self.op())
         result = []
@@ -4438,7 +4437,7 @@ class Table(Expr, _FixedTextJupyterMixin):
                     # add in the where clause to filter the appropriate values
                     p.Reduction(where=None) >> _.copy(where=where)
                     # TODO(kszucs)
-                    #| p.Reduction(where=+x) >> _.copy(where=where & x)
+                    # | p.Reduction(where=+x) >> _.copy(where=where & x)
                 )
                 arg = arg.op().replace(rules, filter=p.Value).to_expr()
 

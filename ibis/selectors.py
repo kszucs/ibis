@@ -58,6 +58,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from functools import reduce
 from typing import Optional, Union
 
+from koerce import Annotable, Builder, Deferred, resolve
 from public import public
 
 import ibis.common.exceptions as exc
@@ -66,8 +67,6 @@ import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import util
 from ibis.common.collections import frozendict  # noqa: TCH001
-from koerce import Deferred, Builder, resolve
-from ibis.common.grounds import Concrete
 from ibis.common.selectors import All, Any, Expandable, Selector
 from ibis.common.typing import VarTuple  # noqa: TCH001
 
@@ -597,7 +596,7 @@ def if_all(selector: Selector, predicate: Deferred | Callable) -> IfAnyAll:
     return IfAnyAll(selector=selector, predicate=predicate, summarizer=operator.and_)
 
 
-class Slice(Concrete):
+class Slice(Annotable, immutable=True):
     """Hashable and smaller-scoped slice object versus the builtin one."""
 
     start: int | str | None = None
@@ -639,7 +638,7 @@ class ColumnSlice(Selector):
         return frozenset(iterable)
 
 
-class Sliceable(Concrete):
+class Sliceable(Annotable, immutable=True):
     def __getitem__(self, key: str | int | slice | Iterable[int | str]):
         if isinstance(key, slice):
             key = Slice(key.start, key.stop, key.step)
