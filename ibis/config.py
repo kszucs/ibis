@@ -4,10 +4,10 @@ import contextlib
 from collections.abc import Callable  # noqa: TCH003
 from typing import Annotated, Any, Optional
 
+from koerce import Annotable, pattern
 from public import public
 
 import ibis.common.exceptions as com
-from koerce import Annotable, pattern
 
 
 @pattern

@@ -3,13 +3,13 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Generic, Optional
 
+from koerce import attribute
 from public import public
 from typing_extensions import Any, Self, TypeVar
 
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-from koerce import attribute
 from ibis.common.graph import Node as GraphNode
 from ibis.common.typing import DefaultTypeVars
 from ibis.util import is_iterable

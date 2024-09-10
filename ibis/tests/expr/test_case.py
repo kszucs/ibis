@@ -7,7 +7,6 @@ import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import _
-from ibis.common.annotations import SignatureValidationError
 from ibis.tests.util import assert_equal, assert_pickle_roundtrip
 
 

@@ -3,16 +3,18 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
+from koerce import Builder as Resolver
+from koerce import Deferred, annotated, attribute
+
 import ibis
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.types as ir
 from ibis import util
-from koerce import annotated, attribute, Deferred, Builder as Resolver, Annotable
 from ibis.common.deferred import deferrable
 from ibis.common.exceptions import IbisInputError
-
+from ibis.common.grounds import Concrete
 from ibis.common.selectors import Selector  # noqa: TCH001
 from ibis.common.typing import VarTuple  # noqa: TCH001
 
@@ -20,7 +22,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-class Builder(Annotable, immutable=True, hashable=True):
+class Builder(Concrete):
     pass
 
 

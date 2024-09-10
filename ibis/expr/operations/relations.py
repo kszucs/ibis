@@ -7,19 +7,18 @@ import typing
 from abc import abstractmethod
 from typing import Annotated, Any, Literal, Optional, TypeVar
 
+from koerce import Is, attribute
 from public import public
 
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
-from koerce import attribute
 from ibis.common.collections import (
     ConflictingValuesError,
     FrozenDict,
     FrozenOrderedDict,
 )
 from ibis.common.exceptions import IbisTypeError, IntegrityError, RelationError
-
-from koerce import Is, Annotable
+from ibis.common.grounds import Concrete
 from ibis.common.typing import VarTuple
 from ibis.expr.operations.core import Alias, Column, Node, Scalar, Value
 from ibis.expr.operations.sortkeys import SortKey
@@ -384,7 +383,7 @@ class PhysicalTable(Relation):
 
 
 @public
-class Namespace(Annotable, immutable=True, hashable=True):
+class Namespace(Concrete):
     """Object to model namespaces for tables.
 
     Maps to the concept of database and/or catalog in SQL databases that support

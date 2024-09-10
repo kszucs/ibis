@@ -6,16 +6,14 @@ import itertools
 from typing import Annotated, Any, Optional
 from typing import Literal as LiteralType
 
+from koerce import Is, Length, attribute  # noqa: TCH001
 from public import public
 from typing_extensions import TypeVar
 
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-from koerce import attribute
 from ibis.common.deferred import Deferred  # noqa: TCH001
-
-from koerce import Is, Length  # noqa: TCH001
 from ibis.common.typing import VarTuple  # noqa: TCH001
 from ibis.expr.operations.core import Scalar, Unary, Value
 from ibis.expr.operations.relations import Relation  # noqa: TCH001

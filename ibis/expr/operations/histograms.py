@@ -5,11 +5,11 @@ from __future__ import annotations
 import numbers  # noqa: TCH003
 from typing import Literal
 
+from koerce import attribute
 from public import public
 
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
-from koerce import attribute
 from ibis.common.typing import VarTuple  # noqa: TCH001
 from ibis.expr.operations.core import Column, Value
 

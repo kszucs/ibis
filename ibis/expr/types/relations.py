@@ -9,6 +9,7 @@ from keyword import iskeyword
 from typing import TYPE_CHECKING, Any, Literal
 
 import toolz
+from koerce import Builder, Deferred, resolve
 from public import public
 
 import ibis
@@ -17,7 +18,6 @@ import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.schema as sch
 from ibis import util
-from koerce import Deferred
 from ibis.common.selectors import Expandable, Selector
 from ibis.expr.rewrites import DerefMap
 from ibis.expr.types.core import Expr, _FixedTextJupyterMixin
@@ -106,8 +106,8 @@ def bind(table: Table, value) -> Iterator[ir.Value]:
         for name in value.columns:
             yield ops.Field(value, name).to_expr()
     elif isinstance(value, Deferred):
-        yield value.resolve(table)
-    # elif isinstance(value, Resolver):
+        yield resolve(value, {"_": table})
+    # elif isinstance(value, Builder):
     #     yield value.resolve({"_": table})
     elif isinstance(value, Expandable):
         yield from value.expand(table)
@@ -1118,7 +1118,8 @@ class Table(Expr, _FixedTextJupyterMixin):
         │ orange │       0.33 │     0.33 │
         └────────┴────────────┴──────────┘
         """
-        from ibis.common.patterns import Contains, In
+        from koerce import If, IsIn
+
         from ibis.expr.rewrites import p
 
         node = self.op()
@@ -1133,7 +1134,9 @@ class Table(Expr, _FixedTextJupyterMixin):
         # the user doesn't need to specify the metrics used in the having clause
         # explicitly, we implicitly add them to the metrics list by looking for
         # any metrics depending on self which are not specified explicitly
-        pattern = p.Reduction(relations=Contains(node)) & ~In(set(metrics.values()))
+        pattern = p.Reduction(relations=If(lambda _: node in _)) & ~IsIn(
+            set(metrics.values())
+        )
         original_metrics = metrics.copy()
         for pred in having:
             for metric in pred.op().find_topmost(pattern):

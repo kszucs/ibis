@@ -8,16 +8,14 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any
 
 import toolz
+from koerce import Is, Object, Pattern, attribute, replace, var
 from public import public
 
 import ibis.common.exceptions as com
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.annotations import attribute
 from ibis.common.collections import FrozenDict  # noqa: TCH001
-from ibis.common.deferred import var
 from ibis.common.graph import Graph
-from ibis.common.patterns import InstanceOf, Object, Pattern, replace
 from ibis.common.typing import VarTuple  # noqa: TCH001
 from ibis.expr.rewrites import d, p, replace_parameter
 from ibis.expr.schema import Schema
@@ -330,7 +328,7 @@ def extract_ctes(node: ops.Relation) -> set[ops.Relation]:
     cte_types = (Select, ops.Aggregate, ops.JoinChain, ops.Set, ops.Limit, ops.Sample)
     dont_count = (ops.Field, ops.CountStar, ops.CountDistinctStar)
 
-    g = Graph.from_bfs(node, filter=~InstanceOf(dont_count))
+    g = Graph.from_bfs(node, filter=~Is(dont_count))
     result = set()
     for op, dependents in g.invert().items():
         if isinstance(op, ops.View) or (

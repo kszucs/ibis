@@ -4,12 +4,11 @@ from functools import partial
 from typing import Union
 
 import pytest
+from koerce import NoMatch, Pattern
 
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.annotations import ValidationError
-from ibis.common.patterns import NoMatch, Pattern
 
 one = ops.Literal(1, dt.int8)
 
@@ -45,8 +44,8 @@ def test_literal_coercion_type_inference(value, dtype):
     ],
 )
 def test_coerced_to_literal(typehint, value, expected):
-    pat = Pattern.from_typehint(typehint)
-    assert pat.match(value, {}) == expected
+    pat = Pattern.from_typehint(typehint, allow_coercion=True)
+    assert pat.apply(value) == expected
 
 
 @pytest.mark.parametrize(
@@ -89,8 +88,8 @@ def test_coerced_to_literal(typehint, value, expected):
     ],
 )
 def test_coerced_to_value(typehint, value, expected):
-    pat = Pattern.from_typehint(typehint)
-    assert pat.match(value, {}) == expected
+    pat = Pattern.from_typehint(typehint, allow_coercion=True)
+    assert pat.apply(value) == expected
 
 
 @pytest.mark.pandas
@@ -98,11 +97,11 @@ def test_coerced_to_interval_value():
     import pandas as pd
 
     expected = ops.Literal(1, dt.Interval("s"))
-    pat = Pattern.from_typehint(ops.Value[dt.Interval])
-    assert pat.match(pd.Timedelta("1s"), {}) == expected
+    pat = Pattern.from_typehint(ops.Value[dt.Interval], allow_coercion=True)
+    assert pat.apply(pd.Timedelta("1s")) == expected
 
     expected = ops.Literal(3661, dt.Interval("s"))
-    assert pat.match(pd.Timedelta("1h 1m 1s"), {}) == expected
+    assert pat.apply(pd.Timedelta("1h 1m 1s")) == expected
 
 
 @pytest.mark.parametrize(

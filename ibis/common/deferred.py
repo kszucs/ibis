@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import collections.abc
 import functools
 import inspect
-import operator
-from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any, TypeVar, overload
 
-
-from koerce import Builder, Deferred
+from koerce import Builder, Deferred, _
 
 
 def _contains_deferred(obj: Any) -> bool:

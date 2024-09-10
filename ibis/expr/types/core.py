@@ -9,10 +9,7 @@ from public import public
 
 import ibis
 import ibis.expr.operations as ops
-
 from ibis.common.exceptions import IbisError, TranslationError
-
-
 from ibis.common.typing import get_defining_scope
 from ibis.config import _default_backend
 from ibis.config import options as opts

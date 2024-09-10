@@ -8,7 +8,6 @@ from itertools import zip_longest
 from typing import TYPE_CHECKING, Any, Optional, TypeVar, get_args, get_origin
 from typing import get_type_hints as _get_type_hints
 
-
 from ibis.common.caching import memoize
 
 if TYPE_CHECKING:

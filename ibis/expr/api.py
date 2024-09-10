@@ -11,6 +11,8 @@ import operator
 from collections import Counter
 from typing import TYPE_CHECKING, Any, overload
 
+from koerce import Annotable, Deferred, _
+
 import ibis.expr.builders as bl
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
@@ -19,10 +21,8 @@ import ibis.expr.types as ir
 from ibis import selectors, util
 from ibis.backends import BaseBackend, connect
 from ibis.common.deferred import deferrable
-from koerce import Deferred, _, Annotable
 from ibis.common.dispatch import lazy_singledispatch
 from ibis.common.exceptions import IbisInputError
-
 from ibis.common.temporal import normalize_datetime, normalize_timezone
 from ibis.expr.decompile import decompile
 from ibis.expr.schema import Schema

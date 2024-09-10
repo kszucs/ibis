@@ -6,7 +6,6 @@ import ibis
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.annotations import ValidationError
 
 
 def test_struct_column_shape():

@@ -6,8 +6,8 @@ from datetime import date, datetime, time, timedelta, timezone
 import dateutil
 import pytest
 import pytz
+from koerce import As
 
-from ibis.common.patterns import CoercedTo
 from ibis.common.temporal import (
     DateUnit,
     IntervalUnit,
@@ -47,7 +47,7 @@ def test_interval_units(singular, plural, short):
 @interval_units
 def test_interval_unit_coercions(singular, plural, short):
     u = IntervalUnit[singular.upper()]
-    v = CoercedTo(IntervalUnit)
+    v = As(IntervalUnit)
     assert v.match(singular, {}) == u
     assert v.match(plural, {}) == u
     assert v.match(short, {}) == u
@@ -66,7 +66,7 @@ def test_interval_unit_coercions(singular, plural, short):
     ],
 )
 def test_interval_unit_aliases(alias, expected):
-    v = CoercedTo(IntervalUnit)
+    v = As(IntervalUnit)
     assert v.match(alias, {}) == IntervalUnit(expected)
 
 
@@ -114,7 +114,7 @@ def test_normalize_timedelta_invalid(value, unit):
 
 
 def test_interval_unit_compatibility():
-    v = CoercedTo(IntervalUnit)
+    v = As(IntervalUnit)
     for unit in itertools.chain(DateUnit, TimeUnit):
         interval = v.match(unit, {})
         assert isinstance(interval, IntervalUnit)

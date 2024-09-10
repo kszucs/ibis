@@ -3,14 +3,12 @@ from __future__ import annotations
 from itertools import product, starmap
 from typing import Optional
 
+from koerce import attribute, pattern
 from public import public
 
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 from ibis import util
-
-from koerce import attribute, pattern
-
 from ibis.common.temporal import IntervalUnit
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from koerce import NoMatch, Pattern
 from pytest import param
 
 import ibis
@@ -8,9 +9,7 @@ import ibis.expr.builders as bl
 import ibis.expr.datashape as ds
 import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
-from ibis.common.annotations import ValidationError
 from ibis.common.exceptions import IbisInputError
-from ibis.common.patterns import NoMatch, Pattern
 
 
 @pytest.fixture

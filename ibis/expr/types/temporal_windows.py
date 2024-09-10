@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal
 
+from koerce import Annotable
 from public import public
 
 import ibis.common.exceptions as com
 import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis.common.collections import FrozenOrderedDict  # noqa: TCH001
-from koerce import Annotable
 from ibis.expr.operations.relations import Unaliased  # noqa: TCH001
 from ibis.expr.types.relations import unwrap_aliases
 

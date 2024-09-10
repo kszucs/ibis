@@ -22,7 +22,6 @@ from uuid import uuid4
 
 import toolz
 
-
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
     from numbers import Real

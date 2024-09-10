@@ -20,12 +20,13 @@ from typing import (
 )
 
 import toolz
+from koerce import attribute
 from public import public
 from typing_extensions import Self
 
-from koerce import attribute, Annotable
 from ibis.common.collections import FrozenOrderedDict, MapSet
 from ibis.common.dispatch import lazy_singledispatch
+from ibis.common.grounds import Concrete
 from ibis.common.temporal import IntervalUnit, TimestampUnit
 
 
@@ -100,7 +101,7 @@ del dtype.register
 
 
 @public
-class DataType(Annotable, immutable=True, hashable=True):
+class DataType(Concrete):
     """Base class for all data types.
 
     Instances are immutable.

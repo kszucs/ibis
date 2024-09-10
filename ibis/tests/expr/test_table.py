@@ -14,7 +14,6 @@ import ibis.expr.schema as sch
 import ibis.expr.types as ir
 import ibis.selectors as s
 from ibis import _
-from ibis.common.annotations import ValidationError
 from ibis.common.deferred import Deferred
 from ibis.common.exceptions import ExpressionError, IntegrityError, RelationError
 from ibis.expr import api

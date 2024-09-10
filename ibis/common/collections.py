@@ -5,8 +5,9 @@ from abc import abstractmethod
 from itertools import tee
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from public import public
 from koerce import Annotable as Abstract
+from public import public
+
 from ibis.common.exceptions import ConflictingValuesError
 
 if TYPE_CHECKING:
@@ -276,7 +277,7 @@ class MapSet(Mapping[K, V]):
 
 
 @public
-class FrozenDict(dict[K, V]):#, Mapping[K, V]):
+class FrozenDict(dict[K, V]):  # , Mapping[K, V]):
     __slots__ = ("__precomputed_hash__",)
     # TODO(kszucs): Annotable is the base class, so traditional typehint is not allowed
     # __precomputed_hash__: int

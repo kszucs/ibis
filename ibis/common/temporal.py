@@ -12,7 +12,6 @@ import pytz
 from public import public
 
 from ibis import util
-
 from ibis.common.dispatch import lazy_singledispatch
 
 

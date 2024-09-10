@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import pytest
+from koerce import Annotable, attribute
 
-from koerce import attribute, Annotable
 from ibis.common.collections import frozendict
-
+from ibis.common.grounds import Concrete
 
 pytestmark = pytest.mark.benchmark
 
 
-class MyObject(Annotable, immutable=True, hashable=True):
+class MyObject(Concrete):
     a: int
     b: str
     c: tuple[int, ...]

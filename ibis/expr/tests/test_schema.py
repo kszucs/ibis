@@ -4,12 +4,11 @@ from dataclasses import dataclass
 from typing import NamedTuple
 
 import pytest
+from koerce import Annotable
 
 import ibis.expr.datatypes as dt
 import ibis.expr.schema as sch
 from ibis.common.exceptions import IntegrityError
-from koerce import Annotable
-
 
 
 def test_whole_schema():

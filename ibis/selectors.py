@@ -66,8 +66,8 @@ import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import util
 from ibis.common.collections import frozendict  # noqa: TCH001
-from ibis.common.deferred import Deferred, Builder as Resolver
-
+from ibis.common.deferred import Builder as Resolver
+from ibis.common.deferred import Deferred
 from ibis.common.selectors import All, Any, Expandable, Selector
 from ibis.common.typing import VarTuple  # noqa: TCH001
 

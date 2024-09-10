@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import pytest
+from koerce import Eq
 
 import ibis
 import ibis.expr.datashape as ds
@@ -10,8 +11,6 @@ import ibis.expr.datatypes as dt
 import ibis.expr.operations as ops
 import ibis.expr.rules as rlz
 import ibis.expr.types as ir
-
-from koerce import Eq
 
 t = ibis.table([("a", "int64")], name="t")
 

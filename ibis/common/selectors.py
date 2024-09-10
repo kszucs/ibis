@@ -3,8 +3,8 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING
 
-
 from koerce import Annotable
+
 from ibis.common.typing import VarTuple  # noqa: TCH001
 
 if TYPE_CHECKING:

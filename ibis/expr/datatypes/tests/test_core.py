@@ -7,11 +7,10 @@ from dataclasses import dataclass
 from typing import Annotated, NamedTuple
 
 import pytest
+from koerce import As, Pattern
 from pytest import param
 
 import ibis.expr.datatypes as dt
-from ibis.common.annotations import ValidationError
-from ibis.common.patterns import As, Attrs, NoMatch, Pattern
 from ibis.common.temporal import TimestampUnit, TimeUnit
 from ibis.util import get_subclasses
 

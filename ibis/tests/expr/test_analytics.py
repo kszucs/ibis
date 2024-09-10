@@ -17,7 +17,6 @@ import pytest
 
 import ibis
 import ibis.expr.types as ir
-from ibis.common.annotations import ValidationError
 from ibis.tests.expr.mocks import MockBackend
 from ibis.tests.util import assert_equal
 

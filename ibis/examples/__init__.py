@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING, Optional
 
 import ibis
-from koerce import Annotable
+from ibis.common.grounds import Concrete
 
 try:
     import importlib_resources as resources
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 _DIRECT_BACKENDS = frozenset({"duckdb", "polars"})
 
 
-class Example(Annotable, immutable=True, hashable=True):
+class Example(Concrete):
     name: str
     help: Optional[str]
 
@@ -128,7 +128,7 @@ def __dir__() -> list[str]:
     return sorted(_get_metadata().keys())
 
 
-class Zones(Annotable, immutable=True, hashable=True):
+class Zones(Concrete):
     name: str
     help: Optional[str]
 

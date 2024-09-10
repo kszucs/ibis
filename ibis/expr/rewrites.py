@@ -5,11 +5,10 @@ from __future__ import annotations
 from collections import defaultdict
 
 import toolz
+from koerce import Annotable, If, Item, Replace, _, namespace, replace, var
 
 import ibis.expr.operations as ops
 from ibis.common.collections import FrozenDict  # noqa: TCH001
-
-from koerce import _, var, namespace, Item, Annotable, Replace, If
 from ibis.common.exceptions import ExpressionError, IbisInputError
 
 # from ibis.common.graph import Node as Traversable
@@ -24,13 +23,6 @@ p, d = namespace(ops)
 x = var("x")
 y = var("y")
 name = var("name")
-
-
-def replace(pattern):
-    def decorator(func):
-        return Replace(pattern, func)
-
-    return decorator
 
 
 # class DerefMap(Concrete, Traversable):

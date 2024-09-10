@@ -5,11 +5,11 @@ from __future__ import annotations
 import operator
 from typing import Annotated, Optional
 
+from koerce import As, Object, attribute
 from public import public
 
 import ibis.expr.datatypes as dt
 import ibis.expr.rules as rlz
-from koerce import attribute, As, Object
 from ibis.common.temporal import DateUnit, IntervalUnit, TimestampUnit, TimeUnit
 from ibis.expr.operations.core import Binary, Scalar, Unary, Value
 from ibis.expr.operations.logical import Between
