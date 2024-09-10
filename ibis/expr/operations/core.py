@@ -27,11 +27,6 @@ class Node(GraphNode):
     # Avoid custom repr for performance reasons
     __repr__ = object.__repr__
 
-    # TODO(kszucs): hidrate the __children__ traversable attribute
-    # @attribute
-    # def __children__(self):
-    #     return super().__children__
-
 
 T = TypeVar("T", bound=dt.DataType, covariant=True)
 S = TypeVar("S", bound=ds.DataShape, default=ds.Any, covariant=True)
@@ -72,7 +67,7 @@ class Value(Node, DefaultTypeVars, Generic[T, S]):
         try:
             return Literal(value, dtype=dtype)
         except TypeError:
-            raise CoercionError(f"Unable to coerce {value!r} to Value[{T!r}]")
+            raise ValueError(f"Unable to coerce {value!r} to Value[{T!r}]")
 
     # TODO(kszucs): cover it with tests
     # TODO(kszucs): figure out how to represent not named arguments

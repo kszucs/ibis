@@ -8,9 +8,7 @@ from ibis.common.typing import (
     DefaultTypeVars,
     Sentinel,
     evaluate_annotations,
-    get_bound_typevars,
     get_type_hints,
-    get_type_params,
 )
 
 T = TypeVar("T")
@@ -91,29 +89,6 @@ class C(B[T, str]): ...
 
 
 class D(C[bool]): ...
-
-
-def test_get_type_params() -> None:
-    assert get_type_params(A[int, float, str]) == {"T": int, "S": float, "U": str}
-    assert get_type_params(B[int, bool]) == {"T": int, "S": bool, "U": bytes}
-    assert get_type_params(C[int]) == {"T": int, "S": str, "U": bytes}
-    assert get_type_params(D) == {"T": bool, "S": str, "U": bytes}
-
-
-def test_get_bound_typevars() -> None:
-    expected = {
-        T: ("t", int),
-        S: ("s", float),
-        U: ("u", str),
-    }
-    assert get_bound_typevars(A[int, float, str]) == expected
-
-    expected = {
-        T: ("t", int),
-        S: ("s", bool),
-        U: ("u", bytes),
-    }
-    assert get_bound_typevars(B[int, bool]) == expected
 
 
 def test_default_type_vars():
