@@ -26,7 +26,7 @@ from ibis.backends.sql.rewrites import (
     replace,
     split_select_distinct_with_order_by,
 )
-from ibis.common.deferred import var
+from koerce import var
 
 if TYPE_CHECKING:
     from collections.abc import Mapping

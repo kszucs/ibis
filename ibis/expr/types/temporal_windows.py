@@ -14,10 +14,10 @@ from ibis.expr.types.relations import unwrap_aliases
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
+from ibis.common.grounds import Concrete
 
 @public
-class WindowedTable(Annotable, immutable=True, hashable=True):
+class WindowedTable(Concrete):
     """An intermediate table expression to hold windowing information."""
 
     parent: ir.Table

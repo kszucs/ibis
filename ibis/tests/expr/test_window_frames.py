@@ -38,19 +38,19 @@ def test_window_boundary_typevars():
 
     p = Pattern.from_typehint(ops.WindowBoundary[dt.Integer, ds.Any])
     b = ops.WindowBoundary(5, preceding=False)
-    assert p.match(b, {}) == b
-    assert p.match(ops.WindowBoundary(5.0, preceding=False), {}) is NoMatch
-    assert p.match(ops.WindowBoundary(lit, preceding=True), {}) is NoMatch
+    assert p.apply(b, {}) == b
+    assert p.apply(ops.WindowBoundary(5.0, preceding=False), {}) is NoMatch
+    assert p.apply(ops.WindowBoundary(lit, preceding=True), {}) is NoMatch
 
     p = Pattern.from_typehint(ops.WindowBoundary[dt.Interval, ds.Any])
     b = ops.WindowBoundary(lit, preceding=True)
-    assert p.match(b, {}) == b
+    assert p.apply(b, {}) == b
 
 
 def test_window_boundary_coercions():
     RowsWindowBoundary = ops.WindowBoundary[dt.Integer, ds.Any]
     p = Pattern.from_typehint(RowsWindowBoundary)
-    assert p.match(1, {}) == RowsWindowBoundary(ops.Literal(1, dtype=dt.int8), False)
+    assert p.apply(1, {}) == RowsWindowBoundary(ops.Literal(1, dtype=dt.int8), False)
 
 
 def test_window_builder_rows():

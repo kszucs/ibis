@@ -157,7 +157,7 @@ class ValueOf:
     def __init__(self, dtype=None):
         self.dtype = dtype
 
-    def __call__(self, value, context):
+    def __call__(self, value, **ctx):
         value = ops.Value.__coerce__(value, self.dtype)
 
         if self.dtype and not value.dtype.castable(self.dtype):

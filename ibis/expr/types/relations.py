@@ -4437,7 +4437,8 @@ class Table(Expr, _FixedTextJupyterMixin):
                 rules = (
                     # add in the where clause to filter the appropriate values
                     p.Reduction(where=None) >> _.copy(where=where)
-                    | p.Reduction(where=x) >> _.copy(where=where & x)
+                    # TODO(kszucs)
+                    #| p.Reduction(where=+x) >> _.copy(where=where & x)
                 )
                 arg = arg.op().replace(rules, filter=p.Value).to_expr()
 

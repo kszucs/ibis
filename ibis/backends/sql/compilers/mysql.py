@@ -18,7 +18,7 @@ from ibis.backends.sql.rewrites import (
     exclude_unsupported_window_frame_from_row_number,
     rewrite_empty_order_by_window,
 )
-from ibis.common.patterns import replace
+from koerce import replace
 from ibis.expr.rewrites import p
 
 

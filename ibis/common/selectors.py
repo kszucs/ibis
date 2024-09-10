@@ -3,8 +3,8 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING
 
-from koerce import Annotable
 
+from ibis.common.grounds import Concrete
 from ibis.common.typing import VarTuple  # noqa: TCH001
 
 if TYPE_CHECKING:
@@ -13,7 +13,9 @@ if TYPE_CHECKING:
     import ibis.expr.types as ir
 
 
-class Expandable(Annotable, immutable=True, hashable=True):
+class Expandable(Concrete):
+
+
     @abc.abstractmethod
     def expand(self, table: ir.Table) -> Sequence[ir.Value]:
         """Expand `table` into value expressions that match the selector.

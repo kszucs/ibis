@@ -20,7 +20,7 @@ import ibis.backends.sql.compilers as sc
 import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import _
-from ibis.common.annotations import SignatureValidationError
+
 from ibis.tests.util import assert_equal
 
 

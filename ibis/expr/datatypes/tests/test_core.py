@@ -636,47 +636,47 @@ def test_set_is_an_alias_of_array():
 
 def test_type_coercion():
     p = Pattern.from_typehint(dt.DataType)
-    assert p.match(dt.int8, {}) == dt.int8
-    assert p.match("int8", {}) == dt.int8
-    assert p.match(dt.string, {}) == dt.string
-    assert p.match("string", {}) == dt.string
-    assert p.match(3, {}) is NoMatch
+    assert p.apply(dt.int8, {}) == dt.int8
+    assert p.apply("int8", {}) == dt.int8
+    assert p.apply(dt.string, {}) == dt.string
+    assert p.apply("string", {}) == dt.string
+    assert p.apply(3, {}) is NoMatch
 
     p = Pattern.from_typehint(dt.Primitive)
-    assert p.match(dt.int8, {}) == dt.int8
-    assert p.match("int8", {}) == dt.int8
-    assert p.match(dt.boolean, {}) == dt.boolean
-    assert p.match("boolean", {}) == dt.boolean
-    assert p.match(dt.Array(dt.int8), {}) is NoMatch
-    assert p.match("array<int8>", {}) is NoMatch
+    assert p.apply(dt.int8, {}) == dt.int8
+    assert p.apply("int8", {}) == dt.int8
+    assert p.apply(dt.boolean, {}) == dt.boolean
+    assert p.apply("boolean", {}) == dt.boolean
+    assert p.apply(dt.Array(dt.int8), {}) is NoMatch
+    assert p.apply("array<int8>", {}) is NoMatch
 
     p = Pattern.from_typehint(dt.Integer)
-    assert p.match(dt.int8, {}) == dt.int8
-    assert p.match("int8", {}) == dt.int8
-    assert p.match(dt.uint8, {}) == dt.uint8
-    assert p.match("uint8", {}) == dt.uint8
-    assert p.match(dt.boolean, {}) is NoMatch
-    assert p.match("boolean", {}) is NoMatch
+    assert p.apply(dt.int8, {}) == dt.int8
+    assert p.apply("int8", {}) == dt.int8
+    assert p.apply(dt.uint8, {}) == dt.uint8
+    assert p.apply("uint8", {}) == dt.uint8
+    assert p.apply(dt.boolean, {}) is NoMatch
+    assert p.apply("boolean", {}) is NoMatch
 
     p = Pattern.from_typehint(dt.Array[dt.Integer])
-    assert p.match(dt.Array(dt.int8), {}) == dt.Array(dt.int8)
-    assert p.match("array<int8>", {}) == dt.Array(dt.int8)
-    assert p.match(dt.Array(dt.uint8), {}) == dt.Array(dt.uint8)
-    assert p.match("array<uint8>", {}) == dt.Array(dt.uint8)
-    assert p.match(dt.Array(dt.boolean), {}) is NoMatch
-    assert p.match("array<boolean>", {}) is NoMatch
+    assert p.apply(dt.Array(dt.int8), {}) == dt.Array(dt.int8)
+    assert p.apply("array<int8>", {}) == dt.Array(dt.int8)
+    assert p.apply(dt.Array(dt.uint8), {}) == dt.Array(dt.uint8)
+    assert p.apply("array<uint8>", {}) == dt.Array(dt.uint8)
+    assert p.apply(dt.Array(dt.boolean), {}) is NoMatch
+    assert p.apply("array<boolean>", {}) is NoMatch
 
     p = Pattern.from_typehint(dt.Map[dt.String, dt.Integer])
-    assert p.match(dt.Map(dt.string, dt.int8), {}) == dt.Map(dt.string, dt.int8)
-    assert p.match("map<string, int8>", {}) == dt.Map(dt.string, dt.int8)
-    assert p.match(dt.Map(dt.string, dt.uint8), {}) == dt.Map(dt.string, dt.uint8)
-    assert p.match("map<string, uint8>", {}) == dt.Map(dt.string, dt.uint8)
-    assert p.match(dt.Map(dt.string, dt.boolean), {}) is NoMatch
-    assert p.match("map<string, boolean>", {}) is NoMatch
+    assert p.apply(dt.Map(dt.string, dt.int8), {}) == dt.Map(dt.string, dt.int8)
+    assert p.apply("map<string, int8>", {}) == dt.Map(dt.string, dt.int8)
+    assert p.apply(dt.Map(dt.string, dt.uint8), {}) == dt.Map(dt.string, dt.uint8)
+    assert p.apply("map<string, uint8>", {}) == dt.Map(dt.string, dt.uint8)
+    assert p.apply(dt.Map(dt.string, dt.boolean), {}) is NoMatch
+    assert p.apply("map<string, boolean>", {}) is NoMatch
 
     p = Pattern.from_typehint(Annotated[dt.Interval, Attrs(unit=As(TimeUnit))])
-    assert p.match(dt.Interval("s"), {}) == dt.Interval("s")
-    assert p.match(dt.Interval("ns"), {}) == dt.Interval("ns")
+    assert p.apply(dt.Interval("s"), {}) == dt.Interval("s")
+    assert p.apply(dt.Interval("ns"), {}) == dt.Interval("ns")
 
 
 @pytest.mark.parametrize(

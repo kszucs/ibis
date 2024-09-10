@@ -21,7 +21,7 @@ from ibis.backends.sql.rewrites import (
     p,
     split_select_distinct_with_order_by,
 )
-from ibis.common.patterns import replace
+from koerce import replace
 from ibis.config import options
 from ibis.expr.operations.udf import InputType
 from ibis.util import gen_name

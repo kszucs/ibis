@@ -106,7 +106,7 @@ def test_reduction_methods(fn, operation, cond):
     if where is None:
         assert node.where is None
     elif isinstance(where, Deferred):
-        resolved = resolve(t, {"_": t}).op()
+        resolved = resolve(where, {"_": t}).op()
         assert node.where == resolved
     else:
         assert node.where == where.op()

@@ -26,6 +26,7 @@ from ibis.common.exceptions import IbisTypeError
 from ibis.expr import api
 from ibis.tests.util import assert_equal
 
+from koerce import resolve
 
 def test_null():
     assert ibis.literal(None).equals(ibis.null())
@@ -1627,7 +1628,7 @@ def test_deferred_function_call(func, expected_type):
 )
 def test_deferred_nested_types(case):
     expr, sol = case()
-    assert expr.resolve(2).equals(sol)
+    assert resolve(expr, {"_": 2}).equals(sol)
 
 
 def test_numpy_ufuncs_dont_cast_columns():

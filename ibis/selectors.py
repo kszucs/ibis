@@ -66,8 +66,8 @@ import ibis.expr.operations as ops
 import ibis.expr.types as ir
 from ibis import util
 from ibis.common.collections import frozendict  # noqa: TCH001
-from ibis.common.deferred import Builder as Resolver
-from ibis.common.deferred import Deferred
+from koerce import Deferred, Builder, resolve
+from ibis.common.grounds import Concrete
 from ibis.common.selectors import All, Any, Expandable, Selector
 from ibis.common.typing import VarTuple  # noqa: TCH001
 
@@ -390,9 +390,9 @@ def c(*names: str | ir.Column) -> Selector:
 class Across(Expandable):
     selector: Selector
     funcs: Union[
-        Resolver,
+        Builder,
         Callable[[ir.Value], ir.Value],
-        frozendict[Optional[str], Union[Resolver, Callable[[ir.Value], ir.Value]]],
+        frozendict[Optional[str], Union[Builder, Callable[[ir.Value], ir.Value]]],
     ]
     names: Union[str, Callable[[str, Optional[str]], str]]
 
@@ -403,8 +403,8 @@ class Across(Expandable):
         cols = self.selector.expand(table)
         for func_name, func in self.funcs.items():
             for orig_col in cols:
-                if isinstance(func, Resolver):
-                    col = func.resolve({"_": orig_col})
+                if isinstance(func, Builder):
+                    col = resolve(func, {"_": orig_col})
                 else:
                     col = func(orig_col)
 
@@ -487,14 +487,14 @@ def across(
 
 class IfAnyAll(Expandable):
     selector: Selector
-    predicate: Union[Resolver, Callable[[ir.Value], ir.BooleanValue]]
+    predicate: Union[Builder, Callable[[ir.Value], ir.BooleanValue]]
     summarizer: Callable[[ir.BooleanValue, ir.BooleanValue], ir.BooleanValue]
 
     def expand(self, table: ir.Table) -> Sequence[ir.Value]:
         func = self.predicate
 
-        if isinstance(func, Resolver):
-            fn = lambda col, func=func: func.resolve({"_": col})
+        if isinstance(func, Builder):
+            fn = lambda col, func=func: resolve(func, {"_": col})
         else:
             fn = func
 
@@ -597,7 +597,7 @@ def if_all(selector: Selector, predicate: Deferred | Callable) -> IfAnyAll:
     return IfAnyAll(selector=selector, predicate=predicate, summarizer=operator.and_)
 
 
-class Slice:
+class Slice(Concrete):
     """Hashable and smaller-scoped slice object versus the builtin one."""
 
     start: int | str | None = None
@@ -639,7 +639,7 @@ class ColumnSlice(Selector):
         return frozenset(iterable)
 
 
-class Sliceable:
+class Sliceable(Concrete):
     def __getitem__(self, key: str | int | slice | Iterable[int | str]):
         if isinstance(key, slice):
             key = Slice(key.start, key.stop, key.step)

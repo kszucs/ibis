@@ -49,7 +49,10 @@ class MapGet(Value):
 
     @attribute
     def dtype(self):
-        return dt.higher_precedence(self.default.dtype, self.arg.dtype.value_type)
+        if self.default is None:
+            return self.arg.dtype.value_type
+        else:
+            return dt.higher_precedence(self.default.dtype, self.arg.dtype.value_type)
 
 
 @public
